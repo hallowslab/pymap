@@ -1,0 +1,11 @@
+{
+    "source": "adamantium01.tld",
+    "destination": "obsidian04.tld",
+    "input": [
+        "test@test.pt 123456 presidente@test.pt 123456",
+        "test1@test.pt 123456 presidente9@test.pt 123456",
+        "test2@test.pt 123456 presidente8@test.pt 123456",
+        "test3@test.pt 123456 presidente7@test.pt 123456",
+        "test4@test.pt 123456 presidente6@test.pt 123456"
+    ] 
+}
