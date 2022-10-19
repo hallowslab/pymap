@@ -23,7 +23,7 @@ mypy = "^0.910"
 autoflake = "^1.4"
 
 [tool.taskipy.tasks]
-format = "black . && autoflake --in-place -r --remove-unused-variables --exclude client ."
+format = "black . && autoflake --in-place -r --remove-unused-variables --exclude client . && mypy *.py"
 apiDev = "python manage.py run -h 0.0.0.0"
 clientDev = "cd client && npm start"
 apiProd = "gunicorn -w 4 -b 0.0.0.0:5000 'server:create_app()'"
@@ -35,7 +35,8 @@ buildDeps = "python scripts/build_client_dependencies_cache.py"
 genLogs = "python scripts/generate_random_logs.py"
 testCore = "pytest tests/"
 testClient = "cd client && npm test"
-pythonCov = "coverage run -m pytest"
+coverage = "coverage run -m pytest"
+report = "coverage report"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
