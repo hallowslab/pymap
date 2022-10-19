@@ -23,6 +23,7 @@ def create_flask_app(script_info=None):
     # import blueprints
     from server.routes.views import main_blueprint
     from server.routes.apiv1 import apiv1_blueprint
+    from server.routes.apiv2 import apiv2_blueprint
 
     app.logger.addHandler(default_handler)
 
@@ -35,11 +36,14 @@ def create_flask_app(script_info=None):
 
     # initialize DB after loading config
     db.init_app(app)
+    with app.app_context():
+        db.create_all()
 
     # register blueprints
     if not app.config.get("HEADLESS", False):
         app.register_blueprint(main_blueprint)
     app.register_blueprint(apiv1_blueprint)
+    app.register_blueprint(apiv2_blueprint)
 
     # shell context for flask cli
     app.shell_context_processor({"app": app})
