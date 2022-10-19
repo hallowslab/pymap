@@ -16,7 +16,7 @@ from tests import RANDOM_VALID_CREDS_2, VALID_HOSTS, RANDOM_VALID_CREDS
     ],
 )
 def test_discards_invalid_inputs(test_input):
-    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input)
+    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input, domain="test.com")
     if "This gets parsed" in test_input:
         # As explained above the fallback logic tries to find the user and password
         # Refer to core.
@@ -32,7 +32,7 @@ def test_discards_invalid_inputs(test_input):
 # USER1 PASSWORD1 USER2 PASSWORD2""
 @pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS)
 def test_returns_parsed_line_2_users(test_input):
-    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input)
+    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input, domain="test.com")
     user1, passwd1, user2, passwd2 = test_input.split(" ")
     final_str = x.process_line(test_input)
     assert f"--user1 {user1}" in final_str
@@ -48,7 +48,7 @@ def test_returns_parsed_line_2_users(test_input):
 # Same but for lines that match "USER PASSWORD"
 @pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS_2)
 def test_returns_parsed_line_1_user(test_input):
-    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input)
+    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input, domain="test.com")
     user1, passwd1 = test_input.split(" ")
     # final_str = x.FORMAT_STRING.format(VALID_HOSTS["cp"], user, passwd, VALID_HOSTS["cpp"], user, passwd)
     final_str = x.process_line(test_input)
