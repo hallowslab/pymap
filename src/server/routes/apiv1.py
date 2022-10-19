@@ -8,6 +8,8 @@ from flask import Blueprint, jsonify, request, url_for, current_app, send_file
 
 from server.tasks import call_system
 from server.utils import get_task_info, get_logs_status
+from server.models import CeleryTask, User
+from server import db
 from core.pymap_core import ScriptGenerator
 
 apiv1_blueprint = Blueprint("api", __name__)
@@ -37,6 +39,9 @@ def parse_creds():
         "Received the following output from generator:\n %s", content
     )"""
     task = call_system.delay(content)
+    ctask = CeleryTask(source, dest, f"/var/log/pymap/{task.id}", task.id)
+    db.session.add(ctask)
+    db.session.commit()
     if not isdir(f"/var/log/pymap/{task.id}"):
         mkdir(f"/var/log/pymap/{task.id}")
     current_app.logger.info("Starting background task with ID: %s", task.id)
