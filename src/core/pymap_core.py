@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Iterable, List, Union
+from typing import Generator, Iterable, List, Union
 
 
 LOGDIR = "/var/log/pymap"
@@ -27,13 +27,13 @@ class ScriptGenerator:
     ) -> None:
         self.logger = logging.getLogger("server")
         self.creds = creds
-        self.lines = []
+        self.lines: List[str] = []
         self.domain = kwargs.get("domain", "")
         self.dest = kwargs.get("destination", "sync")
         self.line_count = kwargs.get("split", 30)
-        self.config = kwargs.get("config", [])
         self.file_count = 0
         self.extra_args = extra_args if extra_args is not None else ""
+        self.config = kwargs.get("config", {})
         self.host2 = self.verify_host(host2)
         self.host1 = self.verify_host(host1)
 
@@ -57,26 +57,32 @@ class ScriptGenerator:
                     return f"{hostname}{all_hosts[k]}"
         return hostname
 
-    def process(self, mode:str="file") -> Union[None, List]:
+    def process(self, mode: str = "file") -> Union[Exception, List]:
         self.logger.debug("Started with mode: %s", mode)
         if mode == "file":
             try:
+                lines = []
                 with open(self.creds, "r") as fh:
                     for line in self.process_input(fh):
-                        self.write_output(line)
+                        lines.append(line)
+                        if len(lines) >= self.line_count:
+                            self.write_output(lines)
+                            lines.clear()
+                    if len(lines) > 1:
+                        self.write_output(lines)
+                return lines
             except Exception as exc:
-                self.logger.critical("Failed")
-                raise exc
+                self.logger.critical("Failed to process file: %s", exc)
+                return exc
         elif mode == "api":
             # TODO: Strip out passwords before logging commands
             # self.logger.debug("Supplied data: %s", self.creds)
             scripts = [x for x in self.process_input(self.creds) if x is not None]
             return scripts
-        else:
-            raise ValueError("Unkown mode: %s", mode)
+        return ValueError("Unkown mode: %s", mode)
 
     # processes input -> yields str
-    def process_input(self, uinput:Iterable) -> str:
+    def process_input(self, uinput: Iterable) -> Generator:
         # FIXME: Splitting was broken in some commit
         new_line = None
         for line in uinput:
@@ -106,57 +112,56 @@ class ScriptGenerator:
             self.logger.debug(
                 f"Adding users: {user1}{mail1} -> {user2}{mail2} to sync queue"
             )
-            user1 = (
+            username1: str = (
                 f"{user1}{mail1}"
                 if mail1
                 else f"{user1}{self.domain}"
                 if self.domain
-                else None
+                else ""
             )
-            user2 = (
+            username2: str = (
                 f"{user2}{mail2}"
                 if mail2
                 else f"{user2}{self.domain}"
                 if self.domain
-                else None
+                else ""
             )
-            if user1 and user2:
+            if len(username1) > 5 and len(username2) > 5:
                 return self.FORMAT_STRING.format(
                     self.host1,
-                    user1,
+                    username1,
                     has_match.group("pword1"),
                     self.host2,
-                    user2,
+                    username2,
                     has_match.group("pword2"),
-                    f"{self.host1}_{self.host2}_{user1}-{user2}.log",
+                    f"{self.host1}_{self.host2}_{username1}-{username2}.log",
                 )
             else:
-                self.logger.error(
-                    "User missing domain or provider"
-                )
+                self.logger.error("User missing domain or provider")
         else:
             self.logger.error("Line did not match regex %s....", line[0:5])
             try:
-                new_line = line.replace("\t", " ")
+                new_line = re.sub("\t+", " ", line)
                 new_line = re.sub("\s+", " ", new_line)
-                new_line = new_line.split(" ")
-                user1 = new_line[0]
-                pword1 = new_line[1]
-                user2 = new_line[0]
-                pword2 = new_line[1]
-                if len(new_line) >= 4:
-                    user2 = new_line[2]
-                    pword2 = new_line[3]
-                self.logger.debug("Line %s Matched!!", line[0:5])
-                return self.FORMAT_STRING.format(
-                    self.host1,
-                    user1,
-                    pword1,
-                    self.host2,
-                    user2,
-                    pword2,
-                    f"{self.host1}_{self.host2}_{user1}-{user2}.log",
-                )
+                new_line_split: List[str] = new_line.split(" ")
+                if len(new_line_split) > 1:
+                    user1 = new_line_split[0]
+                    pword1 = new_line_split[1]
+                    user2 = new_line_split[0]
+                    pword2 = new_line_split[1]
+                    if len(new_line_split) >= 4:
+                        user2 = new_line_split[2]
+                        pword2 = new_line_split[3]
+                    self.logger.debug("Line %s Matched!!", line[0:5])
+                    return self.FORMAT_STRING.format(
+                        self.host1,
+                        user1,
+                        pword1,
+                        self.host2,
+                        user2,
+                        pword2,
+                        f"{self.host1}_{self.host2}_{user1}-{user2}.log",
+                    )
             except Exception as e:
                 self.logger.error("Line did not match split %s", line[0:5])
                 self.logger.error("Error: %s", e)
@@ -166,7 +171,8 @@ class ScriptGenerator:
     # Writes output to a file
     def write_output(self, lines: str) -> None:
         dest = f"{self.dest}_{self.file_count}.sh"
-        self.logger.debug("Writting %s lines to file %s", len(lines.split("\n")), dest)
+        self.logger.debug("Writting %s lines to file %s", len(lines), dest)
+        lines = [line+"\n" for line in lines]
         with open(dest, "w") as fh:
             fh.writelines(lines)
         self.file_count += 1
