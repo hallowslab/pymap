@@ -1,96 +1,64 @@
 import pytest
 from core.pymap_core import ScriptGenerator
 
-from tests import VALID_HOSTS, INVALID_HOSTS, RANDOM_VALID_CREDS
+from tests import RANDOM_VALID_CREDS_2, VALID_HOSTS, RANDOM_VALID_CREDS
 
 
 @pytest.mark.parametrize(
     "test_input",
     [
         # These should all return None
-        (" "),
-        ("\n\n\n\n\n\n"),
+        (""),
         ("n1x28ex31xe2"),
         ("random.email@gmail.com"),
-        ("n1x28ex31xe2 random.email@gmail.com"),
-        ("email@email.com \n n1x28ex31xe2"),
+        # Except this
+        ("This gets parsed by the second method, unfortunately returns bad content"),
     ],
 )
 def test_discards_invalid_inputs(test_input):
-    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], RANDOM_VALID_CREDS)
-    assert (x.process_line(test_input)) is None
+    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input)
+    if "This gets parsed" in test_input:
+        # As explained above the fallback logic tries to find the user and password
+        # Refer to core.
+        # +0
+        # .0213pymap_core.process_line
+        final_str = x.process_line(test_input)
+        assert "--user1 This" in final_str
+        assert "--password1 'gets'" in final_str
+    else:
+        assert x.process_line(test_input) is None
 
 
-@pytest.mark.parametrize(
-    "test_u1,test_p1, test_u2, test_p2",
-    [
-        ("test@mail.com", "Qwerty123", "test@mail.com", "Qwerty123",),
-        ("test.test@mail.com", "Qwerty123", "test.test@mail.com", "Qwerty123"),
-        ("test-test@mail.com", "Qwerty123", "test-test@mail.com", "Qwerty123"),
-        (
-            "test@email.com",
-            "Espaços Funcionam Mas NSei se Deviam",
-            "test@email.com",
-            "Espaços Funcionam Mas NSei se Deviam",
-        ),
-        ("test@email.com", "Abc123!#$%&/()=", "test@email.com", "Abc123!#$%&/()="),
-    ],
-)
-def test_returns_valid_inputs(test_u1, test_p1, test_u2, test_p2):
-    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], RANDOM_VALID_CREDS)
-    f_str = "imapsync --host1 {} --user1 {} --password1 '{}' --host2 {}  --user2 {} --password2 '{}' --log --logdir=....."
-    # discard everything after --log we do not worry about that here
-    out = x.process_line(" ".join([test_u1, test_p1, test_u2, test_p2])).split("--log")[
-        0
-    ]
-    # do the same for the output to match
-    assert (
-        f_str.format(
-            "cpanel01.dnscpanel.com",
-            test_u1,
-            test_p1,
-            "premium01.dnscpanel.com",
-            test_u2,
-            test_p2,
-        ).split("--log")[0]
-        == out
-    )
-
-
+# USER1 PASSWORD1 USER2 PASSWORD2""
 @pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS)
-def test_returns_parsed_line(test_input):
-    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], RANDOM_VALID_CREDS)
+def test_returns_parsed_line_2_users(test_input):
+    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input)
     user1, passwd1, user2, passwd2 = test_input.split(" ")
-    # final_str = x.FORMAT_STRING.format(VALID_HOSTS["cp"], user, passwd, VALID_HOSTS["cpp"], user, passwd)
     final_str = x.process_line(test_input)
-    assert user1 in final_str
-    assert passwd1 in final_str
-    assert user2 in final_str
-    assert passwd2 in final_str
+    assert f"--user1 {user1}" in final_str
+    assert f"--password1 '{passwd1}'" in final_str
+    assert f"user2 {user2}" in final_str
+    assert f"--password2 '{passwd2}'" in final_str
+    assert final_str.count(user1) == 2
+    assert final_str.count(user2) == 2
     assert VALID_HOSTS["cp"] in final_str
     assert VALID_HOSTS["cpp"] in final_str
 
 
-@pytest.mark.parametrize(
-    "test_input,output",
-    [
-        # Should return as found
-        ("", ""),
-        ("invalid_host", "invalid_host"),
-        ("127.0.0.1", "127.0.0.1"),
-        ("cpanel1", "cpanel1"),
-        # should return the appropriate hostname for the shortcut
-        ("cpanel01", "cpanel01.dnscpanel.com"),
-        ("premium04", "premium04.dnscpanel.com"),
-        ("iberweb7a", "iberweb7a.ibername.com"),
-        ("iberweb16", "iberweb16.ibername.com"),
-        ("plesk08", "plesk08.host-services.com"),
-        ("wp01", "wp01.host-services.com"),
-        ("wp01-cpanel", "wp01.dnscpanel.com"),
-        ("wp11cp", "wp11.dnscpanel.com"),
-        ("wp11-cp", "wp11.dnscpanel.com"),
-    ],
-)
-def test_returns_valid_hosts(test_input, output):
-    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], RANDOM_VALID_CREDS)
-    assert x.verify_host(test_input) == output
+# Same but for lines that match "USER PASSWORD"
+@pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS_2)
+def test_returns_parsed_line_1_user(test_input):
+    x = ScriptGenerator(VALID_HOSTS["cp"], VALID_HOSTS["cpp"], test_input)
+    user1, passwd1 = test_input.split(" ")
+    # final_str = x.FORMAT_STRING.format(VALID_HOSTS["cp"], user, passwd, VALID_HOSTS["cpp"], user, passwd)
+    final_str = x.process_line(test_input)
+    assert user1 in final_str
+    assert passwd1 in final_str
+    # Usernames appear in log file
+    assert final_str.count(user1) == 4
+    assert final_str.count(passwd1) == 2
+    assert VALID_HOSTS["cp"] in final_str
+    assert VALID_HOSTS["cpp"] in final_str
+
+
+# TODO: test functionality to use alias from config files
