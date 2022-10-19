@@ -11,7 +11,9 @@ import celery.signals
 
 # configure celery
 celery_app = Celery(__name__)
-celery_app.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379")
+celery_app.conf.broker_url = os.environ.get(
+    "CELERY_BROKER_URL", "redis://localhost:6379"
+)
 celery_app.conf.result_backend = os.environ.get(
     "CELERY_RESULT_BACKEND", "redis://localhost:6379"
 )
@@ -21,15 +23,17 @@ celery_app.conf.result_backend = os.environ.get(
 def on_celery_setup_logging(**kwargs):
     logger = logging.getLogger(__name__)
     if not logger.handlers:
-        handler = logging.FileHandler('celery_tasks.log')
-        formatter = logging.Formatter("%(asctime)s - %(name)s >>> %(levelname)s: %(message)s")
+        handler = logging.FileHandler("celery_tasks.log")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s >>> %(levelname)s: %(message)s"
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.propagate = False
 
 
 @celery_app.task(bind=True)
-def call_system(self, cmd_list: List[str]) -> bool:
+def call_system(self, cmd_list: List[str]) -> dict:
     # task_logger.debug("Command list %s", cmd_list)
     total_cmds = len(cmd_list)
     max_procs = 4
