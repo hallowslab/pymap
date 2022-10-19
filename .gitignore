@@ -37,9 +37,9 @@ imapsync
 *.db
 .vscode
 *.log
+*.deb
 tmux.sh
 dump.rdb
 sync_tests
-*.ini
 config.json
 config.dev.json
