@@ -7,7 +7,7 @@ LOGDIR = "/var/log/pymap"
 
 
 class ScriptGenerator:
-    DOMAIN_IDENTIFIER = re.compile(r"^([\w].[\w])*")
+    DOMAIN_IDENTIFIER = re.compile(r".*@(?P<domain>[\w].[\w]).*")
     USER_IDENTIFIER = re.compile(r"^[\w.]+(?P<mail_provider>@[\w.]+)*")
     PASS_IDENTIFIER = re.compile(r".*[\s|,|.]+(?P<pword>.+)$")
     # Finding a delimiter for the password can be difficult since passwords
@@ -26,16 +26,28 @@ class ScriptGenerator:
         self, host1: str, host2: str, creds, extra_args: str = "", **kwargs
     ) -> None:
         self.logger = logging.getLogger("server")
-        self.creds = creds
+        self.creds: List[str] = creds
         self.lines: List[str] = []
-        self.domain = kwargs.get("domain", "")
-        self.dest = kwargs.get("destination", "sync")
-        self.line_count = kwargs.get("split", 30)
-        self.file_count = 0
+        self.dest: str = kwargs.get("destination", "sync")
+        self.line_count: int = kwargs.get("split", 30)
+        self.file_count: int = 0
         self.extra_args = extra_args if extra_args is not None else ""
         self.config = kwargs.get("config", {})
         self.host2 = self.verify_host(host2)
         self.host1 = self.verify_host(host1)
+        self.domain = self.find_first_domain(kwargs.get("domain", ""))
+
+    # Extracts the first domain found in the credentials
+    def find_first_domain(self, domain: str = "") -> str:
+        if not domain or domain == "":
+            # str here is just to avoid mypy warnings about returning any
+            return str(
+                re.sub("\s+", " ", self.creds[0])
+                .split("__")[0]
+                .split("@")[1]
+                .split(" ")[0]
+            )
+        return domain
 
     # Verifies if the hostname is either a CPanel, Plesk or WEBLX instance
     # and returns the apropriate FQDN
@@ -108,9 +120,7 @@ class ScriptGenerator:
             user2 = has_match.group("user2")
             mail1 = has_match.group("mail_provider1")
             mail2 = has_match.group("mail_provider2")
-            self.logger.debug(
-                f"Adding users: {user1}{mail1} -> {user2}{mail2} to sync queue"
-            )
+            self.logger.debug(f"Adding task: {user1}{mail1} -> {user2}{mail2}")
             username1: str = (
                 f"{user1}{mail1}"
                 if mail1
@@ -133,12 +143,12 @@ class ScriptGenerator:
                     self.host2,
                     username2,
                     has_match.group("pword2"),
-                    f"{self.host1}_{self.host2}_{username1}-{username2}.log",
+                    f"{self.host1}__{self.host2}__{username1}--{username2}.log",
                 )
             else:
-                self.logger.error("User missing domain or provider")
+                self.logger.warning("User missing domain or provider")
         else:
-            self.logger.error("Line did not match regex %s....", line[0:5])
+            self.logger.warning("Line did not match regex %s....", line[0:5])
             try:
                 new_line = re.sub("\t+", " ", line)
                 new_line = re.sub("\s+", " ", new_line)
@@ -151,7 +161,7 @@ class ScriptGenerator:
                     if len(new_line_split) >= 4:
                         user2 = new_line_split[2]
                         pword2 = new_line_split[3]
-                    self.logger.debug("Line %s Matched!!", line[0:5])
+                    self.logger.info("Line %s Matched trough fallback", line[0:5])
                     return self.FORMAT_STRING.format(
                         self.host1,
                         user1,
@@ -159,7 +169,7 @@ class ScriptGenerator:
                         self.host2,
                         user2,
                         pword2,
-                        f"{self.host1}_{self.host2}_{user1}-{user2}.log",
+                        f"{self.host1}__{self.host2}__{user1}--{user2}.log",
                     )
             except Exception as e:
                 self.logger.error("Line did not match split %s", line[0:5])

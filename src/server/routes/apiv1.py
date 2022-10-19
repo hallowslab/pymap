@@ -12,7 +12,7 @@ from server.models import CeleryTask, User
 from server import db
 from core.pymap_core import ScriptGenerator
 
-apiv1_blueprint = Blueprint("api", __name__)
+apiv1_blueprint = Blueprint("apiV1", __name__)
 
 
 # TODO: Move this to flask config
@@ -39,15 +39,15 @@ def parse_creds():
         "Received the following output from generator:\n %s", content
     )"""
     task = call_system.delay(content)
-    ctask = CeleryTask(source, dest, f"/var/log/pymap/{task.id}", task.id)
-    db.session.add(ctask)
-    db.session.commit()
     if not isdir(f"/var/log/pymap/{task.id}"):
         mkdir(f"/var/log/pymap/{task.id}")
     current_app.logger.info("Starting background task with ID: %s", task.id)
     return (
         jsonify(
-            {"location": url_for("api.task_status", task_id=task.id), "taskID": task.id}
+            {
+                "location": url_for("apiV1.task_status", task_id=task.id),
+                "taskID": task.id,
+            }
         ),
         202,
     )
