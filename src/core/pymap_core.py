@@ -41,12 +41,15 @@ class ScriptGenerator:
     def find_first_domain(self, domain: str = "") -> str:
         if not domain or domain == "":
             # str here is just to avoid mypy warnings about returning any
-            return str(
-                re.sub("\s+", " ", self.creds[0])
-                .split("__")[0]
-                .split("@")[1]
-                .split(" ")[0]
-            )
+            try:
+                return str(
+                    re.sub("\s+", " ", self.creds[0])
+                    .split("__")[0]
+                    .split("@")[1]
+                    .split(" ")[0]
+                )
+            except IndexError:
+                return "NO_DOMAIN"
         return domain
 
     # Verifies if the hostname is either a CPanel, Plesk or WEBLX instance
