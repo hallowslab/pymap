@@ -1,3 +1,5 @@
+import secrets
+import os
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 from flask_cors import CORS
@@ -5,6 +7,8 @@ import json
 from flask.logging import default_handler
 from celery import Celery
 import sys
+
+from server.extensions import jwt
 
 db = SQLAlchemy()
 
@@ -33,6 +37,14 @@ def create_flask_app(script_info=None):
         CORS(apiv1_blueprint)
     else:
         app.config.from_file("config.json", load=json.load)
+    if app.config.get("JWT_SECRET_KEY", "") == "":
+        app.config["JWT_SECRET_KEY"] = secrets.SystemRandom()
+    # TODO: Move to config like above
+    app.config['JWT_BLACKLIST_ENABLED'] = True
+    app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
+
+    # Initialize jwt
+    jwt.init_app(app)
 
     # initialize DB after loading config
     db.init_app(app)
