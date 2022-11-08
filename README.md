@@ -22,6 +22,8 @@
 * `poetry install` in `pymap/src` for python dependencies
 * `npm ci` in `pymap/src/client` for React dependencies
 
+
+
 # Getting started
 
 ###See [requirements](#requirements) and [Dev requirements](#dev-requirements)
@@ -74,3 +76,7 @@
 - Celery on windows always pending ->
  * Issue on [github](https://github.com/celery/celery/issues/2146) / Thread on [SO](https://stackoverflow.com/a/27358974)
  * Command `celery -A server.tasks worker -E --loglevel debug --pool=solo`
+
+### Celery notes
+* Using eventlet and and redis
+* might replace redis by Rabbitmq

@@ -1,22 +1,15 @@
-import os
 import subprocess
 import time
 from typing import List
 
 import logging
-from celery import Celery
 from celery.utils.log import get_task_logger
 import celery.signals
 
+from server import create_celery_app
 
-# configure celery
-celery_app = Celery(__name__)
-celery_app.conf.broker_url = os.environ.get(
-    "CELERY_BROKER_URL", "redis://localhost:6379"
-)
-celery_app.conf.result_backend = os.environ.get(
-    "CELERY_RESULT_BACKEND", "redis://localhost:6379"
-)
+celery_app = create_celery_app()
+
 
 # TODO: This is not working, find a way to do proper logging....
 @celery.signals.setup_logging.connect
@@ -50,7 +43,6 @@ def call_system(self, cmd_list: List[str]) -> dict:
 
     def check_running(procs):
         for key in procs.keys():
-            print("POLLING: %s" % key)
             # Poll the process, if running returns None, else returns exit code
             proc = procs[key]
             status = proc.poll()
@@ -66,13 +58,14 @@ def call_system(self, cmd_list: List[str]) -> dict:
         return procs
 
     for index, cmd in enumerate(cmd_list):
-        print("Scheduling %s" % index)
+        print("Task %s Scheduling %s" % (call_system.request.id, index))
         n_cmd = subprocess.Popen(cmd, stdin=None, stdout=None, stderr=None, shell=True)
         running_procs[str(index)] = n_cmd
         while len(running_procs) >= max_procs:
-            print("%s Waiting on Queue" % call_system.request.id)
+            print("%s Waiting for Queue" % call_system.request.id)
             running_procs = check_running(running_procs)
             time.sleep(4)
+        # FIXME: Pending is not correct AFAIK
         self.update_state(
             state="PROGRESS",
             meta={
@@ -84,10 +77,8 @@ def call_system(self, cmd_list: List[str]) -> dict:
             },
         )
     while len(running_procs) > 0:
-        print("Waiting on last tasks")
         running_procs = check_running(running_procs)
         nrp = len(running_procs)
-        print("Running procs %s" % nrp)
         self.update_state(
             state="PROGRESS",
             meta={
