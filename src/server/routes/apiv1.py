@@ -1,4 +1,3 @@
-from typing import Union
 from os import listdir, mkdir
 from os.path import join, isdir, isfile
 import subprocess
@@ -52,6 +51,7 @@ def parse_creds():
 @apiv1_blueprint.route("/api/v1/task-status/<task_id>", methods=["GET"])
 def task_status(task_id):
     task = call_system.AsyncResult(task_id)
+    response = {"Querying status": True}
     # Common states
     C_STATES = ["PROGRESS", "SUCCESS"]
     if task and task.info:
@@ -86,7 +86,7 @@ def task_status(task_id):
                 response["result"] = task.info["result"]
         else:
             # something went wrong in the background job
-            response = {
+            return {
                 "state": task.state,
                 "processing": task.info.get("processing", 0),
                 "pending": task.info.get("pending", 0),
@@ -94,20 +94,15 @@ def task_status(task_id):
                 "return_codes": task.info.get("return_codes", []),
                 "status": str(task.info),  # this is the exception raised
             }
-        return jsonify(response), 200
+        return response
     else:
-        return (
-            jsonify(
-                {
-                    "state": "Unknown",
-                    "processing": 0,
-                    "pending": 0,
-                    "total": 0,
-                    "status": f"Failed to fetch task with ID: {task_id}",
-                }
-            ),
-            400,
-        )
+        return {
+                "state": "Unknown",
+                "processing": 0,
+                "pending": 0,
+                "total": 0,
+                "status": f"Failed to fetch task with ID: {task_id}",
+            }
 
 
 @apiv1_blueprint.route("/api/v1/tasks", methods=["GET"])
@@ -140,7 +135,7 @@ def get_logs_by_task_id(task_id):
             for f in listdir(logs_dir)
             if isfile(join(logs_dir, f))
         ]
-        return (jsonify({"logs": all_logs}), 200)
+        return (jsonify({"logs": all_logs, "status": task_status(task_id)}), 200)
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return (jsonify({"error": e.__class__.__name__, "message": e.__str__()}), 400)
@@ -156,7 +151,9 @@ def get_log_by_path(task_id, log_file):
         f_path = f"{LOG_DIRECTORY}/{task_id}/{log_file}"
         if not isfile(f_path):
             return (jsonify({"error": f"File {f_path} was not found"}), 404)
-        current_app.logger.debug("Tail timeout is: %s\nTail count is: %s", tail_timeout, tail_count)
+        current_app.logger.debug(
+            "Tail timeout is: %s\nTail count is: %s", tail_timeout, tail_count
+        )
         p1 = subprocess.Popen(
             f"tail -n {tail_count} {f_path}",
             stdout=subprocess.PIPE,
@@ -181,6 +178,7 @@ def get_log_by_path(task_id, log_file):
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return (jsonify({"error": e.__class__.__name__, "message": e.__str__()}), 400)
+
 
 @apiv1_blueprint.route("/api/v1/tasks/<task_id>/<log_file>/download", methods=["GET"])
 def download_log_by_path(task_id, log_file):

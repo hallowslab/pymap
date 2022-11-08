@@ -3,9 +3,13 @@
         "HOST1": ["REGEX_TO_MATCH", "STRING_TO_ADD"] -> if the regex matches, appends the string to the provided hostname
         "HOST2": ["REGEX_TO_MATCH", "IP_ADDR"] -> if the regex matches, maps the provided hostname to an address
     },
+    "CELERY": {
+        "broker_url": "redis://localhost:6379",
+        "result_backend": "redis://localhost:6379",
+        "task_track_started": true
+    },
     "SQLALCHEMY_DATABASE_URI": "sqlite:////pymap.db",
     "SQLALCHEMY_TRACK_MODIFICATIONS": false,
-    "TESTING": false,
     "DEBUG": false,
     "HEADLESS": false
 }

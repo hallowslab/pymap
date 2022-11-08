@@ -68,7 +68,7 @@ class ScriptGenerator:
                         if len(lines) >= self.line_count:
                             self.write_output(lines)
                             lines.clear()
-                    if len(lines) > 1:
+                    if len(lines) >= 1:
                         self.write_output(lines)
                 return lines
             except Exception as exc:
@@ -83,7 +83,6 @@ class ScriptGenerator:
 
     # processes input -> yields str
     def process_input(self, uinput: Iterable) -> Generator:
-        # FIXME: Splitting was broken in some commit
         new_line = None
         for line in uinput:
             if line and len(line) > 1:
@@ -169,10 +168,10 @@ class ScriptGenerator:
         return None
 
     # Writes output to a file
-    def write_output(self, lines: str) -> None:
+    def write_output(self, lines: List[str]) -> None:
         dest = f"{self.dest}_{self.file_count}.sh"
         self.logger.debug("Writting %s lines to file %s", len(lines), dest)
-        lines = [line+"\n" for line in lines]
+        lines = [line + "\n" for line in lines]
         with open(dest, "w") as fh:
             fh.writelines(lines)
         self.file_count += 1

@@ -1,3 +1,3 @@
-from server import create_app, db
+from server import create_flask_app, db
 
-db.create_all(app=create_app())
+db.create_all(app=create_flask_app())
