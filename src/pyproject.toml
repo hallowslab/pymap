@@ -13,7 +13,8 @@ Flask-SQLAlchemy = "^2.5.1"
 coverage = "^6.3.2"
 celery = {extras = ["eventlet"], version = "^5.2.7"}
 Flask-Cors = "^3.0.10"
-Flask-JWT-Extended = "^4.4.4"
+flask-praetorian = "^1.4.0"
+Flask-Migrate = "^4.0.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
@@ -23,7 +24,6 @@ mypy = "^0.910"
 autoflake = "^1.4"
 
 [tool.taskipy.tasks]
-format = "black . && autoflake --in-place -r --remove-unused-variables --exclude client . && mypy *.py"
 apiDev = "python manage.py --debug run -h 0.0.0.0 "
 clientDev = "cd client && npm start"
 apiProd = "gunicorn -w 4 -b 0.0.0.0:5000 'server:create_flask_app()'"
@@ -31,12 +31,13 @@ prod = "cd client && npm run build && cd .. && gunicorn -w 4 -b 0.0.0.0:5000 'se
 worker = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l INFO"
 workerDev = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l DEBUG"
 workerWin = "celery -A server.tasks worker -E --pool=solo -l DEBUG"
-buildDeps = "python scripts/build_client_dependencies_cache.py"
-genLogs = "python scripts/generate_random_logs.py"
+format = "black . && autoflake --in-place -r --remove-unused-variables --exclude client . && mypy *.py"
 testCore = "pytest tests/"
 testClient = "cd client && npm test"
-coverage = "coverage run -m pytest"
-report = "coverage report"
+coverage = "coverage run -m pytest && coverage report"
+addAdmin = "python manage.py create-user Admin"
+genLogs = "python scripts/generate_random_logs.py"
+buildDeps = "python scripts/build_client_dependencies_cache.py"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

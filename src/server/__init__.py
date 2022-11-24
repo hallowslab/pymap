@@ -1,18 +1,18 @@
 import secrets
-import os
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
-from flask_cors import CORS
-import json
-from flask.logging import default_handler
-from celery import Celery
 import sys
+import json
+from flask import Flask
+from flask.logging import default_handler
+from flask_cors import CORS
+from flask_praetorian import Praetorian
+from flask_migrate import Migrate
 
-from server.extensions import jwt
 
-db = SQLAlchemy()
+from celery import Celery
 
-argv = sys.argv[1:]
+from server.models import db, users
+
+guard = Praetorian()
 
 
 def create_flask_app(script_info=None):
@@ -39,17 +39,19 @@ def create_flask_app(script_info=None):
         app.config.from_file("config.json", load=json.load)
     if app.config.get("JWT_SECRET_KEY", "") == "":
         app.config["JWT_SECRET_KEY"] = secrets.SystemRandom()
-    # TODO: Move to config like above
-    app.config['JWT_BLACKLIST_ENABLED'] = True
-    app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
+    if app.config.get("SECRET_KEY", "") == "":
+        app.config["SECRET_KEY"] = secrets.SystemRandom()
 
-    # Initialize jwt
-    jwt.init_app(app)
-
-    # initialize DB after loading config
+    # Initialize DB after loading config
     db.init_app(app)
     with app.app_context():
         db.create_all()
+
+    # Initialize the flask-praetorian instance for the app
+    guard.init_app(app, user_class=users.User)
+
+    # Flask migrate
+    Migrate(app, db)
 
     # register blueprints
     if not app.config.get("HEADLESS", False):
@@ -60,6 +62,9 @@ def create_flask_app(script_info=None):
     # shell context for flask cli
     app.shell_context_processor({"app": app})
     return app
+
+
+argv = sys.argv[1:]
 
 
 def create_celery_app():
