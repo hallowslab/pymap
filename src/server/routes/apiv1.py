@@ -8,8 +8,6 @@ from flask import Blueprint, jsonify, request, url_for, current_app, send_file
 
 from server.tasks import call_system
 from server.utils import get_task_info, get_logs_status
-from server.models import CeleryTask, User
-from server import db
 from core.pymap_core import ScriptGenerator
 
 apiv1_blueprint = Blueprint("apiV1", __name__)
@@ -102,12 +100,12 @@ def task_status(task_id):
         return response
     else:
         return {
-                "state": "Unknown",
-                "processing": 0,
-                "pending": 0,
-                "total": 0,
-                "status": f"Failed to fetch task with ID: {task_id}",
-            }
+            "state": "Unknown",
+            "processing": 0,
+            "pending": 0,
+            "total": 0,
+            "status": f"Failed to fetch task with ID: {task_id}",
+        }
 
 
 @apiv1_blueprint.route("/api/v1/tasks", methods=["GET"])
