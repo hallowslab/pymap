@@ -8,30 +8,34 @@
 
 ## App
 * [Python](https://www.python.org/) >= 3.8.10
-* Web server -> [Gunicorn](https://gunicorn.org/)/[Tornado](https://www.tornadoweb.org/en/stable/)/[Apache](https://www.apache.org/)/[Nginx](https://www.nginx.com/) to serve the built React App
+* [Poetry](https://python-poetry.org/), make sure to use the new script at https://python-poetry.org/docs/master/#installing-with-the-official-installer
+* Web server -> [Gunicorn](https://gunicorn.org/)(Included by default)/[Tornado](https://www.tornadoweb.org/en/stable/)/[Apache](https://www.apache.org/)/[Nginx](https://www.nginx.com/) to serve the built React App
 * [Redis-server](https://redis.com/)
 * [Imapsync](https://github.com/imapsync/imapsync)
-
-### Other
-* Database SQLite/MySQL (WIP/Not Implemented)
-
-## Dev requirements
-
 * NodeJS - LTS
-* [Poetry](https://python-poetry.org/), make sure to use the new script at https://python-poetry.org/docs/master/#installing-with-the-official-installer
-* `poetry install` in `pymap/src` for python dependencies
-* `npm ci` in `pymap/src/client` for React dependencies
+* Database SQLite/MySQL (WIP)
 
+# Initial setup
+### See [requirements](#requirements)
+**NOTE: poetry commands should be run in `pymap/src` folder**
 
+- Install the python requirements
+  * `poetry install`
+- Rename the configuration files `pymap/src/server/config.json.template` (remove ".template"), and modify the configuration according to your setup
+- Create database (When you have no current database)
+  * `poetry run task initDB`
+  * `poetry run task createDB`
+- Add user with admin rights (Ignore this step if you have imported a database)
+  * `poetry run task addAdmin` Will create a user named admin with the the password "CHANGE_ME"
+- Instantiate database (If you are importing a database)
+  * `poetry run task updateDB`
+* Build the client
+ - Navigate to `pymap/src/client` and run `npm run build`
+ - This will build the app to `pymap/src/build`, serve this with either flask or one of the webservers mentioned above
 
 # Getting started
 
-###See [requirements](#requirements) and [Dev requirements](#dev-requirements)
-
-* Make sure the client is up to date
- - Navigate to `pymap/src/client` and run `npm run build`
- - This will build the app to `pymap/src/build`, either serve this with flask or one of the webservers mentioned above
-* Serve the client with any of the servers mentioned in [requiremnts - Web server](#requirements)
+* Serve the client with any of the servers mentioned in [requirements - Web server](#requirements)
 * if you decide to serve the client without flask you will still need to start the API (**You should also set the environment variable of FLASK_HEADLESS="True" or FLASK_HEADLESS=1, this will not register the routes to serve the build react app**)
 * Start the API
   - `poetry run task apiProd` -> This will start 4 gunicorn workers for the API
@@ -39,7 +43,7 @@
   - `poetry run task worker`
 
 
-# Dockers
+# Dockers (needs updating)
 
 ### Pymap
 
@@ -58,13 +62,8 @@
 
 #### TODO:
 * Make a logo
-* Implement start time, end time and status for each log/sync
-* Add search functionality - to search for a domain in all tasks
 * Add requeue functionality
 * Add Database login and admin functionality 
-* Add `RUN echo 'root:pymap' | chpasswd` ?
-
-
 
 #### Notes
 
