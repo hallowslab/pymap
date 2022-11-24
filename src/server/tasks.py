@@ -10,7 +10,6 @@ from server import create_celery_app
 
 celery_app = create_celery_app()
 
-
 # TODO: This is not working, find a way to do proper logging....
 @celery.signals.setup_logging.connect
 def on_celery_setup_logging(**kwargs):
