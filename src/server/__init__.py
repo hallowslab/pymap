@@ -6,8 +6,6 @@ from flask.logging import default_handler
 from flask_cors import CORS
 from flask_praetorian import Praetorian
 from flask_migrate import Migrate
-
-
 from celery import Celery
 
 from server.models import db, users
@@ -44,8 +42,6 @@ def create_flask_app(script_info=None):
 
     # Initialize DB after loading config
     db.init_app(app)
-    with app.app_context():
-        db.create_all()
 
     # Initialize the flask-praetorian instance for the app
     guard.init_app(app, user_class=users.User)

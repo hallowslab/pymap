@@ -17,6 +17,7 @@ apiv2_blueprint = Blueprint("apiV2", __name__)
 
 
 @apiv2_blueprint.route("/api/v2/sync", methods=["POST"])
+@auth_required
 def sync_v2():
     content = request.json
     # TODO: Strip out passwords before logging data
@@ -24,7 +25,7 @@ def sync_v2():
     source = content.get("source")
     dest = content.get("destination")
     creds = content.get("input")
-    extra_args = content.get("extra_args", None)
+    extra_args = content.get("extra_args", "")
     extra_args = None if extra_args.strip() == "" else extra_args
     current_app.logger.debug(
         f"Extra Arguments: {extra_args}, Extra arguments type: {type(extra_args)}"
@@ -83,11 +84,16 @@ def do_login():
         abort(401)
 
     user = User.query.filter_by(username=identifier).first()
+    print(f"USER: {user}")
     email = User.query.filter_by(email=identifier).first()
-    identifier = email.username if user is None else user
-    user = guard.authenticate(identifier, password)
-    ret = {"access_token": guard.encode_jwt_token(user)}
-    return (jsonify(ret), 200)
+    print(f"Email: {email}")
+    identifier = email if user is None else user
+    print(f"ID: {identifier}")
+    if identifier:
+        user = guard.authenticate(identifier.username, password)
+        ret = {"access_token": guard.encode_jwt_token(user)}
+        return (jsonify(ret), 200)
+    abort(401)
 
 
 @apiv2_blueprint.route("/api/v2/logout", methods=["POST"])
