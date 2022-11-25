@@ -16,6 +16,9 @@ Flask-Cors = "^3.0.10"
 flask-praetorian = "^1.4.0"
 Flask-Migrate = "^4.0.0"
 
+[tool.black]
+extend-exclude = "^/migrations"
+
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
 pytest = "^6.2.5"

@@ -1,3 +1,4 @@
+from datetime import timedelta
 import secrets
 import sys
 import json
@@ -7,10 +8,18 @@ from flask_cors import CORS
 from flask_praetorian import Praetorian
 from flask_migrate import Migrate
 from celery import Celery
+import redis
 
 from server.models import db, users
 
+ACCESS_EXPIRES = timedelta(minutes=10)
+
+
 guard = Praetorian()
+
+jwt_redis_blocklist = redis.StrictRedis(
+    host="localhost", port=6379, db=0, decode_responses=True
+)
 
 
 def create_flask_app(script_info=None):

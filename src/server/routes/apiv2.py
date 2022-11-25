@@ -1,11 +1,11 @@
 from os import mkdir
 from os.path import isdir
 from flask import Blueprint, jsonify, request, url_for, current_app, abort, redirect
-from flask_praetorian import auth_required
+from flask_praetorian import auth_required, roles_accepted
 
 # Core and Flask
 from core.pymap_core import ScriptGenerator
-from server import db, guard
+from server import db, guard, jwt_redis_blocklist, ACCESS_EXPIRES
 from server.tasks import call_system
 
 # Models
@@ -17,7 +17,7 @@ apiv2_blueprint = Blueprint("apiV2", __name__)
 
 
 @apiv2_blueprint.route("/api/v2/sync", methods=["POST"])
-@auth_required
+@roles_accepted("operator", "admin")
 def sync_v2():
     content = request.json
     # TODO: Strip out passwords before logging data
@@ -62,6 +62,7 @@ def sync_v2():
 
 
 @apiv2_blueprint.route("/api/v2/tasks", methods=["GET"])
+@roles_accepted("operator", "admin")
 def get_tasks_v2():
     # Get all tasks
     try:
@@ -74,56 +75,3 @@ def get_tasks_v2():
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
-
-
-@apiv2_blueprint.route("/api/v2/login", methods=["POST"])
-def do_login():
-    identifier = request.json.get("identifier", None)
-    password = request.json.get("password", None)
-    if identifier is None or password is None:
-        abort(401)
-
-    user = User.query.filter_by(username=identifier).first()
-    print(f"USER: {user}")
-    email = User.query.filter_by(email=identifier).first()
-    print(f"Email: {email}")
-    identifier = email if user is None else user
-    print(f"ID: {identifier}")
-    if identifier:
-        user = guard.authenticate(identifier.username, password)
-        ret = {"access_token": guard.encode_jwt_token(user)}
-        return (jsonify(ret), 200)
-    abort(401)
-
-
-@apiv2_blueprint.route("/api/v2/logout", methods=["POST"])
-def logout():
-    return redirect("/")
-
-
-@apiv2_blueprint.route("/api/v2/register", methods=["POST"])
-@auth_required
-def register_user():
-    content = request.json
-    username = content.get("username")
-    email = content.get("email")
-    password = content.get("password")
-
-    user_exists = User.query.filter_by(username=username).first() is not None
-    email_exists = User.query.filter_by(email=email).first() is not None
-
-    if user_exists or email_exists:
-        abort(409)
-
-    hashed_password = guard.hash_password(password)
-    new_user = User(username=username, email=email, password=hashed_password)
-    db.session.add(new_user)
-    db.session.commit()
-
-    return jsonify(
-        {
-            "id": new_user.id,
-            "username": new_user.username,
-            "email": new_user.email,
-        }
-    )
