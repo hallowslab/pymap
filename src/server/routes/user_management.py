@@ -1,14 +1,14 @@
-from flask import Blueprint, jsonify, request, url_for, current_app, abort, redirect
+from time import strftime
+from flask import Blueprint, abort, current_app, jsonify, request
 from flask_praetorian import auth_required, roles_accepted
 
 # Core and Flask
 from server import db, guard, jwt_redis_blocklist, ACCESS_EXPIRES
-from server.tasks import call_system
 
 # Models
 from server.models.users import User
 
-user_manager_blueprint = Blueprint("apiV2", __name__)
+user_manager_blueprint = Blueprint("user-management", __name__)
 
 
 @user_manager_blueprint.route("/api/v2/login", methods=["POST"])
@@ -22,6 +22,7 @@ def do_login():
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
     if identifier:
+        identifier.last_login = strftime("%d/%m/%Y %H:%M")
         user = guard.authenticate(identifier.username, password)
         ret = {"access_token": guard.encode_jwt_token(user)}
         return (jsonify(ret), 200)
@@ -49,7 +50,7 @@ def register_user():
     email_exists = User.query.filter_by(email=email).first() is not None
 
     if user_exists or email_exists or password is None:
-        abort(409)
+        return (jsonify(message="Invalid data, check your input"), 409)
 
     hashed_password = guard.hash_password(password)
     new_user = User(username=username, email=email, password=hashed_password)
@@ -66,6 +67,7 @@ def register_user():
 
 
 @user_manager_blueprint.route("/api/v2/account-status", methods=["GET"])
+@auth_required
 def check_if_token_is_revoked():
     token = guard.read_token_from_header()
     data = guard.extract_jwt_token(token)
@@ -73,8 +75,8 @@ def check_if_token_is_revoked():
     token_in_redis = jwt_redis_blocklist.get(data["jti"])
     current_app.logger.debug(f"TOKEN: {token_in_redis}")
     if token_in_redis is None:
-        return jsonify(f"token allowed ({token})")
-    return jsonify(f"token blacklisted ({token})")
+        return jsonify(message=f"token allowed ({token})")
+    return jsonify(message=f"token blacklisted ({token})")
 
 
 @user_manager_blueprint.route("/api/v2/change-account-status", methods=["POST"])
@@ -82,12 +84,26 @@ def check_if_token_is_revoked():
 def deactivate_account():
     identifier = request.json.get("identifier", None)
     if identifier is None:
-        abort(400)
+        return (
+            jsonify(message="Please provide a valid identifier (Username|Email)"),
+            400,
+        )
 
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
     if identifier:
         identifier.is_active = not identifier.is_active
-        return jsonify(message="User deactivated ({})".format(identifier.username))
-    abort(404)
+        db.session.commit()
+        return jsonify(
+            message=f"User {identifier.username} is active = ({identifier.is_active})"
+        )
+    return (jsonify(message=f"The user {identifier} does not seem to exist"), 404)
+
+
+@user_manager_blueprint.route("/api/v2/refresh-token", methods=["POST"])
+def refresh_token():
+    old_token = guard.read_token_from_header()
+    new_token = guard.refresh_jwt_token(old_token)
+    ret = {"access_token": new_token}
+    return jsonify(ret), 200
