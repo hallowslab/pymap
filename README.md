@@ -27,7 +27,7 @@
   * `poetry run task createDB`
 - Add user with admin rights (Ignore this step if you have imported a database)
   * `poetry run task addAdmin` Will create a user named admin with the the password "CHANGE_ME"
-- Instantiate database (If you are importing a database)
+- Instantiate database (If you are upgrading from an older version with database)
   * `poetry run task updateDB`
 * Build the client
  - Navigate to `pymap/src/client` and run `npm run build`

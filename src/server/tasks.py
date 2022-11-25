@@ -3,7 +3,6 @@ import time
 from typing import List
 
 import logging
-from celery.utils.log import get_task_logger
 import celery.signals
 
 from server import create_celery_app

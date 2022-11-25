@@ -1,15 +1,14 @@
 from os import mkdir
 from os.path import isdir
-from flask import Blueprint, jsonify, request, url_for, current_app, abort, redirect
-from flask_praetorian import auth_required, roles_accepted
+from flask import Blueprint, current_app, jsonify, request, url_for
+from flask_praetorian import roles_accepted
 
 # Core and Flask
 from core.pymap_core import ScriptGenerator
-from server import db, guard, jwt_redis_blocklist, ACCESS_EXPIRES
+from server import db
 from server.tasks import call_system
 
 # Models
-from server.models.users import User
 from server.models.tasks import CeleryTask
 
 
@@ -75,3 +74,21 @@ def get_tasks_v2():
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
+
+
+@apiv2_blueprint.route("/api/v2/delete-task", methods=["GET", "POST"])
+@roles_accepted("admin")
+def delete_task():
+    task_id = request.args.get("id", None)
+    if not task_id:
+        return (jsonify(message="You need to provide a task ID"), 400)
+    return ("Not implemented", 418)
+
+
+@apiv2_blueprint.route("/api/v2/archive-task", methods=["GET", "POST"])
+@roles_accepted("admin")
+def delete_task():
+    task_id = request.args.get("id", None)
+    if not task_id:
+        return (jsonify(message="You need to provide a task ID"), 400)
+    return ("Not implemented", 418)

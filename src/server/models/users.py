@@ -12,6 +12,7 @@ class User(BaseModel):
     password: str = db.Column(db.Text)
     roles: str = db.Column(db.Text)
     is_active: bool = db.Column(db.Boolean, default=True, server_default="true")
+    last_login: str = db.Column(db.String(20), nullable=True)
 
     @property
     def identity(self):
