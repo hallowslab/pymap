@@ -17,12 +17,18 @@ ACCESS_EXPIRES = timedelta(minutes=10)
 
 guard = Praetorian()
 
-jwt_redis_blocklist = redis.StrictRedis(
+redis_store = redis.StrictRedis(
     host="localhost", port=6379, db=0, decode_responses=True
 )
 
+def check_token_blacklisted(jti):
+    token_in_redis = redis_store.get(jti)
+    if token_in_redis is None:
+        return False
+    return True
 
-def create_flask_app(script_info=None):
+
+def create_flask_app(config={}, script_info=None):
 
     # instantiate the app
     app = Flask(
@@ -43,18 +49,20 @@ def create_flask_app(script_info=None):
     if "--debug" in argv:
         app.config.from_file("config.dev.json", load=json.load)
         CORS(apiv1_blueprint)
+    elif len(config) > 0:
+        app.config.from_mapping(config)
     else:
         app.config.from_file("config.json", load=json.load)
     if app.config.get("JWT_SECRET_KEY", "") == "":
-        app.config["JWT_SECRET_KEY"] = secrets.SystemRandom()
+        app.config["JWT_SECRET_KEY"] = str(secrets.SystemRandom())
     if app.config.get("SECRET_KEY", "") == "":
-        app.config["SECRET_KEY"] = secrets.SystemRandom()
+        app.config["SECRET_KEY"] = str(secrets.SystemRandom())
 
     # Initialize DB after loading config
     db.init_app(app)
 
     # Initialize the flask-praetorian instance for the app
-    guard.init_app(app, user_class=users.User)
+    guard.init_app(app, user_class=users.User, is_blacklisted=check_token_blacklisted)
 
     # Flask migrate
     Migrate(app, db)

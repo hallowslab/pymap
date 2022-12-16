@@ -87,7 +87,7 @@ def delete_task():
 
 @apiv2_blueprint.route("/api/v2/archive-task", methods=["GET", "POST"])
 @roles_accepted("admin")
-def delete_task():
+def archive_task():
     task_id = request.args.get("id", None)
     if not task_id:
         return (jsonify(message="You need to provide a task ID"), 400)

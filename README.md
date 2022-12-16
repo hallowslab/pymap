@@ -63,7 +63,8 @@
 #### TODO:
 * Make a logo
 * Add requeue functionality
-* Add Database login and admin functionality 
+* Add Database login and admin functionality
+* Add failsafe to pass --gmail or --office when it detects one of their hosts and the parameter missing
 
 #### Notes
 

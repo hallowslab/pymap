@@ -380,6 +380,17 @@ Flask = ">=0.10"
 SQLAlchemy = ">=0.8.0"
 
 [[package]]
+name = "flask-testing"
+version = "0.8.1"
+description = "Unit testing for Flask"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+Flask = "*"
+
+[[package]]
 name = "greenlet"
 version = "2.0.1"
 description = "Lightweight in-process concurrent programming"
@@ -858,6 +869,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "types-redis"
+version = "4.3.21.6"
+description = "Typing stubs for redis"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "typing-extensions"
 version = "4.4.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
@@ -918,7 +937,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "77f17a187306e5d2802d3d334baf46dc7c0db69ba570e6fc3d6c1a53ac012fbd"
+content-hash = "1ef13ff6c7782088ecad2b7539fd068d04af4e123c1a4f9230eb1a43eec22cdf"
 
 [metadata.files]
 alembic = []
@@ -948,6 +967,7 @@ flask-mail = []
 flask-migrate = []
 flask-praetorian = []
 flask-sqlalchemy = []
+flask-testing = []
 greenlet = []
 gunicorn = []
 importlib-metadata = []
@@ -986,6 +1006,7 @@ taskipy = []
 toml = []
 tomli = []
 typed-ast = []
+types-redis = []
 typing-extensions = []
 vine = []
 wcwidth = []
