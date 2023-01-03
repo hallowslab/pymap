@@ -1,3 +1,4 @@
+import sys
 import subprocess
 import time
 from typing import List
@@ -7,7 +8,7 @@ import celery.signals
 
 from server import create_celery_app
 
-celery_app = create_celery_app()
+celery_app = create_celery_app(str(sys.argv[1:]))
 
 # TODO: This is not working, find a way to do proper logging....
 @celery.signals.setup_logging.connect

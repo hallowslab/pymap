@@ -16,44 +16,45 @@ def do_login():
     identifier = request.json.get("identifier", None)
     password = request.json.get("password", None)
     if identifier is None or password is None:
-        abort(401)
+        return jsonify(message=f"Missing user: {identifier} or password: {password}"), 401
 
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
-    if identifier:
-        identifier.last_login = strftime("%d/%m/%Y %H:%M")
-        user = guard.authenticate(identifier.username, password)
-        ret = {"access_token": guard.encode_jwt_token(user)}
-        return (jsonify(ret), 200)
-    abort(401)
+    if identifier is None:
+        return jsonify(message=f"User not found"), 401
+        
+    identifier.last_login = strftime("%d/%m/%Y %H:%M")
+    db.session.commit()
+    user = guard.authenticate(identifier.username, password)
+    token = guard.encode_jwt_token(user)
+    # We can either set the token in the response cookie, or send it to client to store in the localstorage,
+    # Reference: https://developer.mozilla.org/en-US/docs/Web/API/document/cookie
+    #resp = make_response({"message": f"Logged in as {identifier}", "access_token": token})
+    #resp.set_cookie("access_token", value=)
+    return jsonify({"message": f"Logged in as {identifier}", "access_token": token}), 200
 
-
-@user_manager_blueprint.route("/api/v2/logout", methods=["GET"])
-@auth_required
-def do_logout():
-    token = guard.read_token_from_header()
-    data = guard.extract_jwt_token(token)
-    redis_store.set(data["jti"], "", ex=ACCESS_EXPIRES)
-    return jsonify(message="token blacklisted ({})".format(token))
 
 
 @user_manager_blueprint.route("/api/v2/register", methods=["POST"])
 @roles_accepted("admin")
 def register_user():
     content = request.json
-    username = content.get("username", None)
+    identifier = content.get("identifier", None)
     email = content.get("email", None)
     password = content.get("password", None)
 
-    user_exists = User.query.filter_by(username=username).first() is not None
+    if (identifier and email is None) or password is None:
+        return (jsonify(message=f"Missing user: {identifier} or password: {password}"), 400)
+
+    user_exists = User.query.filter_by(username=identifier).first() is not None
     email_exists = User.query.filter_by(email=email).first() is not None
 
-    if user_exists or email_exists or password is None:
+    if user_exists or email_exists:
         return (jsonify(message="Invalid data, check your input"), 400)
 
     hashed_password = guard.hash_password(password)
-    new_user = User(username=username, email=email, password=hashed_password)
+    new_user = User(username=identifier, email=email, password=hashed_password)
     db.session.add(new_user)
     db.session.commit()
 
@@ -79,11 +80,13 @@ def check_account_status():
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
-    if identifier:
-        return jsonify(
-            message=f"User {identifier.username} is active = {identifier.is_active}"
-        )
-    return (jsonify(message=f"The user {identifier} does not seem to exist"), 404)
+    if identifier is None:
+        return (jsonify(message=f"The user {identifier} does not seem to exist"), 404)
+    
+    status = "Active" if identifier.is_active else "Deactivated"
+    return jsonify(
+        message=f"User {identifier.username} is {status}"
+    )
 
 
 @user_manager_blueprint.route("/api/v2/change-account-status", methods=["POST"])
@@ -99,13 +102,14 @@ def deactivate_account():
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
-    if identifier:
-        identifier.is_active = not identifier.is_active
-        db.session.commit()
-        return jsonify(
-            message=f"User {identifier.username} Status = ({identifier.is_active})"
-        )
-    return (jsonify(message=f"The user {identifier} does not seem to exist"), 404)
+    if identifier is None:
+        return (jsonify(message=f"The user {identifier} does not seem to exist"), 404)
+    
+    identifier.is_active = not identifier.is_active
+    db.session.commit()
+    return jsonify(
+        message=f"User {identifier.username} Status = ({identifier.is_active})"
+    )
 
 
 @user_manager_blueprint.route("/api/v2/refresh-token", methods=["POST"])
@@ -127,3 +131,11 @@ def check_if_token_is_revoked():
     if token_in_redis is None:
         return jsonify(message=f"token allowed ({token})")
     return jsonify(message=f"token blacklisted ({token})")
+
+@user_manager_blueprint.route("/api/v2/blacklist-token", methods=["GET"])
+@auth_required
+def do_logout():
+    token = guard.read_token_from_header()
+    data = guard.extract_jwt_token(token)
+    redis_store.set(data["jti"], "", ex=ACCESS_EXPIRES)
+    return jsonify(message="token blacklisted ({})".format(token))

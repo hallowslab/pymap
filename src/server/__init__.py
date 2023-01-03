@@ -13,6 +13,7 @@ import redis
 from server.models import db, users
 
 ACCESS_EXPIRES = timedelta(minutes=10)
+argv = sys.argv[1:]
 
 
 guard = Praetorian()
@@ -30,6 +31,7 @@ def check_token_blacklisted(jti):
 
 def create_flask_app(config={}, script_info=None):
 
+    _debug = True if "--debug" in argv else False
     # instantiate the app
     app = Flask(
         __name__,
@@ -46,7 +48,7 @@ def create_flask_app(config={}, script_info=None):
     app.logger.addHandler(default_handler)
 
     # set config
-    if "--debug" in argv:
+    if _debug:
         app.config.from_file("config.dev.json", load=json.load)
         CORS(apiv1_blueprint)
     elif len(config) > 0:
@@ -78,22 +80,25 @@ def create_flask_app(config={}, script_info=None):
     app.shell_context_processor({"app": app})
     return app
 
-
-argv = sys.argv[1:]
-
-
-def create_celery_app():
-    # configure celery
+def create_celery_app(options:str=""):
+    # Initialize celery
+    options = options.split(" ")
     celery_app = Celery(__name__)
-    params = ["broker_url", "result_backend"]
+    
+    # Load the config
     config = {}
-    if "DEBUG" in argv:
+    if ("--debug" in options or "DEBUG" in options):
         with open("server/config.dev.json") as fh:
             config = json.load(fh)
-    with open("server/config.json") as fh:
-        config = json.load(fh)
+    else:
+        with open("server/config.json") as fh:
+            config = json.load(fh)
+
+    # Select the celery section
     config = config["CELERY"]
-    for item in params:
-        if item in config.keys():
-            celery_app.conf[item] = config.get(item)
+
+    # loop trough the items and set the values manually
+    for item in config:
+        celery_app.conf[item] = config.get(item)
+
     return celery_app
