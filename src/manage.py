@@ -19,16 +19,17 @@ def create_db():
 
 @app.cli.command("create-admin")
 @click.argument("user")
-def create_admin(user):
+@click.argument("pword")
+def create_admin(user, pword):
     new_user = users.User(
         username=user,
-        email="pymap@localhost",
-        password=guard.hash_password("CHANGE_ME"),
+        email=f"{user}@pymap-localhost",
+        password=guard.hash_password(pword),
         roles="admin",
     )
     db.session.add(new_user)
     db.session.commit()
-    ctx_str = f"\nCreated User:\nUser: {user}\nEmail: {'pymap@localhost'}\nPassword: {'CHANGE_ME'}\nRoles: {'admin'}\n======="
+    ctx_str = f"\nCreated User:\nUser: {user}\nEmail: {user}@pymap-localhost\nPassword: {pword}\nRoles: {'admin'}\n======="
     print(ctx_str)
 
 

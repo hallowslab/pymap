@@ -35,7 +35,7 @@ worker = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l 
 workerDev = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l DEBUG"
 workerWin = "celery -A server.tasks worker -E --pool=solo -l DEBUG"
 apiDev = "flask --app manage --debug run -h 0.0.0.0 "
-devDB = "flask --app manage --debug create-db && flask --app manage --debug create-admin admin"
+devDB = "flask --app manage --debug create-db && flask --app manage --debug create-admin admin CHANGE_ME"
 prodDB = "flask --app manage db init"
 updateDB = "flask --app manage db upgrade"
 createDB = "flask --app manage create-db"
