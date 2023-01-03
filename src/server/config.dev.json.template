@@ -11,7 +11,7 @@
     "SECRET_KEY": "",
     "JWT_SECRET_KEY": "",
     "JWT_ACCESS_LIFESPAN": {"minutes": 10},
-    "JWT_REFRESH_LIFESPAN": {"hours": 1}
+    "JWT_REFRESH_LIFESPAN": {"hours": 1},
     "SQLALCHEMY_DATABASE_URI": "sqlite:///tmp/pymap.db",
     "SQLALCHEMY_TRACK_MODIFICATIONS": false,
     "TESTING": true,
