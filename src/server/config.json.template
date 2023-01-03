@@ -8,8 +8,13 @@
         "result_backend": "redis://localhost:6379",
         "task_track_started": true
     },
-    "SQLALCHEMY_DATABASE_URI": "sqlite:////pymap.db",
+    "SECRET_KEY": "",
+    "JWT_SECRET_KEY": "",
+    "JWT_ACCESS_LIFESPAN": {"hours": 24},
+    "JWT_REFRESH_LIFESPAN": {"days": 1}
+    "SQLALCHEMY_DATABASE_URI": "sqlite:///pymap.db",
     "SQLALCHEMY_TRACK_MODIFICATIONS": false,
+    "TESTING": false,
     "DEBUG": false,
     "HEADLESS": false
 }

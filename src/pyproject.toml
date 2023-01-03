@@ -10,9 +10,13 @@ Flask = ">=2.0.1"
 redis = "^4.1.4"
 gunicorn = "^20.1.0"
 Flask-SQLAlchemy = "^2.5.1"
-coverage = "^6.3.2"
 celery = {extras = ["eventlet"], version = "^5.2.7"}
 Flask-Cors = "^3.0.10"
+flask-praetorian = "^1.4.0"
+Flask-Migrate = "^4.0.0"
+
+[tool.black]
+extend-exclude = "^/migrations"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
@@ -20,22 +24,29 @@ pytest = "^6.2.5"
 taskipy = "^1.8.0"
 mypy = "^0.910"
 autoflake = "^1.4"
+coverage = "^6.3.2"
+Flask-Testing = "^0.8.1"
+types-redis = "^4.3.21"
 
 [tool.taskipy.tasks]
-format = "black . && autoflake --in-place -r --remove-unused-variables --exclude client . && mypy *.py"
-apiDev = "python manage.py --debug run -h 0.0.0.0 "
 clientDev = "cd client && npm start"
-apiProd = "gunicorn -w 4 -b 0.0.0.0:5000 'server:create_flask_app()'"
 prod = "cd client && npm run build && cd .. && gunicorn -w 4 -b 0.0.0.0:5000 'server:create_flask_app()'"
 worker = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l INFO"
 workerDev = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l DEBUG"
 workerWin = "celery -A server.tasks worker -E --pool=solo -l DEBUG"
-buildDeps = "python scripts/build_client_dependencies_cache.py"
-genLogs = "python scripts/generate_random_logs.py"
-testCore = "pytest tests/"
+apiDev = "flask --app manage --debug run -h 0.0.0.0 "
+devDB = "flask --app manage --debug create-db && flask --app manage --debug create-admin admin CHANGE_ME"
+prodDB = "flask --app manage db init"
+updateDB = "flask --app manage db upgrade"
+createDB = "flask --app manage create-db"
+addAdmin = "flask --app manage create-admin admin"
+format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports --exclude client,migrations . && mypy core server"
+testCore = "pytest tests/core"
+testServer = "pytest tests/server"
 testClient = "cd client && npm test"
-coverage = "coverage run -m pytest"
-report = "coverage report"
+coverage = "coverage run -m pytest && coverage report"
+genLogs = "python scripts/generate_random_logs.py"
+buildDeps = "python scripts/build_client_dependencies_cache.py"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

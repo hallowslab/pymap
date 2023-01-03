@@ -10,7 +10,7 @@ from server.tasks import call_system
 from server.utils import get_task_info, get_logs_status
 from core.pymap_core import ScriptGenerator
 
-apiv1_blueprint = Blueprint("api", __name__)
+apiv1_blueprint = Blueprint("apiV1", __name__)
 
 
 # TODO: Move this to flask config
@@ -42,7 +42,10 @@ def parse_creds():
     current_app.logger.info("Starting background task with ID: %s", task.id)
     return (
         jsonify(
-            {"location": url_for("api.task_status", task_id=task.id), "taskID": task.id}
+            {
+                "location": url_for("apiV1.task_status", task_id=task.id),
+                "taskID": task.id,
+            }
         ),
         202,
     )
@@ -97,12 +100,12 @@ def task_status(task_id):
         return response
     else:
         return {
-                "state": "Unknown",
-                "processing": 0,
-                "pending": 0,
-                "total": 0,
-                "status": f"Failed to fetch task with ID: {task_id}",
-            }
+            "state": "Unknown",
+            "processing": 0,
+            "pending": 0,
+            "total": 0,
+            "status": f"Failed to fetch task with ID: {task_id}",
+        }
 
 
 @apiv1_blueprint.route("/api/v1/tasks", methods=["GET"])
