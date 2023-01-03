@@ -63,8 +63,11 @@
 #### TODO:
 * Make a logo
 * Add requeue functionality
-* Add Database login and admin functionality
+* Add Database login and admin functionality (WIP)
 * Add failsafe to pass --gmail or --office when it detects one of their hosts and the parameter missing
+* There is a bug where sometimes the additional arguments on the client side do not get passed correctly to the API,
+  probably something to do with React state, TODO: Ensure the arguments get loaded as soon as the APP is, or save the arguments
+  in the database as a user property string 
 
 #### Notes
 
