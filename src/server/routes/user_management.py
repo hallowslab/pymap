@@ -1,5 +1,7 @@
 from time import strftime
-from flask import Blueprint, abort, current_app, jsonify, request
+from secrets import token_hex
+from hashlib import sha256
+from flask import Blueprint, current_app, jsonify, request
 from flask_praetorian import auth_required, roles_accepted
 
 # Core and Flask
@@ -31,8 +33,8 @@ def do_login():
     # We can either set the token in the response cookie, or send it to client to store in the localstorage,
     # Reference: https://developer.mozilla.org/en-US/docs/Web/API/document/cookie
     #resp = make_response({"message": f"Logged in as {identifier}", "access_token": token})
-    #resp.set_cookie("access_token", value=)
-    return jsonify({"message": f"Logged in as {identifier}", "access_token": token}), 200
+    #resp.set_cookie("access_token", value=token)
+    return jsonify({"message": f"Logged in as {identifier.username}", "access_token": token}), 200
 
 
 
@@ -44,7 +46,7 @@ def register_user():
     email = content.get("email", None)
     password = content.get("password", None)
 
-    if (identifier and email is None) or password is None:
+    if (identifier is None and email is None) or password is None:
         return (jsonify(message=f"Missing user: {identifier} or password: {password}"), 400)
 
     user_exists = User.query.filter_by(username=identifier).first() is not None
@@ -62,7 +64,7 @@ def register_user():
         {
             "id": new_user.id,
             "username": new_user.username,
-            "email": new_user.email,
+            "email": new_user.email
         }
     )
 

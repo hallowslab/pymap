@@ -2,7 +2,8 @@ import click
 from flask.cli import FlaskGroup, with_appcontext
 
 from server import create_flask_app, guard
-from server.models import users, db
+from server.extensions import db
+from server.models import users
 
 
 app = create_flask_app()

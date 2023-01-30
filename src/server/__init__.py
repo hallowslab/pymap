@@ -10,7 +10,8 @@ from flask_migrate import Migrate
 from celery import Celery
 import redis
 
-from server.models import db, users
+from server.extensions import db
+from server.models import users
 
 ACCESS_EXPIRES = timedelta(minutes=10)
 argv = sys.argv[1:]
@@ -56,9 +57,9 @@ def create_flask_app(config={}, script_info=None):
     else:
         app.config.from_file("config.json", load=json.load)
     if app.config.get("JWT_SECRET_KEY", "") == "":
-        app.config["JWT_SECRET_KEY"] = str(secrets.SystemRandom())
+        app.config["JWT_SECRET_KEY"] = str(secrets.token_hex(21))
     if app.config.get("SECRET_KEY", "") == "":
-        app.config["SECRET_KEY"] = str(secrets.SystemRandom())
+        app.config["SECRET_KEY"] = str(secrets.token_hex(21))
 
     # Initialize DB after loading config
     db.init_app(app)

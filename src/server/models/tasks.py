@@ -1,6 +1,6 @@
 from flask_sqlalchemy.model import DefaultMeta
 
-from server.models import db
+from server.extensions import db
 
 BaseModel: DefaultMeta = db.Model
 
@@ -14,6 +14,8 @@ class CeleryTask(BaseModel):
     task_id: str = db.Column(db.String)
     n_accounts: int = db.Column(db.Integer)
     domain: str = db.Column(db.String(100), nullable=True)
+    
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     def serialize(self):
         return {

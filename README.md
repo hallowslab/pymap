@@ -68,6 +68,7 @@
 * There is a bug where sometimes the additional arguments on the client side do not get passed correctly to the API,
   probably something to do with React state, TODO: Ensure the arguments get loaded as soon as the APP is, or save the arguments
   in the database as a user property string 
+* If running the CLI remove the pipe to /dev/null
 
 #### Notes
 

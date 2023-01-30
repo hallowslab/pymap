@@ -5,12 +5,12 @@ from flask_praetorian import roles_accepted
 
 # Core and Flask
 from core.pymap_core import ScriptGenerator
-from server import db
+from server import db, guard
 from server.tasks import call_system
 
 # Models
 from server.models.tasks import CeleryTask
-
+from server.models.users import User
 
 apiv2_blueprint = Blueprint("apiV2", __name__)
 
@@ -18,6 +18,8 @@ apiv2_blueprint = Blueprint("apiV2", __name__)
 @apiv2_blueprint.route("/api/v2/sync", methods=["POST"])
 @roles_accepted("operator", "admin")
 def sync_v2():
+    id = guard.extract_jwt_token(guard.read_token_from_header()).get("id")
+    user = User.query.filter_by(id=id).first_or_404()
     content = request.json
     # TODO: Strip out passwords before logging data
     # current_app.logger.debug("Parsing the following json data:\n %s", content)
@@ -64,6 +66,8 @@ def sync_v2():
 @roles_accepted("operator", "admin")
 def get_tasks_v2():
     # Get all tasks
+    token = guard.read_token_from_header()
+    print(guard.extract_jwt_token(token).get("id"))
     try:
         query = [t.__dict__ for t in db.session.query(CeleryTask).all()]
         all_tasks = []
