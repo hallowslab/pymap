@@ -1,9 +1,9 @@
 from os import mkdir
 from os.path import isdir
 from flask import Blueprint, current_app, jsonify, request, url_for
-from flask_praetorian import roles_accepted
+from flask_praetorian import roles_accepted, auth_required
 
-# Core and Flask
+# Core and Flask app
 from core.pymap_core import ScriptGenerator
 from server import db, guard
 from server.tasks import call_system
@@ -45,6 +45,8 @@ def sync_v2():
         task_id=task.id,
         n_accounts=len(content),
         domain=gen.domain,
+        owner_id=id,
+        owner_username=user.username
     )
     db.session.add(ctask)
     db.session.commit()
@@ -61,38 +63,34 @@ def sync_v2():
         202,
     )
 
-
 @apiv2_blueprint.route("/api/v2/tasks", methods=["GET"])
-@roles_accepted("operator", "admin")
+@auth_required
 def get_tasks_v2():
+    id = guard.extract_jwt_token(guard.read_token_from_header()).get("id")
     # Get all tasks
-    token = guard.read_token_from_header()
-    print(guard.extract_jwt_token(token).get("id"))
     try:
-        query = [t.__dict__ for t in db.session.query(CeleryTask).all()]
+        query = CeleryTask.query.filter_by(owner_id=id).all()
+        print(type(query))
         all_tasks = []
         for t in query:
-            all_tasks.append({k: v for k, v in t.items() if k != "_sa_instance_state"})
-        # TODO: Handle errors, or just return the array with tasks: or error:
+            all_tasks.append({
+                "id": t.id,
+                "source": t.source,
+                "destination": t.destination,
+                "domain": t.domain,
+                "n_accounts": t.n_accounts,
+                "owner_id": t.owner_id
+                })
         return (jsonify({"tasks": all_tasks}), 200)
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
 
 
-@apiv2_blueprint.route("/api/v2/delete-task", methods=["GET", "POST"])
-@roles_accepted("admin")
-def delete_task():
-    task_id = request.args.get("id", None)
-    if not task_id:
-        return (jsonify(message="You need to provide a task ID"), 400)
-    return ("Not implemented", 418)
-
-
-@apiv2_blueprint.route("/api/v2/archive-task", methods=["GET", "POST"])
-@roles_accepted("admin")
-def archive_task():
-    task_id = request.args.get("id", None)
-    if not task_id:
-        return (jsonify(message="You need to provide a task ID"), 400)
-    return ("Not implemented", 418)
+@apiv2_blueprint.route("/api/v2/heartbeat", methods=["GET"])
+@auth_required
+def heartbeat():
+    id = guard.extract_jwt_token(guard.read_token_from_header()).get("id")
+    user = User.query.filter_by(id=id).first_or_404()
+    # Get all tasks
+    return (jsonify({"message": user.username}), 200)

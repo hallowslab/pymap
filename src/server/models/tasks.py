@@ -16,6 +16,7 @@ class CeleryTask(BaseModel):
     domain: str = db.Column(db.String(100), nullable=True)
     
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    owner_username = db.Column(db.String, db.ForeignKey("user.username"))
 
     def serialize(self):
         return {
