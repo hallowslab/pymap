@@ -2,7 +2,7 @@ from flask import current_app, jsonify, request
 from flask_praetorian import roles_accepted
 
 # Core and Flask app
-from server import db, guard
+from server.extensions import db, guard
 
 # Models
 from server.models.tasks import CeleryTask

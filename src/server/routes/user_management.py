@@ -5,7 +5,8 @@ from flask import Blueprint, current_app, jsonify, request
 from flask_praetorian import auth_required, roles_accepted
 
 # Core and Flask
-from server import db, guard, redis_store, ACCESS_EXPIRES
+from server import redis_store, ACCESS_EXPIRES
+from server.extensions import db, guard
 
 # Models
 from server.models.users import User

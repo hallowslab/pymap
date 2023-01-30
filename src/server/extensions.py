@@ -1,5 +1,6 @@
 from sqlalchemy import MetaData
 from flask_sqlalchemy import SQLAlchemy
+from flask_praetorian import Praetorian
 
 metadata = MetaData(
     naming_convention={
@@ -12,3 +13,5 @@ metadata = MetaData(
 )
 
 db = SQLAlchemy(metadata=metadata)
+
+guard = Praetorian()

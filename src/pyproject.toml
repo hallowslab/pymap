@@ -41,11 +41,12 @@ initDB = "flask --app manage db init"
 createDB = "flask --app manage create-db"
 addAdmin = "flask --app manage create-admin admin CHANGE_ME"
 # Upgrading
-updateDB = "flask --app manage db upgrade && flask --app manage --debug db upgrade"
+upgradeDB = "flask --app manage db upgrade && flask --app manage --debug db upgrade"
 # Dev
+# migrate needs to be run before update in a dev environment
+migrateDB = "flask --app manage db migrate"
 createDevDB = "flask --app manage --debug create-db"
 addDevAdmin = "flask --app manage --debug create-admin admin CHANGE_ME"
-migrateDB = "flask --app manage db migrate"
 ### Misc
 genLogs = "python scripts/generate_random_logs.py"
 buildDeps = "python scripts/build_client_dependencies_cache.py"

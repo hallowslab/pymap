@@ -5,7 +5,7 @@ from flask_praetorian import roles_accepted, auth_required
 
 # Core and Flask app
 from core.pymap_core import ScriptGenerator
-from server import db, guard
+from server.extensions import db, guard
 from server.tasks import call_system
 
 # Models

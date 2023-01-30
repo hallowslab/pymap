@@ -5,19 +5,15 @@ import json
 from flask import Flask
 from flask.logging import default_handler
 from flask_cors import CORS
-from flask_praetorian import Praetorian
 from flask_migrate import Migrate
 from celery import Celery
 import redis
-
-from server.extensions import db
-from server.models import users
+from server.extensions import db, guard
+from server.models.users import User
 
 ACCESS_EXPIRES = timedelta(minutes=10)
 argv = sys.argv[1:]
 
-
-guard = Praetorian()
 
 redis_store = redis.StrictRedis(
     host="localhost", port=6379, db=0, decode_responses=True
@@ -64,11 +60,15 @@ def create_flask_app(config={}, script_info=None):
     # Initialize DB after loading config
     db.init_app(app)
 
-    # Initialize the flask-praetorian instance for the app
-    guard.init_app(app, user_class=users.User, is_blacklisted=check_token_blacklisted)
-
     # Flask migrate
     Migrate(app, db)
+
+    # Initialize the flask-praetorian instance for the app
+    # TODO: Find out why using flask migrate without this "with app.app_context():" raises the 
+    # Working outside of application context error only for praetorian
+    # https://flask.palletsprojects.com/en/2.2.x/appcontext/#:~:text=RuntimeError%3A%20Working%20outside%20of%20application,app_context().
+    with app.app_context():
+        guard.init_app(app, user_class=User, is_blacklisted=check_token_blacklisted)
 
     # register blueprints
     if not app.config.get("HEADLESS", False):
