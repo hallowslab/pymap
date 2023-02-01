@@ -7,17 +7,12 @@ from flask.logging import default_handler
 from flask_cors import CORS
 from flask_migrate import Migrate
 from celery import Celery
-import redis
-from server.extensions import db, guard
+from server.extensions import db, guard, redis_store
 from server.models.users import User
 
 ACCESS_EXPIRES = timedelta(minutes=10)
 argv = sys.argv[1:]
 
-
-redis_store = redis.StrictRedis(
-    host="localhost", port=6379, db=0, decode_responses=True
-)
 
 def check_token_blacklisted(jti):
     token_in_redis = redis_store.get(jti)
@@ -64,7 +59,7 @@ def create_flask_app(config={}, script_info=None):
     Migrate(app, db)
 
     # Initialize the flask-praetorian instance for the app
-    # TODO: Find out why using flask migrate without this "with app.app_context():" raises the 
+    # TODO: Find out why using flask migrate without this "with app.app_context():" raises the
     # Working outside of application context error only for praetorian
     # https://flask.palletsprojects.com/en/2.2.x/appcontext/#:~:text=RuntimeError%3A%20Working%20outside%20of%20application,app_context().
     with app.app_context():
@@ -81,14 +76,15 @@ def create_flask_app(config={}, script_info=None):
     app.shell_context_processor({"app": app})
     return app
 
-def create_celery_app(options:str=""):
+
+def create_celery_app(options: str = ""):
     # Initialize celery
     options = options.split(" ")
     celery_app = Celery(__name__)
-    
+
     # Load the config
     config = {}
-    if ("--debug" in options or "DEBUG" in options):
+    if "--debug" in options or "DEBUG" in options:
         with open("server/config.dev.json") as fh:
             config = json.load(fh)
     else:
