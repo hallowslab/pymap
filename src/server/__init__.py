@@ -10,8 +10,10 @@ from celery import Celery
 from server.extensions import db, guard, redis_store
 from server.models.users import User
 
-ACCESS_EXPIRES = timedelta(minutes=10)
 argv = sys.argv[1:]
+
+# TODO: move to flask config
+ACCESS_EXPIRES = timedelta(minutes=10)
 
 
 def check_token_blacklisted(jti):
@@ -33,8 +35,8 @@ def create_flask_app(config={}, script_info=None):
 
     # import blueprints
     from server.routes.views import main_blueprint
-    from server.routes.apiv1 import apiv1_blueprint
     from server.routes.apiv2 import apiv2_blueprint
+    from server.routes.tasks import tasks_blueprint
     from server.routes.user_management import user_manager_blueprint
 
     app.logger.addHandler(default_handler)
@@ -42,7 +44,9 @@ def create_flask_app(config={}, script_info=None):
     # set config
     if _debug:
         app.config.from_file("config.dev.json", load=json.load)
-        CORS(apiv1_blueprint)
+        CORS(apiv2_blueprint)
+        CORS(tasks_blueprint)
+        CORS(user_manager_blueprint)
     elif len(config) > 0:
         app.config.from_mapping(config)
     else:
@@ -68,8 +72,8 @@ def create_flask_app(config={}, script_info=None):
     # register blueprints
     if not app.config.get("HEADLESS", False):
         app.register_blueprint(main_blueprint)
-    app.register_blueprint(apiv1_blueprint)
     app.register_blueprint(apiv2_blueprint)
+    app.register_blueprint(tasks_blueprint)
     app.register_blueprint(user_manager_blueprint)
 
     # shell context for flask cli

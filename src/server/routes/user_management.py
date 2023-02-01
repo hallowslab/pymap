@@ -1,6 +1,4 @@
 from time import strftime
-from secrets import token_hex
-from hashlib import sha256
 from flask import Blueprint, current_app, jsonify, request
 from flask_praetorian import auth_required, roles_accepted
 
@@ -19,24 +17,31 @@ def do_login():
     identifier = request.json.get("identifier", None)
     password = request.json.get("password", None)
     if identifier is None or password is None:
-        return jsonify(message=f"Missing user: {identifier} or password: {password}"), 401
+        return (
+            jsonify(message=f"Missing user: {identifier} or password: {password}"),
+            401,
+        )
 
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
     if identifier is None:
         return jsonify(message=f"User not found"), 401
-        
+
     identifier.last_login = strftime("%d/%m/%Y %H:%M")
     db.session.commit()
     user = guard.authenticate(identifier.username, password)
     token = guard.encode_jwt_token(user)
     # We can either set the token in the response cookie, or send it to client to store in the localstorage,
     # Reference: https://developer.mozilla.org/en-US/docs/Web/API/document/cookie
-    #resp = make_response({"message": f"Logged in as {identifier}", "access_token": token})
-    #resp.set_cookie("access_token", value=token)
-    return jsonify({"message": f"Logged in as {identifier.username}", "access_token": token}), 200
-
+    # resp = make_response({"message": f"Logged in as {identifier}", "access_token": token})
+    # resp.set_cookie("access_token", value=token)
+    return (
+        jsonify(
+            {"message": f"Logged in as {identifier.username}", "access_token": token}
+        ),
+        200,
+    )
 
 
 @user_manager_blueprint.route("/api/v2/register", methods=["POST"])
@@ -48,7 +53,10 @@ def register_user():
     password = content.get("password", None)
 
     if (identifier is None and email is None) or password is None:
-        return (jsonify(message=f"Missing user: {identifier} or password: {password}"), 400)
+        return (
+            jsonify(message=f"Missing user: {identifier} or password: {password}"),
+            400,
+        )
 
     user_exists = User.query.filter_by(username=identifier).first() is not None
     email_exists = User.query.filter_by(email=email).first() is not None
@@ -62,11 +70,7 @@ def register_user():
     db.session.commit()
 
     return jsonify(
-        {
-            "id": new_user.id,
-            "username": new_user.username,
-            "email": new_user.email
-        }
+        {"id": new_user.id, "username": new_user.username, "email": new_user.email}
     )
 
 
@@ -85,11 +89,9 @@ def check_account_status():
     identifier = email if user is None else user
     if identifier is None:
         return (jsonify(message=f"The user {identifier} does not seem to exist"), 404)
-    
+
     status = "Active" if identifier.is_active else "Deactivated"
-    return jsonify(
-        message=f"User {identifier.username} is {status}"
-    )
+    return jsonify(message=f"User {identifier.username} is {status}")
 
 
 @user_manager_blueprint.route("/api/v2/change-account-status", methods=["POST"])
@@ -107,7 +109,7 @@ def deactivate_account():
     identifier = email if user is None else user
     if identifier is None:
         return (jsonify(message=f"The user {identifier} does not seem to exist"), 404)
-    
+
     identifier.is_active = not identifier.is_active
     db.session.commit()
     return jsonify(
@@ -134,6 +136,7 @@ def check_if_token_is_revoked():
     if token_in_redis is None:
         return jsonify(message=f"token allowed ({token})")
     return jsonify(message=f"token blacklisted ({token})")
+
 
 @user_manager_blueprint.route("/api/v2/blacklist-token", methods=["GET"])
 @auth_required
