@@ -1,12 +1,11 @@
 from os import listdir, mkdir
-from os.path import join, isdir, isfile
-import subprocess
+from os.path import isdir, join
 
 
-from flask import Blueprint, jsonify, request, url_for, current_app, send_file
+from flask import Blueprint, current_app, jsonify, request, url_for
 
 from server.tasks import call_system
-from server.utils import get_task_info, get_logs_status
+from server.utils import get_task_info
 from core.pymap_core import ScriptGenerator
 
 apiv1_blueprint = Blueprint("apiV1", __name__)
@@ -17,7 +16,7 @@ LOG_DIRECTORY = "/var/log/pymap"
 
 
 # no need to register route V2 takes care of this
-#@apiv1_blueprint.route("/api/v1/sync", methods=["POST"])
+# @apiv1_blueprint.route("/api/v1/sync", methods=["POST"])
 def parse_creds():
     content = request.json
     # TODO: Strip out passwords before logging data
@@ -51,7 +50,7 @@ def parse_creds():
     )
 
 
-#@apiv1_blueprint.route("/api/v1/tasks", methods=["GET"])
+# @apiv1_blueprint.route("/api/v1/tasks", methods=["GET"])
 def get_tasks():
     # Get all tasks
     try:
@@ -66,6 +65,3 @@ def get_tasks():
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
-
-
-

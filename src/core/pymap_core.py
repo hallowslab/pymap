@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Generator, Iterable, List, Union
+from typing import Generator, Iterable, List, Optional, Union
 
 
 LOGDIR = "/var/log/pymap"
@@ -23,10 +23,18 @@ class ScriptGenerator:
     )
 
     def __init__(
-        self, host1: str, host2: str, creds, extra_args: str = "", **kwargs
+        self,
+        host1: str,
+        host2: str,
+        file_path=None,
+        creds=None,
+        extra_args: str = "",
+        **kwargs,
     ) -> None:
         self.logger = logging.getLogger("server")
-        self.creds: List[str] = creds
+        # TODO: Cannot suply types : Optional[PathLike[str]] when using open
+        self.file_path = file_path
+        self.creds: Optional[List[str]] = creds
         self.lines: List[str] = []
         self.dest: str = kwargs.get("destination", "sync")
         self.line_count: int = kwargs.get("split", 30)
@@ -40,16 +48,16 @@ class ScriptGenerator:
     # Extracts the first domain found in the credentials
     def find_first_domain(self, domain: str = "") -> str:
         if not domain or domain == "":
-            # str here is just to avoid mypy warnings about returning any
-            try:
-                return str(
-                    re.sub("\s+", " ", self.creds[0])
-                    .split("__")[0]
-                    .split("@")[1]
-                    .split(" ")[0]
-                )
-            except IndexError:
-                return "NO_DOMAIN"
+            if self.creds:
+                try:
+                    return str(
+                        re.sub("\s+", " ", self.creds[0])
+                        .split("__")[0]
+                        .split("@")[1]
+                        .split(" ")[0]
+                    )
+                except IndexError:
+                    return "NO_DOMAIN"
         return domain
 
     # Verifies if the hostname is either a CPanel, Plesk or WEBLX instance
@@ -72,12 +80,12 @@ class ScriptGenerator:
                     return f"{hostname}{all_hosts[k]}"
         return hostname
 
-    def process(self, mode: str = "file") -> Union[Exception, List]:
-        self.logger.debug("Started with mode: %s", mode)
-        if mode == "file":
+    # TODO: Don't need to return the list here anymore
+    def process_file(self) -> Union[Exception, List]:
+        if self.file_path or self.file_path != "":
             try:
                 lines = []
-                with open(self.creds, "r") as fh:
+                with open(self.file_path, "r") as fh:
                     for line in self.process_input(fh):
                         lines.append(line)
                         if len(lines) >= self.line_count:
@@ -89,12 +97,14 @@ class ScriptGenerator:
             except Exception as exc:
                 self.logger.critical("Failed to process file: %s", exc)
                 return exc
-        elif mode == "api":
-            # TODO: Strip out passwords before logging commands
-            # self.logger.debug("Supplied data: %s", self.creds)
-            scripts = [x for x in self.process_input(self.creds) if x is not None]
-            return scripts
-        return ValueError("Unkown mode: %s", mode)
+        else:
+            raise ValueError(f"File path was not supplied: {self.file_path}")
+
+    def process_string(self):
+        # TODO: Strip out passwords before logging commands
+        # self.logger.debug("Supplied data: %s", self.creds)
+        scripts = [x for x in self.process_input(self.creds) if x is not None]
+        return scripts
 
     # processes input -> yields str
     def process_input(self, uinput: Iterable) -> Generator:

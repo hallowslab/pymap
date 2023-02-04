@@ -2,7 +2,7 @@ import secrets
 from flask_testing import TestCase
 
 from server import create_flask_app
-from server.models import db
+from server.extensions import db
 
 
 class APIV2Test(TestCase):

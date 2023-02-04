@@ -6,7 +6,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_praetorian import auth_required
 
 # Core and Flask app
-from server.extensions import db, guard
+from server.extensions import guard
 from server.tasks import call_system
 from server.utils import get_logs_status
 
@@ -18,6 +18,7 @@ tasks_blueprint = Blueprint("tasks", __name__)
 
 # TODO: Move this to flask config
 LOG_DIRECTORY = "/var/log/pymap"
+
 
 @tasks_blueprint.route("/api/v2/tasks", methods=["GET"])
 @auth_required
@@ -50,6 +51,8 @@ def get_tasks_v2():
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
 
+
+# TODO: This is not really being used atm
 @tasks_blueprint.route("/api/v2/task-status/<task_id>", methods=["GET"])
 def task_status(task_id):
     task = call_system.AsyncResult(task_id)
@@ -106,14 +109,12 @@ def task_status(task_id):
             "status": f"Failed to fetch task with ID: {task_id}",
         }
 
+
 @tasks_blueprint.route("/api/v2/tasks/<task_id>", methods=["GET"])
 def get_logs_by_task_id(task_id):
     # Get all logs inside a task directory
     try:
         logs_dir = f"{LOG_DIRECTORY}/{task_id}"
-        # TODO: Maybe we should send all the info trough here: start time, status, etc......
-        # look for Transfer started on ............ Transfer ended on ............
-        # Transfer started on: Thursday  5 May 2022-05-05 09:27:19 +0100 WEST
         all_logs = [
             get_logs_status(logs_dir, f)
             for f in listdir(logs_dir)
@@ -123,6 +124,7 @@ def get_logs_by_task_id(task_id):
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
         return (jsonify({"error": e.__class__.__name__, "message": e.__str__()}), 400)
+
 
 @tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>", methods=["GET"])
 @auth_required
@@ -146,7 +148,7 @@ def get_log_by_path(task_id, log_file):
             text=True,
         )
         content, error = p1.communicate(timeout=tail_timeout)
-        _status:int = 300 if error else 200
+        _status: int = 300 if error else 200
         return (jsonify({"content": content, "error": error}), _status)
     except TimeoutExpired:
         current_app.logger.error("Failed to tail the file: %s", f_path, exc_info=1)

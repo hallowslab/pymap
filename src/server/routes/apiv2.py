@@ -39,8 +39,10 @@ def sync_v2():
     current_app.logger.debug(
         f"Extra Arguments: {extra_args}, Extra arguments type: {type(extra_args)}"
     )
-    gen = ScriptGenerator(source, dest, creds, extra_args, config=current_app.config)
-    content = gen.process(mode="api")
+    gen = ScriptGenerator(
+        source, dest, creds=creds, extra_args=extra_args, config=current_app.config
+    )
+    content = gen.process_string()
     # TODO: Strip out passwords before logging commands
     """current_app.logger.debug(
         "Received the following output from generator:\n %s", content

@@ -48,24 +48,24 @@ def do_login():
 @roles_accepted("admin")
 def register_user():
     content = request.json
-    identifier = content.get("identifier", None)
+    username = content.get("username", None)
     email = content.get("email", None)
     password = content.get("password", None)
 
-    if (identifier is None and email is None) or password is None:
+    if (username is None and email is None) or password is None:
         return (
-            jsonify(message=f"Missing user: {identifier} or password: {password}"),
+            jsonify(message=f"Missing user: {username} or password: {password}"),
             400,
         )
 
-    user_exists = User.query.filter_by(username=identifier).first() is not None
+    user_exists = User.query.filter_by(username=username).first() is not None
     email_exists = User.query.filter_by(email=email).first() is not None
 
     if user_exists or email_exists:
         return (jsonify(message="Invalid data, check your input"), 400)
 
     hashed_password = guard.hash_password(password)
-    new_user = User(username=identifier, email=email, password=hashed_password)
+    new_user = User(username=username, email=email, password=hashed_password)
     db.session.add(new_user)
     db.session.commit()
 

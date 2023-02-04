@@ -2,6 +2,7 @@ from datetime import timedelta
 import secrets
 import sys
 import json
+from typing import List
 from flask import Flask
 from flask.logging import default_handler
 from flask_cors import CORS
@@ -81,9 +82,8 @@ def create_flask_app(config={}, script_info=None):
     return app
 
 
-def create_celery_app(options: str = ""):
+def create_celery_app(options: List[str] = [""]):
     # Initialize celery
-    options = options.split(" ")
     celery_app = Celery(__name__)
 
     # Load the config
