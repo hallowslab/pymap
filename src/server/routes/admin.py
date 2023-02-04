@@ -1,3 +1,5 @@
+import os
+import shutil
 from flask import current_app, jsonify, request
 from flask_praetorian import roles_accepted
 
@@ -9,37 +11,41 @@ from server.models.tasks import CeleryTask
 from server.routes.apiv2 import apiv2_blueprint
 
 
-@apiv2_blueprint.route("/api/v2/admin/tasks", methods=["GET"])
-@roles_accepted("admin")
-def get_tasks_v2():
-    # Get all tasks
-    token = guard.read_token_from_header()
-    print(guard.extract_jwt_token(token).get("id"))
-    try:
-        query = [t.__dict__ for t in db.session.query(CeleryTask).all()]
-        all_tasks = []
-        for t in query:
-            all_tasks.append({k: v for k, v in t.items() if k != "_sa_instance_state"})
-        # TODO: Handle errors, or just return the array with tasks: or error:
-        return (jsonify({"tasks": all_tasks}), 200)
-    except Exception as e:
-        current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
-
-
-@apiv2_blueprint.route("/api/v2/admin/delete-task", methods=["GET", "POST"])
+@apiv2_blueprint.route("/api/v2/admin/delete-task", methods=["POST"])
 @roles_accepted("admin")
 def delete_task():
     task_id = request.args.get("id", None)
     if not task_id:
-        return (jsonify(message="You need to provide a task ID"), 400)
-    return ("Not implemented", 418)
+        return jsonify(error="You need to specify task id")
+    try:
+        task = CeleryTask.query.filter_by(id=task_id).first_or_404()
+        task_path = task.log_path
+        db.session.delete(task)
+        db.session.commit()
+        extra_message = f"Failed to remove files from {task.log_path}"
+        if os.path.isdir(task_path):
+            extra_message = f"Removed files from {task.log_path}"
+            shutil.rmtree(task.log_path)
+        return (jsonify(message=f"Deleted task with ID: {task_id}, {extra_message}"), 200)
+    except Exception as e:
+        current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
+        return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
+    
 
-
-@apiv2_blueprint.route("/api/v2/admin/archive-task", methods=["GET", "POST"])
+@apiv2_blueprint.route("/api/v2/admin/archive-task", methods=["POST"])
 @roles_accepted("admin")
 def archive_task():
     task_id = request.args.get("id", None)
+    new_path = os.path.join(current_app.config.get("LOG_DIRECTORY"), f"archive/{task_id}")
     if not task_id:
-        return (jsonify(message="You need to provide a task ID"), 400)
-    return ("Not implemented", 418)
+        return jsonify(error="You need to specify task id")
+    try:
+        task = CeleryTask.query.filter_by(id=task_id).first_or_404()
+        task_path = task.log_path
+        if os.path.isdir(task_path):
+            extra_message = f"Moving file from {task.log_path} to {new_path}"
+            shutil.move(task.log_path, new_path)
+        return (jsonify(message=f"Archived task with ID: {task_id}, {extra_message}"), 200)
+    except Exception as e:
+        current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
+        return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)

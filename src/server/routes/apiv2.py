@@ -26,6 +26,7 @@ def heartbeat():
 @apiv2_blueprint.route("/api/v2/sync", methods=["POST"])
 @roles_accepted("operator", "admin")
 def sync_v2():
+    log_directory = current_app.config.get("LOG_DIRECTORY")
     id: int = guard.extract_jwt_token(guard.read_token_from_header()).get("id")
     user = User.query.filter_by(id=id).first_or_404()
     content = request.json
@@ -51,7 +52,7 @@ def sync_v2():
     ctask = CeleryTask(
         source=source,
         destination=dest,
-        log_path=f"/var/log/pymap/{task.id}",
+        log_path=f"{log_directory}/{task.id}",
         task_id=task.id,
         n_accounts=len(content),
         domain=gen.domain,
@@ -59,8 +60,8 @@ def sync_v2():
     )
     db.session.add(ctask)
     db.session.commit()
-    if not isdir(f"/var/log/pymap/{task.id}"):
-        mkdir(f"/var/log/pymap/{task.id}")
+    if not isdir(f"{log_directory}/{task.id}"):
+        mkdir(f"{log_directory}/{task.id}")
     current_app.logger.info("Starting background task with ID: %s", task.id)
     return (
         jsonify(
