@@ -34,7 +34,7 @@ def sync_v2():
     source: str = content.get("source")
     dest: str = content.get("destination")
     creds: str = content.get("input")
-    extra_args = content.get("extra_args", "")
+    extra_args = content.get("extra_args")
     extra_args = None if extra_args.strip() == "" else extra_args
     current_app.logger.debug(
         f"Extra Arguments: {extra_args}, Extra arguments type: {type(extra_args)}"

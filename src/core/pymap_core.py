@@ -39,7 +39,7 @@ class ScriptGenerator:
         self.dest: str = kwargs.get("destination", "sync")
         self.line_count: int = kwargs.get("split", 30)
         self.file_count: int = 0
-        self.extra_args = extra_args if extra_args is not None else ""
+        self.extra_args: Optional[str] = extra_args
         self.config = kwargs.get("config", {})
         self.host2 = self.verify_host(host2)
         self.host1 = self.verify_host(host1)
