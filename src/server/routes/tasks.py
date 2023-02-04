@@ -16,9 +16,6 @@ from server.models.users import User
 
 tasks_blueprint = Blueprint("tasks", __name__)
 
-# TODO: Move this to flask config
-LOG_DIRECTORY = "/var/log/pymap"
-
 
 @tasks_blueprint.route("/api/v2/tasks", methods=["GET"])
 @auth_required
@@ -113,8 +110,9 @@ def task_status(task_id):
 @tasks_blueprint.route("/api/v2/tasks/<task_id>", methods=["GET"])
 def get_logs_by_task_id(task_id):
     # Get all logs inside a task directory
+    log_directory = current_app.config.get("LOG_DIRECTORY")
     try:
-        logs_dir = f"{LOG_DIRECTORY}/{task_id}"
+        logs_dir = f"{log_directory}/{task_id}"
         all_logs = [
             get_logs_status(logs_dir, f)
             for f in listdir(logs_dir)
@@ -129,12 +127,12 @@ def get_logs_by_task_id(task_id):
 @tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>", methods=["GET"])
 @auth_required
 def get_log_by_path(task_id, log_file):
-
+    log_directory = current_app.config.get("LOG_DIRECTORY")
     tail_timeout: int = request.args.get("ttimeout", 5, type=int)
     tail_count: int = request.args.get("tcount", 100, type=int)
     # Tail the last X lines from the log file and return it
     try:
-        f_path = f"{LOG_DIRECTORY}/{task_id}/{log_file}"
+        f_path = f"{log_directory}/{task_id}/{log_file}"
         if not isfile(f_path):
             return (jsonify({"error": f"File {f_path} was not found"}), 404)
         current_app.logger.debug(
@@ -169,8 +167,9 @@ def get_log_by_path(task_id, log_file):
 @tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>/download", methods=["GET"])
 @auth_required
 def download_log_by_path(task_id, log_file):
+    log_directory = current_app.config.get("LOG_DIRECTORY")
     try:
-        f_path = f"{LOG_DIRECTORY}/{task_id}/{log_file}"
+        f_path = f"{log_directory}/{task_id}/{log_file}"
         if not isfile(f_path):
             return (jsonify({"error": f"File {f_path} was not found"}), 404)
         return send_file(f_path, as_attachment=True)

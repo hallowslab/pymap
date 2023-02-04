@@ -43,7 +43,7 @@ def archive_task():
         task = CeleryTask.query.filter_by(id=task_id).first_or_404()
         task_path = task.log_path
         if os.path.isdir(task_path):
-            extra_message = f"Moving file from {task.log_path} to {new_path}"
+            extra_message = f"Moving files from {task.log_path} to {new_path}"
             shutil.move(task.log_path, new_path)
         return (jsonify(message=f"Archived task with ID: {task_id}, {extra_message}"), 200)
     except Exception as e:

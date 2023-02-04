@@ -14,6 +14,7 @@ class CeleryTask(BaseModel):
     task_id: str = db.Column(db.String)
     n_accounts: int = db.Column(db.Integer)
     domain: str = db.Column(db.String(100), nullable=True)
+    archived: bool = db.Column(db.Boolean, default=False)
 
     owner_username = db.Column(db.String, db.ForeignKey("user.username"))
 
