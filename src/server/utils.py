@@ -13,6 +13,8 @@ from server.strings import (
     IMAPSYNC_CODES,
 )
 
+from server.extensions import redis_store
+
 
 def check_status(code: str) -> str:
     """
@@ -164,3 +166,7 @@ def create_new_davmail_properties(
     with open(f_path, "w") as fh:
         fh.write(new_props)
     return new_props
+
+def log_redis(username:str, message:str, end: int = 99):
+    redis_store.rpush(f"{username}_logs", message)
+    redis_store.ltrim(f"{username}_logs", 0, end)

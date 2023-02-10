@@ -56,7 +56,10 @@
   - `docker run --name pymap -it -p 5000:5000 -p20:20 -p21:21 -p22:22 -p 3001:3000 -t pymap`
   - press 2 to automagically configure zsh
 
+# Additional Info
 
+* User logs are stored in redis under {username}_logs, application logs use the name provided in the configuration value REDIS_ROOT_LOGGER
+* 
 
 # DEV
 

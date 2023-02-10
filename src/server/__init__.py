@@ -39,6 +39,7 @@ def create_flask_app(config={}, script_info=None):
     from server.routes.apiv2 import apiv2_blueprint
     from server.routes.tasks import tasks_blueprint
     from server.routes.user_management import user_manager_blueprint
+    from server.routes.admin import admin_blueprint
 
     app.logger.addHandler(default_handler)
 
@@ -48,6 +49,7 @@ def create_flask_app(config={}, script_info=None):
         CORS(apiv2_blueprint)
         CORS(tasks_blueprint)
         CORS(user_manager_blueprint)
+        CORS(admin_blueprint)
     elif len(config) > 0:
         app.config.from_mapping(config)
     else:
@@ -76,6 +78,7 @@ def create_flask_app(config={}, script_info=None):
     app.register_blueprint(apiv2_blueprint)
     app.register_blueprint(tasks_blueprint)
     app.register_blueprint(user_manager_blueprint)
+    app.register_blueprint(admin_blueprint)
 
     # shell context for flask cli
     app.shell_context_processor({"app": app})

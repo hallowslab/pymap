@@ -8,6 +8,7 @@
         "result_backend": "redis://localhost:6379",
         "task_track_started": true
     },
+    "REDIS_ROOT_LOGGER": "flask_app",
     "LOG_DIRECTORY": "",
     "SECRET_KEY": "",
     "JWT_SECRET_KEY": "",
