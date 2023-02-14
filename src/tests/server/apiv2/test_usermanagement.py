@@ -31,6 +31,10 @@ class UserFunctionalityTest(APIV2Test):
         self._token = res.json.get("access_token")
         self._header = {"Authorization": f"Bearer {self._token}"}
 
+    def test_heartbeat(self):
+        res = self.client.get("/api/v2/heartbeat", headers=self._header)
+        self.assert200(res)
+
     def test_check_token_status(self):
         res = self.client.get("/api/v2/token-status", headers=self._header)
         self.assert200(res)
