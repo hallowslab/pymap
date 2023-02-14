@@ -31,6 +31,7 @@ def test_discards_invalid_inputs(test_input):
         # All others should fail and return None
         assert x.process_line(test_input) is None
 
+
 @pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS)
 def test_returns_parsed_line_1_user(test_input):
     # Test scenario 1: USER PASSWORD
@@ -46,6 +47,7 @@ def test_returns_parsed_line_1_user(test_input):
     assert final_str.count(passwd1) == 2
     assert "127.0.0.1" in final_str
     assert "127.0.0.2" in final_str
+
 
 @pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS_2)
 def test_returns_parsed_line_2_users(test_input):
@@ -65,40 +67,52 @@ def test_returns_parsed_line_2_users(test_input):
 
 def test_process_file_no_path():
     with pytest.raises(ValueError, match="File path was not supplied: None"):
-        x = ScriptGenerator("127.0.0.1", "127.0.0.1", creds=RANDOM_VALID_CREDS_2, domain="test.com", file_path=None)
+        x = ScriptGenerator(
+            "127.0.0.1",
+            "127.0.0.1",
+            creds=RANDOM_VALID_CREDS_2,
+            domain="test.com",
+            file_path=None,
+        )
         x.process_file()
 
     with pytest.raises(ValueError, match="File path was not supplied: "):
-        x = ScriptGenerator("127.0.0.1", "127.0.0.1", creds=RANDOM_VALID_CREDS_2, domain="test.com", file_path="")
+        x = ScriptGenerator(
+            "127.0.0.1",
+            "127.0.0.1",
+            creds=RANDOM_VALID_CREDS_2,
+            domain="test.com",
+            file_path="",
+        )
         x.process_file()
 
-    
+
 def test_process_file_with_valid_file_path():
     # Create a temporary file with valid credentials
     file_path = "testcreds.tmp"
     with open(file_path, "w") as f:
         for line in RANDOM_VALID_CREDS_2:
-            f.write(line+"\n")
-    
-    x = ScriptGenerator("127.0.0.1", "127.0.0.1", file_path=file_path, domain="test.com")
+            f.write(line + "\n")
+
+    x = ScriptGenerator(
+        "127.0.0.1", "127.0.0.1", file_path=file_path, domain="test.com"
+    )
     x.process_file()
-    
+
     # Verify that the output was written to the expected file
     assert os.path.exists("sync_0.sh")
-    
+
     # Read the output file and verify that it contains the expected data
-    #with open("sync_0.sh", "r") as f:
+    # with open("sync_0.sh", "r") as f:
     #    output = f.read()
     #    assert "--user1 user1" in output
     #    assert "--user2 user1" in output
     #    assert "user2 passwd2" in output
     #    assert "127.0.0.1" in output
     #    assert "test.com" in output
-    
+
     os.remove("sync_0.sh")
     os.remove("testcreds.tmp")
-    
-
 
 
 # TODO: test functionality to use alias from config files

@@ -1,4 +1,5 @@
 import os
+import unittest.mock
 import pytest
 from server.utils import (
     check_status,
@@ -6,7 +7,10 @@ from server.utils import (
     check_failed_is_only_spam,
     sub_check_output,
     create_new_davmail_properties,
+    log_redis,
 )
+
+
 
 CONTENTS_1 = """
 ++++ Listing 1 errors encountered during the sync ( avoid this listing with --noerrorsdump ).
@@ -45,7 +49,7 @@ def test_status_codes(input, expected):
     assert check_status(input) == expected
 
 
-def test_grep_errors(create_logs):
+def test_grep_errors():
     x = grep_errors(".", "local.log")
     x = check_failed_is_only_spam(x)
     assert x is False
@@ -99,3 +103,13 @@ def test_creates_dav_props(fname, uri, cport, iport, lport, pport, sport):
     assert f"davmail.ldapPort={lport}" in x
     assert f"davmail.popPort={pport}" in x
     assert f"davmail.smtpPort={sport}" in x
+
+
+def test_log_redis():
+    with unittest.mock.patch("redis.StrictRedis.rpush") as mock_rpush:
+        log_redis("username", "message")
+        mock_rpush.assert_called_once_with("username_logs", "message")
+
+    with unittest.mock.patch("redis.StrictRedis.ltrim") as mock_ltrim:
+        log_redis("username", "message")
+        mock_ltrim.assert_called_once_with("username_logs", 0, 99)
