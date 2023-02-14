@@ -1,14 +1,17 @@
 from os import listdir
 from os.path import isfile, join
 from subprocess import TimeoutExpired, Popen, PIPE
-from typing import Any, Dict
 from flask import Blueprint, current_app, jsonify, request, send_file
-from flask_praetorian import auth_required
+from flask_praetorian import (
+    auth_required,
+    current_rolenames,
+    current_user_id,
+    current_user,
+)
 
 # Core and Flask app
-from server.extensions import guard
 from server.tasks import call_system
-from server.utils import get_logs_status
+from server.utils import get_logs_status, log_redis
 
 # Models
 from server.models.tasks import CeleryTask
@@ -20,14 +23,15 @@ tasks_blueprint = Blueprint("tasks", __name__)
 @tasks_blueprint.route("/api/v2/tasks", methods=["GET"])
 @auth_required
 def get_tasks_v2():
-    token: Dict[str, Any] = guard.extract_jwt_token(guard.read_token_from_header())
-    roles: str = token.get("rls", "")
-    id: int = token.get("id")
+    roles: str = current_rolenames()
+    id: int = current_user_id()
     # Get all tasks
     try:
         user = User.query.filter_by(id=id).first_or_404()
         query = (
-            CeleryTask.query.filter(CeleryTask.owner_username==user.username, CeleryTask.archived==False).all()
+            CeleryTask.query.filter(
+                CeleryTask.owner_username == user.username, CeleryTask.archived == False
+            ).all()
             if "admin" not in roles
             else CeleryTask.query.order_by(CeleryTask.owner_username).all()
         )
@@ -108,6 +112,7 @@ def task_status(task_id):
 
 
 @tasks_blueprint.route("/api/v2/tasks/<task_id>", methods=["GET"])
+@auth_required
 def get_logs_by_task_id(task_id):
     # Get all logs inside a task directory
     log_directory = current_app.config.get("LOG_DIRECTORY")
@@ -139,10 +144,9 @@ def get_log_by_path(task_id, log_file):
             "Tail timeout is: %s\nTail count is: %s", tail_timeout, tail_count
         )
         p1 = Popen(
-            f"tail -n {tail_count} {f_path}",
+            ["tail", "-n", str(tail_count), f_path],
             stdout=PIPE,
             stderr=PIPE,
-            shell=True,
             text=True,
         )
         content, error = p1.communicate(timeout=tail_timeout)
@@ -168,6 +172,13 @@ def get_log_by_path(task_id, log_file):
 @auth_required
 def download_log_by_path(task_id, log_file):
     log_directory = current_app.config.get("LOG_DIRECTORY")
+    user = current_user()
+    log_redis(
+        user.username, f"Requested download of {log_directory}/{task_id}/{log_file}"
+    )
+    current_app.logger.info(
+        f"Requested download of {log_directory}/{task_id}/{log_file}"
+    )
     try:
         f_path = f"{log_directory}/{task_id}/{log_file}"
         if not isfile(f_path):

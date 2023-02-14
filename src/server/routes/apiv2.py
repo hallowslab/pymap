@@ -1,12 +1,13 @@
 from os import mkdir
 from os.path import isdir
 from flask import Blueprint, current_app, jsonify, request, url_for
-from flask_praetorian import roles_accepted, auth_required
+from flask_praetorian import roles_accepted, auth_required, current_user_id
 
 # Core and Flask app
 from core.pymap_core import ScriptGenerator
-from server.extensions import db, guard
+from server.extensions import db
 from server.tasks import call_system
+from server.utils import log_redis
 
 # Models
 from server.models.tasks import CeleryTask
@@ -18,7 +19,7 @@ apiv2_blueprint = Blueprint("apiV2", __name__)
 @apiv2_blueprint.route("/api/v2/heartbeat", methods=["GET"])
 @auth_required
 def heartbeat():
-    id: int = guard.extract_jwt_token(guard.read_token_from_header()).get("id")
+    id: int = current_user_id()
     user = User.query.filter_by(id=id).first_or_404()
     return (jsonify({"message": user.username}), 200)
 
@@ -27,7 +28,7 @@ def heartbeat():
 @roles_accepted("operator", "admin")
 def sync_v2():
     log_directory = current_app.config.get("LOG_DIRECTORY")
-    id: int = guard.extract_jwt_token(guard.read_token_from_header()).get("id")
+    id: int = current_user_id()
     user = User.query.filter_by(id=id).first_or_404()
     content = request.json
     # TODO: Strip out passwords before logging data
@@ -39,6 +40,10 @@ def sync_v2():
     extra_args = None if extra_args.strip() == "" else extra_args
     current_app.logger.debug(
         f"Extra Arguments: {extra_args}, Extra arguments type: {type(extra_args)}"
+    )
+    log_redis(
+        user.username,
+        f"Sent sync request from {source} to {dest}, with additional parameters: {extra_args}",
     )
     gen = ScriptGenerator(
         source, dest, creds=creds, extra_args=extra_args, config=current_app.config

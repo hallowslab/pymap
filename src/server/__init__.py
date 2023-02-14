@@ -1,7 +1,9 @@
-from datetime import timedelta
 import secrets
 import sys
 import json
+import logging
+from logging.handlers import RotatingFileHandler
+from datetime import timedelta
 from typing import List
 from flask import Flask
 from flask.logging import default_handler
@@ -10,6 +12,7 @@ from flask_migrate import Migrate
 from celery import Celery
 from server.extensions import db, guard, redis_store
 from server.models.users import User
+from server.utils import REQUEST_FORMATTER
 
 argv = sys.argv[1:]
 
@@ -58,6 +61,18 @@ def create_flask_app(config={}, script_info=None):
         app.config["JWT_SECRET_KEY"] = str(secrets.token_hex(21))
     if app.config.get("SECRET_KEY", "") == "":
         app.config["SECRET_KEY"] = str(secrets.token_hex(21))
+
+    # Configure logging after importing config to access LOG_DIRECTORY
+    log_name = "{}/pymap.log".format(app.config.get("LOG_DIRECTORY", "/var/log/pymap"))
+    file_handler = RotatingFileHandler(log_name, maxBytes=50000, backupCount=3)
+    file_handler.setFormatter(REQUEST_FORMATTER)
+    file_handler.setLevel(app.config.get("LOG_LEVEL", "INFO"))
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(app.config.get("LOG_LEVEL", "INFO"))
+
+    app.logger.addHandler(console_handler)
+    app.logger.addHandler(file_handler)
 
     # Initialize DB after loading config
     db.init_app(app)
