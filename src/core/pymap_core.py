@@ -26,12 +26,12 @@ class ScriptGenerator:
         self,
         host1: str,
         host2: str,
+        creds:str=None,
         file_path=None,
-        creds=None,
         extra_args: str = "",
         **kwargs,
     ) -> None:
-        self.logger = logging.getLogger("server")
+        self.logger = logging.getLogger("PymapCore")
         # TODO: Cannot suply types : Optional[PathLike[str]] when using open
         self.file_path = file_path
         self.creds: Optional[List[str]] = creds
@@ -80,34 +80,32 @@ class ScriptGenerator:
                     return f"{hostname}{all_hosts[k]}"
         return hostname
 
-    # TODO: Don't need to return the list here anymore
-    def process_file(self) -> Union[Exception, List]:
-        if self.file_path or self.file_path != "":
+    def process_file(self) -> None:
+        if self.file_path is not None and self.file_path != "":
             try:
                 lines = []
                 with open(self.file_path, "r") as fh:
-                    for line in self.process_input(fh):
+                    for line in self.line_generator(fh):
                         lines.append(line)
                         if len(lines) >= self.line_count:
                             self.write_output(lines)
                             lines.clear()
                     if len(lines) >= 1:
                         self.write_output(lines)
-                return lines
-            except Exception as exc:
-                self.logger.critical("Failed to process file: %s", exc)
-                return exc
+            except Exception as e:
+                self.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
+                raise
         else:
             raise ValueError(f"File path was not supplied: {self.file_path}")
 
-    def process_string(self):
+    def process_string(self) -> None:
         # TODO: Strip out passwords before logging commands
         # self.logger.debug("Supplied data: %s", self.creds)
-        scripts = [x for x in self.process_input(self.creds) if x is not None]
+        scripts = [x for x in self.line_generator(self.creds) if x is not None]
         return scripts
 
     # processes input -> yields str
-    def process_input(self, uinput: Iterable) -> Generator:
+    def line_generator(self, uinput: Iterable) -> Generator:
         new_line = None
         for line in uinput:
             if line and len(line) > 1:
