@@ -1,9 +1,11 @@
+import logging
 import os
 import subprocess
 from os import listdir
 from os.path import isfile, join
 import re
 from typing import Dict, List, Optional
+from flask import has_request_context, request
 
 from server.strings import (
     LOGFILE_REGEX,
@@ -17,36 +19,6 @@ from server.extensions import redis_store
 
 
 def check_status(code: str) -> str:
-    """
-    0 OK
-    1 CATCH_ALL
-    6 EXIT_SIGNALLED
-    7 EXIT_BY_FILE
-    8 EXIT_PID_FILE_ERROR
-    10 EXIT_CONNECTION_FAILURE
-    12 EXIT_TLS_FAILURE
-    16 EXIT_AUTHENTICATION_FAILURE
-    21 EXIT_SUBFOLDER1_NO_EXISTS
-    111 EXIT_WITH_ERRORS
-    112 EXIT_WITH_ERRORS_MAX
-    113 EXIT_OVERQUOTA
-    114 EXIT_ERR_APPEND
-    115 EXIT_ERR_FETCH
-    116 EXIT_ERR_CREATE
-    117 EXIT_ERR_SELECT
-    118 EXIT_TRANSFER_EXCEEDED
-    119 EXIT_ERR_APPEND_VIRUS
-    254 EXIT_TESTS_FAILED
-    101 EXIT_CONNECTION_FAILURE_HOST1
-    102 EXIT_CONNECTION_FAILURE_HOST2
-    161 EXIT_AUTHENTICATION_FAILURE_USER1
-    162 EXIT_AUTHENTICATION_FAILURE_USER2
-    64 BAD_USAGE
-    66 NO_INPUT
-    69 SERVICE_UNAVAILABLE
-    70 INTERNAL_SOFTWARE_ERROR
-    """
-
     if code in IMAPSYNC_CODES.keys():
         return IMAPSYNC_CODES[code]
     return code
@@ -167,6 +139,25 @@ def create_new_davmail_properties(
         fh.write(new_props)
     return new_props
 
-def log_redis(username:str, message:str, end: int = 99):
+
+def log_redis(username: str, message: str, end: int = 99):
     redis_store.rpush(f"{username}_logs", message)
     redis_store.ltrim(f"{username}_logs", 0, end)
+
+
+class RequestFormatter(logging.Formatter):
+    def format(self, record):
+        if has_request_context():
+            record.url = request.url
+            record.remote_addr = request.remote_addr
+        else:
+            record.url = None
+            record.remote_addr = None
+
+        return super().format(record)
+
+
+REQUEST_FORMATTER = RequestFormatter(
+    "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
+    "%(levelname)s in %(module)s: %(message)s"
+)

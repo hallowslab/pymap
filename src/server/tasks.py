@@ -1,4 +1,5 @@
 import sys
+import shlex
 import subprocess
 import time
 from typing import List
@@ -58,7 +59,9 @@ def call_system(self, cmd_list: List[str]) -> dict:
 
     for index, cmd in enumerate(cmd_list):
         print("Task %s Scheduling %s" % (call_system.request.id, index))
-        n_cmd = subprocess.Popen(cmd, stdin=None, stdout=None, stderr=None, shell=True)
+        n_cmd = subprocess.Popen(
+            shlex.split(cmd), stdin=None, stdout=None, stderr=None, shell=False
+        )
         running_procs[str(index)] = n_cmd
         while len(running_procs) >= max_procs:
             print("%s Waiting for Queue" % call_system.request.id)
