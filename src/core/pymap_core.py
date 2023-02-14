@@ -26,7 +26,7 @@ class ScriptGenerator:
         self,
         host1: str,
         host2: str,
-        creds:str=None,
+        creds: str = None,
         file_path=None,
         extra_args: str = "",
         **kwargs,

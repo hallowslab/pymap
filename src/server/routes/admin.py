@@ -8,6 +8,7 @@ from flask_praetorian import roles_accepted, current_user
 from server.extensions import db
 from server.utils import log_redis
 from server.tasks import celery_app
+
 # Models
 from server.models.tasks import CeleryTask
 
@@ -92,6 +93,7 @@ def archive_task():
             )
             processed[task_id] = "Unhandled exception: %s", e.__str__()
     return (jsonify(message=processed), 200)
+
 
 @admin_blueprint.route("/api/v2/admin/cancel/<task_id>")
 @roles_accepted("admin", "operator")

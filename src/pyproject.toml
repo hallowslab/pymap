@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pymap"
-version = "2.2.0"
+version = "2.3.0"
 description = ""
 authors = ["hallowslab <hallow.tech.lab@gmail.com>"]
 
@@ -54,6 +54,7 @@ buildDeps = "python scripts/build_client_dependencies_cache.py"
 format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports --exclude client,migrations . && mypy core server"
 testCore = "pytest tests/core"
 testServer = "pytest tests/server"
+testBackend = "pytest tests/"
 testClient = "cd client && npm test"
 coverage = "coverage run -m pytest && coverage report"
 
