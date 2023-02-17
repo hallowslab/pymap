@@ -26,7 +26,7 @@ class ScriptGenerator:
         self,
         host1: str,
         host2: str,
-        creds: str = None,
+        creds=None,
         file_path=None,
         extra_args: str = "",
         **kwargs,
@@ -34,7 +34,7 @@ class ScriptGenerator:
         self.logger = logging.getLogger("PymapCore")
         # TODO: Cannot suply types : Optional[PathLike[str]] when using open
         self.file_path = file_path
-        self.creds: Optional[List[str]] = creds
+        self.creds: Iterable = creds
         self.lines: List[str] = []
         self.dest: str = kwargs.get("destination", "sync")
         self.line_count: int = kwargs.get("split", 30)
@@ -93,12 +93,14 @@ class ScriptGenerator:
                     if len(lines) >= 1:
                         self.write_output(lines)
             except Exception as e:
-                self.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
+                self.logger.critical(
+                    "Unhandled exception: %s", e.__str__(), exc_info=True
+                )
                 raise
         else:
             raise ValueError(f"File path was not supplied: {self.file_path}")
 
-    def process_string(self) -> None:
+    def process_string(self) -> List[str]:
         # TODO: Strip out passwords before logging commands
         # self.logger.debug("Supplied data: %s", self.creds)
         scripts = [x for x in self.line_generator(self.creds) if x is not None]
@@ -115,8 +117,6 @@ class ScriptGenerator:
                     # if extra arguments append at end
                     if self.extra_args:
                         new_line = f"{new_line} {self.extra_args}"
-                    # redirect stdout to /dev/null, we already have a log file
-                    new_line = f"{new_line} > /dev/null"
                     yield new_line
 
     # Processes individual Lines returns None or a formatted string

@@ -20,7 +20,9 @@ admin_blueprint = Blueprint("admin", __name__)
 def delete_task():
     content = request.json
     ids: List[str] = content.get("task_ids")
+    current_app.logger.debug(f"Content is: {content}")
     user = current_user()
+    current_app.logger.error(f"Requested deletion of IDS {ids}")
     extra_message = ""
     processed = {}
     if not ids:
@@ -28,7 +30,7 @@ def delete_task():
     for task_id in ids:
         log_redis(user.username, f"User requested deletion of task with ID: {task_id}")
         current_app.logger.info(
-            user.username, f"User requested deletion of task with ID: {task_id}"
+            f"User {user.username} requested deletion of task with ID: {task_id}"
         )
         try:
             task = CeleryTask.query.filter_by(task_id=task_id).first()
@@ -66,7 +68,9 @@ def archive_task():
         return (jsonify(error=400, message="You need to specify task id"), 400)
     for task_id in ids:
         log_redis(user.username, f"User requested archival of task with ID: {task_id}")
-        current_app.logger.info(f"User requested archival of task with ID: {task_id}")
+        current_app.logger.info(
+            f"User {user.username} requested archival of task with ID: {task_id}"
+        )
         new_path = os.path.join(
             current_app.config.get("LOG_DIRECTORY"), f"archive/{task_id}"
         )
@@ -95,14 +99,31 @@ def archive_task():
     return (jsonify(message=processed), 200)
 
 
-@admin_blueprint.route("/api/v2/admin/cancel/<task_id>")
+@admin_blueprint.route("/api/v2/admin/cancel-tasks")
 @roles_accepted("admin", "operator")
 def cancel_task(task_id):
+    content = request.json
     user = current_user()
-    log_redis(user.username, f"Requested cancellation of task with ID: {task_id}")
-    current_app.logger.info(f"Requested cancellation of task with ID: {task_id}")
-    try:
-        celery_app.control.revoke(task_id)
-    except Exception as e:
-        current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify(error=400, message=e.__str__()), 400)
+    ids: List[str] = content.get("task_ids")
+    processed = {}
+    if not ids:
+        return (jsonify(error=400, message="You need to specify task id"), 400)
+    for task_id in ids:
+        log_redis(user.username, f"Requested cancellation of task with ID: {task_id}")
+        current_app.logger.info(
+            f"User {user.username} requested cancellation of task with ID: {task_id}"
+        )
+        try:
+            task = CeleryTask.query.filter_by(task_id=task_id).first()
+            if not task:
+                processed[task_id] = f"Task with ID: {task_id} was not found"
+                continue
+            else:
+                celery_app.control.revoke(task_id)
+                processed[task_id] = f"Task with ID: {task_id} was cancelled"
+        except Exception as e:
+            current_app.logger.critical(
+                "Unhandled exception: %s", e.__str__(), exc_info=1
+            )
+            processed[task_id] = "Unhandled exception: %s", e.__str__()
+    return (jsonify(message=processed), 200)

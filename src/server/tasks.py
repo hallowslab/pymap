@@ -10,11 +10,11 @@ import celery.signals
 from server import create_celery_app
 
 celery_app = create_celery_app(sys.argv[1:])
+logger = logging.getLogger(__name__)
 
 # TODO: This is not working, find a way to do proper logging....
 @celery.signals.setup_logging.connect
 def on_celery_setup_logging(**kwargs):
-    logger = logging.getLogger(__name__)
     if not logger.handlers:
         handler = logging.FileHandler("celery_tasks.log")
         formatter = logging.Formatter(
@@ -60,7 +60,11 @@ def call_system(self, cmd_list: List[str]) -> dict:
     for index, cmd in enumerate(cmd_list):
         print("Task %s Scheduling %s" % (call_system.request.id, index))
         n_cmd = subprocess.Popen(
-            shlex.split(cmd), stdin=None, stdout=None, stderr=None, shell=False
+            shlex.split(cmd),
+            stdin=None,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            shell=False,
         )
         running_procs[str(index)] = n_cmd
         while len(running_procs) >= max_procs:

@@ -11,7 +11,6 @@ from server.utils import (
 )
 
 
-
 CONTENTS_1 = """
 ++++ Listing 1 errors encountered during the sync ( avoid this listing with --noerrorsdump ).
 Err 1/10: Host1 failure: Error login on [] with user [] auth [LOGIN]: 2 NO LOGIN Failed - Invalid username or password.
