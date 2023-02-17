@@ -1,57 +1,60 @@
-from os import listdir, mkdir
-from os.path import join, isdir, isfile
-import subprocess
+from os import listdir
+from os.path import isfile, join
+from subprocess import TimeoutExpired, Popen, PIPE
+from flask import Blueprint, current_app, jsonify, request, send_file
+from flask_praetorian import (
+    auth_required,
+    current_rolenames,
+    current_user_id,
+    current_user,
+)
 
-from subprocess import TimeoutExpired
-
-from flask import Blueprint, jsonify, request, url_for, current_app, send_file
-
+# Core and Flask app
 from server.tasks import call_system
-from server.utils import get_task_info, get_logs_status
-from core.pymap_core import ScriptGenerator
+from server.utils import get_logs_status, log_redis
 
-apiv1_blueprint = Blueprint("apiV1", __name__)
+# Models
+from server.models.tasks import CeleryTask
+from server.models.users import User
 
-
-# TODO: Move this to flask config
-LOG_DIRECTORY = "/var/log/pymap"
-
-
-@apiv1_blueprint.route("/api/v1/sync", methods=["POST"])
-def parse_creds():
-    content = request.json
-    # TODO: Strip out passwords before logging data
-    # current_app.logger.debug("Parsing the following json data:\n %s", content)
-    source = content.get("source")
-    dest = content.get("destination")
-    creds = content.get("input")
-    extra_args = content.get("extra_args", None)
-    extra_args = None if extra_args == "" else extra_args
-    current_app.logger.debug(
-        f"Extra Arguments: {extra_args}, Extra arguments type: {type(extra_args)}"
-    )
-    gen = ScriptGenerator(source, dest, creds, extra_args, config=current_app.config)
-    content = gen.process(mode="api")
-    # TODO: Strip out passwords before logging commands
-    """current_app.logger.debug(
-        "Received the following output from generator:\n %s", content
-    )"""
-    task = call_system.delay(content)
-    if not isdir(f"/var/log/pymap/{task.id}"):
-        mkdir(f"/var/log/pymap/{task.id}")
-    current_app.logger.info("Starting background task with ID: %s", task.id)
-    return (
-        jsonify(
-            {
-                "location": url_for("apiV1.task_status", task_id=task.id),
-                "taskID": task.id,
-            }
-        ),
-        202,
-    )
+tasks_blueprint = Blueprint("tasks", __name__)
 
 
-@apiv1_blueprint.route("/api/v1/task-status/<task_id>", methods=["GET"])
+@tasks_blueprint.route("/api/v2/tasks", methods=["GET"])
+@auth_required
+def get_tasks_v2():
+    roles: str = current_rolenames()
+    id: int = current_user_id()
+    # Get all tasks
+    try:
+        user = User.query.filter_by(id=id).first_or_404()
+        query = (
+            CeleryTask.query.filter(
+                CeleryTask.owner_username == user.username, CeleryTask.archived == False
+            ).all()
+            if "admin" not in roles
+            else CeleryTask.query.order_by(CeleryTask.owner_username).all()
+        )
+        all_tasks = []
+        for t in query:
+            all_tasks.append(
+                {
+                    "id": t.task_id,
+                    "source": t.source,
+                    "destination": t.destination,
+                    "domain": t.domain,
+                    "n_accounts": t.n_accounts,
+                    "owner_username": t.owner_username,
+                }
+            )
+        return (jsonify({"tasks": all_tasks}), 200)
+    except Exception as e:
+        current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
+        return (jsonify(error=400, message=e.__str__()), 400)
+
+
+# TODO: This is not really being used atm
+@tasks_blueprint.route("/api/v2/task-status/<task_id>", methods=["GET"])
 def task_status(task_id):
     task = call_system.AsyncResult(task_id)
     response = {"Querying status": True}
@@ -108,31 +111,13 @@ def task_status(task_id):
         }
 
 
-@apiv1_blueprint.route("/api/v1/tasks", methods=["GET"])
-def get_tasks():
-    # Get all tasks
-    try:
-        task_list = [
-            f
-            for f in listdir(LOG_DIRECTORY)
-            if isdir(join(LOG_DIRECTORY, f)) and f != "history" and f != ".history"
-        ]
-        all_tasks = [get_task_info(join(LOG_DIRECTORY, f)) for f in task_list]
-        # TODO: Handle errors, or just return the array with tasks: or error:
-        return (jsonify({"tasks": all_tasks}), 200)
-    except Exception as e:
-        current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return jsonify({"error": e.__class__.__name__, "message": e.__str__()}, 400)
-
-
-@apiv1_blueprint.route("/api/v1/tasks/<task_id>", methods=["GET"])
+@tasks_blueprint.route("/api/v2/tasks/<task_id>", methods=["GET"])
+@auth_required
 def get_logs_by_task_id(task_id):
     # Get all logs inside a task directory
+    log_directory = current_app.config.get("LOG_DIRECTORY")
     try:
-        logs_dir = f"{LOG_DIRECTORY}/{task_id}"
-        # TODO: Maybe we should send all the info trough here: start time, status, etc......
-        # look for Transfer started on ............ Transfer ended on ............
-        # Transfer started on: Thursday  5 May 2022-05-05 09:27:19 +0100 WEST
+        logs_dir = f"{log_directory}/{task_id}"
         all_logs = [
             get_logs_status(logs_dir, f)
             for f in listdir(logs_dir)
@@ -141,38 +126,38 @@ def get_logs_by_task_id(task_id):
         return (jsonify({"logs": all_logs, "status": task_status(task_id)}), 200)
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify({"error": e.__class__.__name__, "message": e.__str__()}), 400)
+        return (jsonify(error=400, message=e.__str__()), 400)
 
 
-@apiv1_blueprint.route("/api/v1/tasks/<task_id>/<log_file>", methods=["GET"])
+@tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>", methods=["GET"])
+@auth_required
 def get_log_by_path(task_id, log_file):
-
-    tail_timeout = request.args.get("ttimeout", 5, type=int)
-    tail_count = request.args.get("tcount", 100, type=int)
+    log_directory = current_app.config.get("LOG_DIRECTORY")
+    tail_timeout: int = request.args.get("ttimeout", 5, type=int)
+    tail_count: int = request.args.get("tcount", 100, type=int)
     # Tail the last X lines from the log file and return it
     try:
-        f_path = f"{LOG_DIRECTORY}/{task_id}/{log_file}"
+        f_path = f"{log_directory}/{task_id}/{log_file}"
         if not isfile(f_path):
             return (jsonify({"error": f"File {f_path} was not found"}), 404)
         current_app.logger.debug(
             "Tail timeout is: %s\nTail count is: %s", tail_timeout, tail_count
         )
-        p1 = subprocess.Popen(
-            f"tail -n {tail_count} {f_path}",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
+        p1 = Popen(
+            ["tail", "-n", str(tail_count), f_path],
+            stdout=PIPE,
+            stderr=PIPE,
             text=True,
         )
         content, error = p1.communicate(timeout=tail_timeout)
-        _status = 300 if error else 200
+        _status: int = 300 if error else 200
         return (jsonify({"content": content, "error": error}), _status)
     except TimeoutExpired:
         current_app.logger.error("Failed to tail the file: %s", f_path, exc_info=1)
         return (
             jsonify(
                 {
-                    "error": "TimeoutExpired",
+                    "error": 400,
                     "message": f"Failed to tail the file -> {f_path} after {tail_timeout} seconds",
                 }
             ),
@@ -180,16 +165,25 @@ def get_log_by_path(task_id, log_file):
         )
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify({"error": e.__class__.__name__, "message": e.__str__()}), 400)
+        return (jsonify(error=400, message=e.__str__()), 400)
 
 
-@apiv1_blueprint.route("/api/v1/tasks/<task_id>/<log_file>/download", methods=["GET"])
+@tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>/download", methods=["GET"])
+@auth_required
 def download_log_by_path(task_id, log_file):
+    log_directory = current_app.config.get("LOG_DIRECTORY")
+    user = current_user()
+    log_redis(
+        user.username, f"Requested download of {log_directory}/{task_id}/{log_file}"
+    )
+    current_app.logger.info(
+        f"Requested download of {log_directory}/{task_id}/{log_file}"
+    )
     try:
-        f_path = f"{LOG_DIRECTORY}/{task_id}/{log_file}"
+        f_path = f"{log_directory}/{task_id}/{log_file}"
         if not isfile(f_path):
-            return (jsonify({"error": f"File {f_path} was not found"}), 404)
+            return (jsonify(error=404, message=f"File {f_path} was not found"), 404)
         return send_file(f_path, as_attachment=True)
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify({"error": e.__class__.__name__, "message": e.__str__()}), 400)
+        return (jsonify(error=400, message=e.__str__()), 400)

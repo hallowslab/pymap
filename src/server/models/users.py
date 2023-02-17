@@ -1,6 +1,6 @@
 from flask_sqlalchemy.model import DefaultMeta
 
-from server.models import db
+from server.extensions import db
 
 BaseModel: DefaultMeta = db.Model
 
@@ -13,6 +13,8 @@ class User(BaseModel):
     roles: str = db.Column(db.Text)
     is_active: bool = db.Column(db.Boolean, default=True, server_default="true")
     last_login: str = db.Column(db.String(20), nullable=True)
+
+    tasks = db.relationship("CeleryTask", backref="user")
 
     @property
     def identity(self):

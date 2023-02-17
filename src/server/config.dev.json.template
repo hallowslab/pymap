@@ -8,6 +8,8 @@
         "result_backend": "redis://localhost:6379",
         "task_track_started": true
     },
+    "LOG_DIRECTORY": "",
+    "LOG_LEVEL": "",
     "SECRET_KEY": "",
     "JWT_SECRET_KEY": "",
     "JWT_ACCESS_LIFESPAN": {"minutes": 10},

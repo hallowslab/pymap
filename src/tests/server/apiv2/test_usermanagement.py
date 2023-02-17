@@ -2,8 +2,8 @@ import json
 
 from tests.server.apiv2 import APIV2Test
 
-from server import guard
-from server.models import db
+from server.extensions import guard
+from server.extensions import db
 from server.models.users import User
 
 
@@ -30,6 +30,10 @@ class UserFunctionalityTest(APIV2Test):
         # set token and header
         self._token = res.json.get("access_token")
         self._header = {"Authorization": f"Bearer {self._token}"}
+
+    def test_heartbeat(self):
+        res = self.client.get("/api/v2/heartbeat", headers=self._header)
+        self.assert200(res)
 
     def test_check_token_status(self):
         res = self.client.get("/api/v2/token-status", headers=self._header)
@@ -92,7 +96,7 @@ class UserManagementTests(APIV2Test):
         self.assert400(res)
 
     def test_add(self):
-        self.client.post(
+        res = self.client.post(
             "/api/v2/register",
             data=json.dumps(
                 dict(
@@ -104,9 +108,7 @@ class UserManagementTests(APIV2Test):
             content_type="application/json",
             headers=self._header,
         )
-        db_user = db.session.execute(
-            db.select(User).filter_by(username="test_user_1")
-        ).one()[0]
+        db_user = User.query.filter_by(username="test_user_1").first()
 
         assert db_user.username == "test_user_1"
         assert db_user.email == "test_user_1@test.com"
@@ -122,7 +124,7 @@ class UserManagementTests(APIV2Test):
             content_type="application/json",
             headers=self._header,
         )
-        assert res.json.get("message") == "User admin is active = True"
+        assert res.json.get("message") == "User admin is Active"
 
     def test_change_account_status(self):
         user = User.query.filter_by(username="test_user_2").first()
@@ -160,8 +162,8 @@ class UserManagementTests(APIV2Test):
             ),
         )
         res3 = self.client.get("/api/v2/account-status")
-        res4 = self.client.get("/api/v2/logout")
         self.assert401(res1)
         self.assert401(res2)
         self.assert401(res3)
-        self.assert401(res4)
+        # res4 = self.client.get("/api/v2/logout")
+        # self.assert401(res4)

@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "pymap"
-version = "1.3.2"
+version = "2.4.0"
 description = ""
-authors = ["HallowF"]
+authors = ["hallowslab <hallow.tech.lab@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -35,18 +35,29 @@ worker = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l 
 workerDev = "celery -A server.tasks worker -E --pool=eventlet --concurrency=100 -l DEBUG"
 workerWin = "celery -A server.tasks worker -E --pool=solo -l DEBUG"
 apiDev = "flask --app manage --debug run -h 0.0.0.0 "
-devDB = "flask --app manage --debug create-db && flask --app manage --debug create-admin admin CHANGE_ME"
-prodDB = "flask --app manage db init"
-updateDB = "flask --app manage db upgrade"
+### Database commands
+# Prod
+initDB = "flask --app manage db init"
 createDB = "flask --app manage create-db"
-addAdmin = "flask --app manage create-admin admin"
+addAdmin = "flask --app manage create-admin admin CHANGE_ME"
+# Upgrading
+upgradeDB = "flask --app manage db upgrade && flask --app manage --debug db upgrade"
+# Dev
+# migrate needs to be run before update in a dev environment
+migrateDB = "flask --app manage db migrate"
+createDevDB = "flask --app manage --debug create-db"
+addDevAdmin = "flask --app manage --debug create-admin admin CHANGE_ME"
+### Misc
+genLogs = "python scripts/generate_random_logs.py"
+buildDeps = "python scripts/build_client_dependencies_cache.py"
+### Formatting, tests & coverage
 format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports --exclude client,migrations . && mypy core server"
 testCore = "pytest tests/core"
 testServer = "pytest tests/server"
+testBackend = "pytest tests/"
 testClient = "cd client && npm test"
 coverage = "coverage run -m pytest && coverage report"
-genLogs = "python scripts/generate_random_logs.py"
-buildDeps = "python scripts/build_client_dependencies_cache.py"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

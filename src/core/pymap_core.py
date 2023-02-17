@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Generator, Iterable, List, Union
+from typing import Generator, Iterable, List, Optional, Union
 
 
 LOGDIR = "/var/log/pymap"
@@ -23,15 +23,23 @@ class ScriptGenerator:
     )
 
     def __init__(
-        self, host1: str, host2: str, creds, extra_args: str = "", **kwargs
+        self,
+        host1: str,
+        host2: str,
+        creds=None,
+        file_path=None,
+        extra_args: str = "",
+        **kwargs,
     ) -> None:
-        self.logger = logging.getLogger("server")
-        self.creds: List[str] = creds
+        self.logger = logging.getLogger("PymapCore")
+        # TODO: Cannot suply types : Optional[PathLike[str]] when using open
+        self.file_path = file_path
+        self.creds: Iterable = creds
         self.lines: List[str] = []
         self.dest: str = kwargs.get("destination", "sync")
         self.line_count: int = kwargs.get("split", 30)
         self.file_count: int = 0
-        self.extra_args = extra_args if extra_args is not None else ""
+        self.extra_args: Optional[str] = extra_args
         self.config = kwargs.get("config", {})
         self.host2 = self.verify_host(host2)
         self.host1 = self.verify_host(host1)
@@ -40,16 +48,16 @@ class ScriptGenerator:
     # Extracts the first domain found in the credentials
     def find_first_domain(self, domain: str = "") -> str:
         if not domain or domain == "":
-            # str here is just to avoid mypy warnings about returning any
-            try:
-                return str(
-                    re.sub("\s+", " ", self.creds[0])
-                    .split("__")[0]
-                    .split("@")[1]
-                    .split(" ")[0]
-                )
-            except IndexError:
-                return "NO_DOMAIN"
+            if self.creds:
+                try:
+                    return str(
+                        re.sub("\s+", " ", self.creds[0])
+                        .split("__")[0]
+                        .split("@")[1]
+                        .split(" ")[0]
+                    )
+                except IndexError:
+                    return "NO_DOMAIN"
         return domain
 
     # Verifies if the hostname is either a CPanel, Plesk or WEBLX instance
@@ -72,32 +80,34 @@ class ScriptGenerator:
                     return f"{hostname}{all_hosts[k]}"
         return hostname
 
-    def process(self, mode: str = "file") -> Union[Exception, List]:
-        self.logger.debug("Started with mode: %s", mode)
-        if mode == "file":
+    def process_file(self) -> None:
+        if self.file_path is not None and self.file_path != "":
             try:
                 lines = []
-                with open(self.creds, "r") as fh:
-                    for line in self.process_input(fh):
+                with open(self.file_path, "r") as fh:
+                    for line in self.line_generator(fh):
                         lines.append(line)
                         if len(lines) >= self.line_count:
                             self.write_output(lines)
                             lines.clear()
                     if len(lines) >= 1:
                         self.write_output(lines)
-                return lines
-            except Exception as exc:
-                self.logger.critical("Failed to process file: %s", exc)
-                return exc
-        elif mode == "api":
-            # TODO: Strip out passwords before logging commands
-            # self.logger.debug("Supplied data: %s", self.creds)
-            scripts = [x for x in self.process_input(self.creds) if x is not None]
-            return scripts
-        return ValueError("Unkown mode: %s", mode)
+            except Exception as e:
+                self.logger.critical(
+                    "Unhandled exception: %s", e.__str__(), exc_info=True
+                )
+                raise
+        else:
+            raise ValueError(f"File path was not supplied: {self.file_path}")
+
+    def process_string(self) -> List[str]:
+        # TODO: Strip out passwords before logging commands
+        # self.logger.debug("Supplied data: %s", self.creds)
+        scripts = [x for x in self.line_generator(self.creds) if x is not None]
+        return scripts
 
     # processes input -> yields str
-    def process_input(self, uinput: Iterable) -> Generator:
+    def line_generator(self, uinput: Iterable) -> Generator:
         new_line = None
         for line in uinput:
             if line and len(line) > 1:
@@ -107,8 +117,6 @@ class ScriptGenerator:
                     # if extra arguments append at end
                     if self.extra_args:
                         new_line = f"{new_line} {self.extra_args}"
-                    # redirect stdout to /dev/null, we already have a log file
-                    new_line = f"{new_line} > /dev/null"
                     yield new_line
 
     # Processes individual Lines returns None or a formatted string
