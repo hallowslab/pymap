@@ -42,7 +42,6 @@ def get_tasks_v2():
                     "id": t.task_id,
                     "source": t.source,
                     "destination": t.destination,
-                    "domain": t.domain,
                     "n_accounts": t.n_accounts,
                     "owner_username": t.owner_username,
                 }

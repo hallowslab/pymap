@@ -108,7 +108,6 @@ def get_task_info(task_path):
                 "taskID": task_path.split("/")[-1],
                 "source": match.group("source"),
                 "dest": match.group("dest"),
-                "domain": match.group("user1").split("@")[1],
                 "count": len(file_list),
             }
         # Try to return as much data as possible
@@ -117,7 +116,6 @@ def get_task_info(task_path):
                 "taskID": task_path.split("/")[-1],
                 "source": filename.split("__")[0],
                 "dest": filename.split("__")[1].split("--")[0],
-                "domain": filename.split("@")[1][:-4],
                 "count": len(file_list),
             }
         return {"error": "Could not parse task status", "fileList": file_list}

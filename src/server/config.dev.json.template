@@ -8,7 +8,8 @@
         "result_backend": "redis://localhost:6379",
         "task_track_started": true
     },
-    "LOG_DIRECTORY": "",
+    "FALLBACK_SEPARATOR": "<->",
+    "LOG_DIRECTORY": "/var/log/pymap",
     "LOG_LEVEL": "",
     "SECRET_KEY": "",
     "JWT_SECRET_KEY": "",

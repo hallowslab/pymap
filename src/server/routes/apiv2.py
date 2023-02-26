@@ -60,7 +60,6 @@ def sync_v2():
         log_path=f"{log_directory}/{task.id}",
         task_id=task.id,
         n_accounts=len(content),
-        domain=gen.domain,
         owner_username=user.username,
     )
     db.session.add(ctask)
