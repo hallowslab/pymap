@@ -7,13 +7,12 @@ LOGDIR = "/var/log/pymap"
 
 
 class ScriptGenerator:
-    DOMAIN_IDENTIFIER = re.compile(r".*@(?P<domain>[\w].[\w]).*")
     USER_IDENTIFIER = re.compile(r"^[\w.]+(?P<mail_provider>@[\w.]+)*")
     PASS_IDENTIFIER = re.compile(r".*[\s|,|.]+(?P<pword>.+)$")
     # Finding a delimiter for the password can be difficult since passwords
     # can be made up of almost any character
     WHOLE_STRING_ID = re.compile(
-        r"^(?P<user1>[\w.-]+)(?P<mail_provider1>@[\w.-]+)[ |,|\||\t]+(?P<pword1>.+)[ |,|\||\t]+(?P<user2>[\w.-]+?)(?P<mail_provider2>@[\w.-]+)[ |,|\||\t]+(?P<pword2>.+)$"
+        r"^(?P<user1>[\w.-]+)(?P<mail_provider1>@[\w.-]+)[ |,|\||\t]+(?P<pword1>.+)(?P<part2>[ |,|\||\t]+(?P<user2>[\w.-]+?)(?P<mail_provider2>@[\w.-]+)[ |,|\||\t]+(?P<pword2>.+))?$"
     )
     IP_ADDR_RE = re.compile(r"[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}")
     FORMAT_STRING = (
@@ -35,34 +34,20 @@ class ScriptGenerator:
         # TODO: Cannot suply types : Optional[PathLike[str]] when using open
         self.file_path = file_path
         self.creds: Iterable = creds
-        self.lines: List[str] = []
-        self.dest: str = kwargs.get("destination", "sync")
+        self.dest: str = kwargs.get("out_file", "sync")
         self.line_count: int = kwargs.get("split", 30)
         self.file_count: int = 0
         self.extra_args: Optional[str] = extra_args
+        self.fallback_separator: str = kwargs.get("fallback_separator", "<->")
+        # Load the config before matching hosts, since they are matched trough the strings defined
+        # in the HOSTS section
         self.config = kwargs.get("config", {})
-        self.host2 = self.verify_host(host2)
-        self.host1 = self.verify_host(host1)
-        self.domain = self.find_first_domain(kwargs.get("domain", ""))
-
-    # Extracts the first domain found in the credentials
-    def find_first_domain(self, domain: str = "") -> str:
-        if not domain or domain == "":
-            if self.creds:
-                try:
-                    return str(
-                        re.sub("\s+", " ", self.creds[0])
-                        .split("__")[0]
-                        .split("@")[1]
-                        .split(" ")[0]
-                    )
-                except IndexError:
-                    return "NO_DOMAIN"
-        return domain
+        self.host2 = self.match_host(host2)
+        self.host1 = self.match_host(host1)
 
     # Verifies if the hostname is either a CPanel, Plesk or WEBLX instance
     # and returns the apropriate FQDN
-    def verify_host(self, hostname: str) -> str:
+    def match_host(self, hostname: str) -> str:
         if self.config and len(self.config.get("HOSTS", [])) > 1:
             # Fetch hosts from config
             all_hosts = self.config.get("HOSTS")
@@ -132,21 +117,28 @@ class ScriptGenerator:
             mail1 = has_match.group("mail_provider1")
             mail2 = has_match.group("mail_provider2")
             self.logger.debug(f"Adding task: {user1}{mail1} -> {user2}{mail2}")
-            username1: str = (
+            self.logger.debug(f"\nUSER1:{user1}\tUSER2:{user2}\tMAIL1{mail1}\tMAIL2{mail2}")
+            username1: Optional[str] = (
                 f"{user1}{mail1}"
                 if mail1
-                else f"{user1}{self.domain}"
-                if self.domain
-                else ""
+                else None
             )
-            username2: str = (
+            username2: Optional[str] = (
                 f"{user2}{mail2}"
                 if mail2
-                else f"{user2}{self.domain}"
-                if self.domain
-                else ""
+                else None
             )
-            if len(username1) > 5 and len(username2) > 5:
+            if username1:
+                return self.FORMAT_STRING.format(
+                    self.host1,
+                    username1,
+                    has_match.group("pword1"),
+                    self.host2,
+                    username1,
+                    has_match.group("pword2"),
+                    f"{self.host1}__{self.host2}__{username1}--{username1}.log",
+                )
+            elif username1 and username2:
                 return self.FORMAT_STRING.format(
                     self.host1,
                     username1,
@@ -159,11 +151,11 @@ class ScriptGenerator:
             else:
                 self.logger.warning("User missing domain or provider")
         else:
-            self.logger.warning("Line did not match regex %s....", line[0:5])
+            self.logger.warning("Line did not match regex %s....", line)
             try:
                 new_line = re.sub("\t+", " ", line)
                 new_line = re.sub("\s+", " ", new_line)
-                new_line_split: List[str] = new_line.split(" ")
+                new_line_split: List[str] = new_line.split(self.fallback_separator)
                 if len(new_line_split) > 1:
                     user1 = new_line_split[0]
                     pword1 = new_line_split[1]

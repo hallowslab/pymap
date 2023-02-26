@@ -38,14 +38,8 @@ def setup_argparse():
         help="Relative path to the file containing the users and credentials",
     )
     parser.add_argument(
-        "-domain",
-        "--domain",
-        type=str,
-        help="Domain to be used for the accounts if one is not provided in the file",
-    )
-    parser.add_argument(
-        "-destination",
-        "--destination",
+        "-of",
+        "--out-file",
         type=str,
         default="sync",
         help="Path to output file",
@@ -69,6 +63,13 @@ def setup_argparse():
         "--dry-run",
         action="store_true",
         default=False,
+        help="Does not write to file only outputs debug",
+    )
+    parser.add_argument(
+        "-fbs",
+        "--fallback-separator",
+        type=str,
+        default="<->",
         help="Does not write to file only outputs debug",
     )
     args = parser.parse_args()

@@ -41,6 +41,13 @@ def generate_line_creds(count: int, creds_type: str = "s") -> List[str]:
 
 INVALID_HOSTS = ["1.1.1.1.1.1", "40000000312", "not_hostname", "", "       ", "\t\n"]
 
+RANDOM_INVALID = [
+        " ",
+        "n1x28ex31xe2",
+        "random.email@gmail.com",
+        "This gets should not be parsed 123",
+    ]
+
 # One user
 RANDOM_VALID_CREDS = generate_line_creds(10)
 

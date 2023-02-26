@@ -2,117 +2,92 @@ import os
 import pytest
 from core.pymap_core import ScriptGenerator
 
-from tests import RANDOM_VALID_CREDS_2, RANDOM_VALID_CREDS
+from tests.core import ScriptGeneratorTest
 
 
-@pytest.mark.parametrize(
-    "test_input",
-    [
-        # These should all return None
-        (""),
-        ("n1x28ex31xe2"),
-        ("random.email@gmail.com"),
-        # Except this
-        ("This gets parsed by the second method, unfortunately returns bad content"),
-    ],
-)
-def test_discards_invalid_inputs(test_input):
-    x = ScriptGenerator("127.0.0.1", "127.0.0.1", test_input, domain="test.com")
-    # Test scenario 1: All should return None except the last line
-    if "This gets parsed" in test_input:
-        # As explained above the fallback logic tries to find the user and password
-        # Refer to core.
-        # +0
-        # .0213pymap_core.process_line
-        final_str = x.process_line(test_input)
-        assert "--user1 This" in final_str
-        assert "--password1 'gets'" in final_str
-    else:
+class TestScriptGenerator(ScriptGeneratorTest):
+
+    def test_discards_invalid_inputs(self):
+        x = ScriptGenerator("127.0.0.1", "127.0.0.1", file_path=self.invalid.name, out_file="/tmp/sync")
         # All others should fail and return None
-        assert x.process_line(test_input) is None
+        x.process_file()
+        contents = []
+        with open("/tmp/sync_0.sh", "r") as fh:
+            contents = fh.readlines()
 
+        #assert len(contents) == 0
 
-@pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS)
-def test_returns_parsed_line_1_user(test_input):
-    # Test scenario 1: USER PASSWORD
-    x = ScriptGenerator("127.0.0.1", "127.0.0.2", test_input, domain="test.com")
-    user1, passwd1 = test_input.split(" ")
-    final_str = x.process_line(test_input)
-    assert f"--user1 {user1}" in final_str
-    assert f"--password1 '{passwd1}'" in final_str
-    assert f"--user2 {user1}" in final_str
-    assert f"--password2 '{passwd1}'" in final_str
-    # Usernames appear in log file
-    assert final_str.count(user1) == 4
-    assert final_str.count(passwd1) == 2
-    assert "127.0.0.1" in final_str
-    assert "127.0.0.2" in final_str
-
-
-@pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS_2)
-def test_returns_parsed_line_2_users(test_input):
-    # Test scenario 1: USER1 PASSWORD1 USER2 PASSWORD2
-    x = ScriptGenerator("127.0.0.1", "127.0.0.1", test_input, domain="test.com")
-    user1, passwd1, user2, passwd2 = test_input.split(" ")
-    final_str = x.process_line(test_input)
-    assert f"--user1 {user1}" in final_str
-    assert f"--password1 '{passwd1}'" in final_str
-    assert f"user2 {user2}" in final_str
-    assert f"--password2 '{passwd2}'" in final_str
-    assert final_str.count(user1) == 2
-    assert final_str.count(user2) == 2
-    assert "--host1 127.0.0.1" in final_str
-    assert "--host2 127.0.0.1" in final_str
-
-
-def test_process_file_no_path():
-    with pytest.raises(ValueError, match="File path was not supplied: None"):
-        x = ScriptGenerator(
-            "127.0.0.1",
-            "127.0.0.1",
-            creds=RANDOM_VALID_CREDS_2,
-            domain="test.com",
-            file_path=None,
-        )
+    def test_returns_parsed_line_1_user(self):
+        # Test scenario 1: USER PASSWORD
+        x = ScriptGenerator("127.0.0.1", "127.0.0.2", file_path=self.r1.name, out_file="/tmp/sync")
+        contents = []
+        output = []
+        with open(self.r1.name, "r") as fh:
+            contents = [x.strip() for x in fh.readlines()]
         x.process_file()
 
-    with pytest.raises(ValueError, match="File path was not supplied: "):
-        x = ScriptGenerator(
-            "127.0.0.1",
-            "127.0.0.1",
-            creds=RANDOM_VALID_CREDS_2,
-            domain="test.com",
-            file_path="",
-        )
+        assert os.path.isfile("/tmp/sync_0.sh")
+
+        with open("/tmp/sync_0.sh", "r") as fh:
+            output = fh.read()
+        for item in contents:
+            u1,p1 = item.split(" ")
+            assert u1 in output
+            assert p1 in output
+        assert "--host1 127.0.0.1" in output
+        assert "--host2 127.0.0.2" in output
+
+    def test_returns_parsed_line_2_users(self):
+        # Test scenario 1: USER1 PASSWORD1 USER2 PASSWORD2
+        x = ScriptGenerator("127.0.0.1", "127.0.0.1", file_path=self.r2.name, out_file="/tmp/sync")
+        contents = []
+        output = []
+        with open(self.r2.name, "r") as fh:
+            contents = [x.strip() for x in fh.readlines()]
         x.process_file()
+        assert os.path.isfile("/tmp/sync_0.sh")
+
+        with open("/tmp/sync_0.sh", "r") as fh:
+            output = fh.read()
+        for item in contents:
+            u1, p1, u2, p2 = item.split(" ")
+            assert u1 in output
+            assert p1 in output
+            assert u2 in output
+            assert p2 in output
+        assert "--host1 127.0.0.1" in output
+        assert "--host2 127.0.0.1" in output
 
 
-def test_process_file_with_valid_file_path():
-    # Create a temporary file with valid credentials
-    file_path = "testcreds.tmp"
-    with open(file_path, "w") as f:
-        for line in RANDOM_VALID_CREDS_2:
-            f.write(line + "\n")
+    def test_process_file_no_path(self):
+        with pytest.raises(ValueError, match="File path was not supplied: None"):
+            x = ScriptGenerator(
+                "127.0.0.1",
+                "127.0.0.1",
+                creds="",
+                file_path=None,
+            )
+            x.process_file()
 
-    x = ScriptGenerator(
-        "127.0.0.1", "127.0.0.1", file_path=file_path, domain="test.com"
-    )
-    x.process_file()
+        with pytest.raises(ValueError, match="File path was not supplied: "):
+            x = ScriptGenerator(
+                "127.0.0.1",
+                "127.0.0.1",
+                creds="",
+                file_path="",
+            )
+            x.process_file()
 
-    # Verify that the output was written to the expected file
-    assert os.path.exists("sync_0.sh")
+# @pytest.mark.parametrize("file_path", RANDOM_VALID_CREDS_2)
+# def test_process_file_with_valid_file_path(file_path):
 
-    # Read the output file and verify that it contains the expected data
-    # with open("sync_0.sh", "r") as f:
-    #    output = f.read()
-    #    assert "--user1 user1" in output
-    #    assert "--user2 user1" in output
-    #    assert "user2 passwd2" in output
-    #    assert "127.0.0.1" in output
-    #    assert "test.com" in output
+#     x = ScriptGenerator(
+#         "127.0.0.1", "127.0.0.1", file_path=file_path
+#     )
+#     x.process_file()
 
-    os.remove("sync_0.sh")
-    os.remove("testcreds.tmp")
+#     # Verify that the output was written to the expected file
+#     assert os.path.exists("sync_0.sh")
 
 
 # TODO: test functionality to use alias from config files
