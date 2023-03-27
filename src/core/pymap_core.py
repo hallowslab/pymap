@@ -54,14 +54,8 @@ class ScriptGenerator:
             all_hosts = {k: v for k, v in [x for x in all_hosts]}
             for k in all_hosts:
                 has_match = re.match(k, hostname)
-                if has_match:
+                if has_match and has_match.end() == len(hostname):
                     self.logger.debug("Matched hostname: %s", hostname)
-                    if re.match(self.IP_ADDR_RE, all_hosts[k]):
-                        self.logger.debug(
-                            "Matched hostname: %s To address: %s",
-                            hostname,
-                            all_hosts[k],
-                        )
                     return f"{hostname}{all_hosts[k]}"
         return hostname
 
@@ -97,17 +91,17 @@ class ScriptGenerator:
         for line in uinput:
             if line and len(line) > 1:
                 # Process line
-                new_line = self.process_line(line)
+                new_line = self.parse_line(line)
                 if new_line:
                     # if extra arguments append at end
                     if self.extra_args:
                         new_line = f"{new_line} {self.extra_args}"
                     yield new_line
 
-    # Processes individual Lines returns None or a formatted string
-    def process_line(self, line: str) -> Union[str, None]:
+    # Parses individual Lines returns None or a formatted string
+    def parse_line(self, line: str) -> Optional[str]:
         # FIXME: Remove passwords before logging
-        self.logger.debug("Processing Line %s....", line[0:5])
+        self.logger.debug("Parsing Line %s....", line[0:5])
         has_match = re.match(self.WHOLE_STRING_ID, line)
         # FIXME: Regex has catastrophic backtracing, should not be used for now...
         # TODO: Maybe replace regex for the splitting logic

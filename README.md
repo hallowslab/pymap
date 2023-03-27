@@ -49,6 +49,10 @@
 * App logs are stored in the log directory in the pymap.log
 
 
+# Usage
+
+- Insert a source and destination in the sync component, input the user and credentials in the large text input, separate them by a single space character, **if for any reason it still fails to match use the fallback separator "<->"**
+
 # Advanced Usage
 
 If you need to interact with the application for adding users or launch in debug mode, you will need to access the environment so that it recognizes the proper python interpreter and adittional packages, for this you can run the following command `poetry shell`
@@ -86,6 +90,7 @@ Now if you need to add a user manually you can do so by using the following comm
 * If running the CLI remove the pipe to /dev/null
 * Add admin functionality (WIP)
 * Configure logging for both Flask and Celery (WIP)
+
 
 #### Notes
 
