@@ -1,4 +1,5 @@
 import secrets
+import os
 import sys
 import json
 import logging
@@ -62,8 +63,12 @@ def create_flask_app(config={}, script_info=None):
     if app.config.get("SECRET_KEY", "") == "":
         app.config["SECRET_KEY"] = str(secrets.token_hex(21))
 
+    # Create required directories 
+    logdir = app.config.get("LOG_DIRECTORY", "/var/log/pymap")
+    if not os.path.isdir(logdir):
+        os.mkdir(logdir)
     # Configure logging after importing config to access LOG_DIRECTORY
-    log_name = "{}/pymap.log".format(app.config.get("LOG_DIRECTORY", "/var/log/pymap"))
+    log_name = "{}/pymap.log".format(logdir)
     file_handler = RotatingFileHandler(log_name, maxBytes=50000, backupCount=3)
     file_handler.setFormatter(REQUEST_FORMATTER)
     file_handler.setLevel(app.config.get("LOG_LEVEL", "INFO"))

@@ -35,36 +35,50 @@ class TaskManagementTests(APIV2Test):
         # set token and header
         self._token = res.json.get("access_token")
         self._header = {"Authorization": f"Bearer {self._token}"}
-        self.task_ids = self.generate_random_tasks()
+        self.tasks = self.generate_random_tasks()
     
     def generate_random_tasks(self)->List[str]:
-        task_ids = []
+        tasks = []
         for _ in range(10):
             t_id = str(uuid.uuid4())
-            task_ids.append(t_id)
             ctask = CeleryTask(
                 source="source",
                 destination="dest",
                 log_path=f"/var/log/pymap/{t_id}",
                 task_id=t_id,
                 n_accounts=randint(1,100),
-                owner_username=choices(ascii_lowercase, randint(6,10))
+                owner_username="".join(choices(ascii_lowercase, k=randint(6,10)))
             )
+            tasks.append(ctask)
             db.session.add(ctask)
             db.session.commit()
-        return task_ids
+        return tasks
     
+    def test_delete_tasks(self):
+        # Post a request to delete self.tasks[0] and self.tasks[1]
+        res = self.client.post(
+            "/api/v2/admin/delete-tasks",
+            data=json.dumps(dict(task_ids=[self.tasks[0].task_id, self.tasks[1].task_id])),
+            content_type="application/json",
+            headers=self._header
+        )
+
+        self.assert200(res)
+        # Get ids in message
+        ids = [t_id for t_id in res.json["message"]]
+        assert self.tasks[0].task_id in ids
+        assert self.tasks[1].task_id in ids
+        # Verify if task was removed from DB
+        assert CeleryTask.query.filter_by(task_id=self.tasks[0].task_id).first() is None
+        assert CeleryTask.query.filter_by(task_id=self.tasks[1].task_id).first() is None
+
+
     def test_delete_no_ids(self):
         res = self.client.post(
             "/api/v2/admin/delete-tasks",
-            data=json.dumps(dict(task_ids=[self.task_ids[0], self.task_ids[1]])),
-            content_type="application/json"
+            data=json.dumps(dict(task_ids=[])),
+            content_type="application/json",
+            headers=self._header
         )
 
-
-    def test_delete_tasks(self):
-        res = self.client.post(
-            "/api/v2/admin/delete-tasks",
-            data=json.dumps(dict(task_ids=[self.task_ids[0], self.task_ids[1]])),
-            content_type="application/json"
-        )
+        self.assert400(res)

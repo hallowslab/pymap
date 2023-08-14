@@ -32,10 +32,13 @@ class UserFunctionalityTest(APIV2Test):
         self._header = {"Authorization": f"Bearer {self._token}"}
 
     def test_heartbeat(self):
+        # Sends an authenticated request to the endpoint, this is used
+        # to check if the users token is still valid
         res = self.client.get("/api/v2/heartbeat", headers=self._header)
         self.assert200(res)
 
     def test_check_token_status(self):
+        # TODO: Maybe replace heartbeat for this
         res = self.client.get("/api/v2/token-status", headers=self._header)
         self.assert200(res)
 
