@@ -4,6 +4,7 @@ from flask_testing import TestCase
 from server import create_flask_app
 from server.extensions import db
 
+
 class APIV2Test(TestCase):
     """Base test class for all APIV2 endpoints"""
 

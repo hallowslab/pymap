@@ -36,8 +36,8 @@ class TaskManagementTests(APIV2Test):
         self._token = res.json.get("access_token")
         self._header = {"Authorization": f"Bearer {self._token}"}
         self.tasks = self.generate_random_tasks()
-    
-    def generate_random_tasks(self)->List[str]:
+
+    def generate_random_tasks(self) -> List[str]:
         tasks = []
         for _ in range(10):
             t_id = str(uuid.uuid4())
@@ -46,21 +46,23 @@ class TaskManagementTests(APIV2Test):
                 destination="dest",
                 log_path=f"/var/log/pymap/{t_id}",
                 task_id=t_id,
-                n_accounts=randint(1,100),
-                owner_username="".join(choices(ascii_lowercase, k=randint(6,10)))
+                n_accounts=randint(1, 100),
+                owner_username="".join(choices(ascii_lowercase, k=randint(6, 10))),
             )
             tasks.append(ctask)
             db.session.add(ctask)
             db.session.commit()
         return tasks
-    
+
     def test_delete_tasks(self):
         # Post a request to delete self.tasks[0] and self.tasks[1]
         res = self.client.post(
             "/api/v2/admin/delete-tasks",
-            data=json.dumps(dict(task_ids=[self.tasks[0].task_id, self.tasks[1].task_id])),
+            data=json.dumps(
+                dict(task_ids=[self.tasks[0].task_id, self.tasks[1].task_id])
+            ),
             content_type="application/json",
-            headers=self._header
+            headers=self._header,
         )
 
         self.assert200(res)
@@ -72,13 +74,12 @@ class TaskManagementTests(APIV2Test):
         assert CeleryTask.query.filter_by(task_id=self.tasks[0].task_id).first() is None
         assert CeleryTask.query.filter_by(task_id=self.tasks[1].task_id).first() is None
 
-
     def test_delete_no_ids(self):
         res = self.client.post(
             "/api/v2/admin/delete-tasks",
             data=json.dumps(dict(task_ids=[])),
             content_type="application/json",
-            headers=self._header
+            headers=self._header,
         )
 
         self.assert400(res)
