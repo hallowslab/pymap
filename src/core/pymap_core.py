@@ -1,8 +1,9 @@
 import logging
 import re
-from typing import Generator, Iterable, List, Optional, Union
+from typing import Generator, Iterable, List, Optional
 
 
+# TODO: Pass this in trough parameters
 LOGDIR = "/var/log/pymap"
 
 
@@ -42,8 +43,8 @@ class ScriptGenerator:
         # Load the config before matching hosts, since they are matched trough the strings defined
         # in the HOSTS section
         self.config = kwargs.get("config", {})
-        self.host2 = self.match_host(host2)
-        self.host1 = self.match_host(host1)
+        self.host2: str = self.match_host(host2)
+        self.host1: str = self.match_host(host1)
 
     # Verifies if the hostname is either a CPanel, Plesk or WEBLX instance
     # and returns the apropriate FQDN
@@ -111,17 +112,11 @@ class ScriptGenerator:
             mail1 = has_match.group("mail_provider1")
             mail2 = has_match.group("mail_provider2")
             self.logger.debug(f"Adding task: {user1}{mail1} -> {user2}{mail2}")
-            self.logger.debug(f"\nUSER1:{user1}\tUSER2:{user2}\tMAIL1{mail1}\tMAIL2{mail2}")
-            username1: Optional[str] = (
-                f"{user1}{mail1}"
-                if mail1
-                else None
+            self.logger.debug(
+                f"\nUSER1:{user1}\tUSER2:{user2}\tMAIL1{mail1}\tMAIL2{mail2}"
             )
-            username2: Optional[str] = (
-                f"{user2}{mail2}"
-                if mail2
-                else None
-            )
+            username1: Optional[str] = f"{user1}{mail1}" if mail1 else None
+            username2: Optional[str] = f"{user2}{mail2}" if mail2 else None
             if username1:
                 return self.FORMAT_STRING.format(
                     self.host1,

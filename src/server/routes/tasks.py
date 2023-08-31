@@ -1,12 +1,11 @@
 from os import listdir
 from os.path import isfile, join
 from subprocess import TimeoutExpired, Popen, PIPE
-from flask import Blueprint, current_app, jsonify, request, send_file
+from flask import Blueprint, current_app, request, send_file
 from flask_praetorian import (
     auth_required,
     current_rolenames,
     current_user_id,
-    current_user,
 )
 
 # Core and Flask app
@@ -46,14 +45,15 @@ def get_tasks_v2():
                     "owner_username": t.owner_username,
                 }
             )
-        return (jsonify({"tasks": all_tasks}), 200)
+        return {"tasks": all_tasks}, 200
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify(error=400, message=e.__str__()), 400)
+        return {"error": e.__str__()}, 400
 
 
 # TODO: This is not really being used atm
 @tasks_blueprint.route("/api/v2/task-status/<task_id>", methods=["GET"])
+@auth_required
 def task_status(task_id):
     task = call_system.AsyncResult(task_id)
     response = {"Querying status": True}
@@ -122,10 +122,10 @@ def get_logs_by_task_id(task_id):
             for f in listdir(logs_dir)
             if isfile(join(logs_dir, f))
         ]
-        return (jsonify({"logs": all_logs, "status": task_status(task_id)}), 200)
+        return {"logs": all_logs, "status": task_status(task_id)}, 200
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify(error=400, message=e.__str__()), 400)
+        return {"error": e.__str__()}, 400
 
 
 @tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>", methods=["GET"])
@@ -138,7 +138,7 @@ def get_log_by_path(task_id, log_file):
     try:
         f_path = f"{log_directory}/{task_id}/{log_file}"
         if not isfile(f_path):
-            return (jsonify({"error": f"File {f_path} was not found"}), 404)
+            return {"error": f"File {f_path} was not found"}, 404
         current_app.logger.debug(
             "Tail timeout is: %s\nTail count is: %s", tail_timeout, tail_count
         )
@@ -150,39 +150,35 @@ def get_log_by_path(task_id, log_file):
         )
         content, error = p1.communicate(timeout=tail_timeout)
         _status: int = 300 if error else 200
-        return (jsonify({"content": content, "error": error}), _status)
+        return {"content": content, "proc_error": error}, _status
     except TimeoutExpired:
         current_app.logger.error("Failed to tail the file: %s", f_path, exc_info=1)
-        return (
-            jsonify(
-                {
-                    "error": 400,
-                    "message": f"Failed to tail the file -> {f_path} after {tail_timeout} seconds",
-                }
-            ),
-            400,
-        )
+        return {
+            "error": f"Failed to tail the file -> {f_path} after {tail_timeout} seconds"
+        }, 400
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify(error=400, message=e.__str__()), 400)
+        return {"error": e.__str__()}, 400
 
 
-@tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>/download", methods=["GET"])
+@tasks_blueprint.route("/api/v2/tasks/<task_id>/<log_file>/download")
 @auth_required
 def download_log_by_path(task_id, log_file):
     log_directory = current_app.config.get("LOG_DIRECTORY")
-    user = current_user()
-    log_redis(
-        user.username, f"Requested download of {log_directory}/{task_id}/{log_file}"
-    )
-    current_app.logger.info(
-        f"Requested download of {log_directory}/{task_id}/{log_file}"
-    )
+    id: int = current_user_id()
+    # Get all tasks
+    user = User.query.filter_by(id=id).first_or_404()
     try:
+        log_redis(
+            user.username, f"Requested download of {log_directory}/{task_id}/{log_file}"
+        )
+        current_app.logger.info(
+            f"{user.username}: Requested download of {log_directory}/{task_id}/{log_file}"
+        )
         f_path = f"{log_directory}/{task_id}/{log_file}"
         if not isfile(f_path):
-            return (jsonify(error=404, message=f"File {f_path} was not found"), 404)
+            return {"error": f"File {f_path} was not found"}, 404
         return send_file(f_path, as_attachment=True)
     except Exception as e:
         current_app.logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
-        return (jsonify(error=400, message=e.__str__()), 400)
+        return {"error": e.__str__()}, 400

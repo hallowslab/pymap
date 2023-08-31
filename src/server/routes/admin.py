@@ -1,7 +1,7 @@
 import os
 import shutil
 from typing import List
-from flask import current_app, jsonify, request, Blueprint
+from flask import current_app, request, Blueprint
 from flask_praetorian import roles_accepted, current_user
 from celery.result import AsyncResult
 
@@ -25,7 +25,7 @@ def delete_task():
     extra_message = ""
     processed = {}
     if not ids:
-        return (jsonify(error=400, message="You need to specify task id"), 400)
+        return {"error": "You need to specify task id"}, 400
     for task_id in ids:
         log_redis(user.username, f"User requested deletion of task with ID: {task_id}")
         current_app.logger.info(
@@ -51,8 +51,10 @@ def delete_task():
                 "Unhandled exception: %s", e.__str__(), exc_info=1
             )
             processed[task_id] = "Unhandled exception: %s", e.__str__()
-    current_app.logger.info("Processed deletion request from %s, %s", user.username, processed)
-    return (jsonify(message=processed), 200)
+    current_app.logger.info(
+        "Processed deletion request from %s, %s", user.username, processed
+    )
+    return {"message": processed}, 200
 
 
 @admin_blueprint.route("/api/v2/admin/archive-tasks", methods=["POST"])
@@ -65,7 +67,7 @@ def archive_task():
     extra_message = ""
     processed = {}
     if not ids:
-        return (jsonify(error=400, message="You need to specify task id"), 400)
+        return {"error": "You need to specify task id"}, 400
     for task_id in ids:
         log_redis(user.username, f"User requested archival of task with ID: {task_id}")
         current_app.logger.info(
@@ -97,8 +99,10 @@ def archive_task():
             )
             processed[task_id] = "Unhandled exception: %s", e.__str__()
             status = 207
-    current_app.logger.info("Processed archival request from %s, %s", user.username, processed)
-    return (jsonify(message=processed), status)
+    current_app.logger.info(
+        "Processed archival request from %s, %s", user.username, processed
+    )
+    return {"message": processed}, status
 
 
 @admin_blueprint.route("/api/v2/admin/cancel-tasks")
@@ -110,7 +114,7 @@ def cancel_task(task_id):
     ids: List[str] = content.get("task_ids")
     processed = {}
     if not ids:
-        return (jsonify(error=400, message="You need to specify task id"), 400)
+        return {"error": "You need to specify task id"}, 400
     for task_id in ids:
         log_redis(user.username, f"Requested cancellation of task with ID: {task_id}")
         current_app.logger.info(
@@ -124,7 +128,9 @@ def cancel_task(task_id):
                 status = 207
                 continue
             elif result.state == "SUCCESS":
-                processed[task_id] = f"Task with ID: {task_id} has already finished executing"
+                processed[
+                    task_id
+                ] = f"Task with ID: {task_id} has already finished executing"
                 status = 207
                 continue
             else:
@@ -137,5 +143,7 @@ def cancel_task(task_id):
             processed[task_id] = "Unhandled exception: %s", e.__str__()
             status = 207
             continue
-    current_app.logger.info("Processed cancelation request from %s, %s", user.username, processed)
-    return (jsonify(message=processed), status)
+    current_app.logger.info(
+        "Processed cancelation request from %s, %s", user.username, processed
+    )
+    return {"message": processed}, status

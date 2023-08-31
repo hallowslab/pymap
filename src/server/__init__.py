@@ -63,12 +63,12 @@ def create_flask_app(config={}, script_info=None):
     if app.config.get("SECRET_KEY", "") == "":
         app.config["SECRET_KEY"] = str(secrets.token_hex(21))
 
-    # Create required directories 
+    # Create required directories
     logdir = app.config.get("LOG_DIRECTORY", "/var/log/pymap")
     if not os.path.isdir(logdir):
         os.mkdir(logdir)
     # Configure logging after importing config to access LOG_DIRECTORY
-    log_name = "{}/pymap.log".format(logdir)
+    log_name = f"{logdir}/pymap.log"
     file_handler = RotatingFileHandler(log_name, maxBytes=50000, backupCount=3)
     file_handler.setFormatter(REQUEST_FORMATTER)
     file_handler.setLevel(app.config.get("LOG_LEVEL", "INFO"))
@@ -118,8 +118,12 @@ def create_celery_app(options: List[str] = [""]):
         with open("server/config.json") as fh:
             config = json.load(fh)
 
+    # Grab the log directory
+    LOG_DIR = config["LOG_DIRECTORY"]
     # Select the celery section
     config = config["CELERY"]
+    # Append the log directory to the new dictionary
+    config["LOG_DIRECTORY"] = LOG_DIR
 
     # loop trough the items and set the values manually
     for item in config:

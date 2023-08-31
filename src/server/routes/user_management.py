@@ -1,9 +1,10 @@
 from time import strftime
-from flask import Blueprint, current_app, jsonify, request
+import time
+from flask import Blueprint, current_app, request
 from flask_praetorian import auth_required, roles_accepted
 
 # Core and Flask, and functionality
-from server import redis_store, ACCESS_EXPIRES
+from server import redis_store
 from server.extensions import db, guard, redis_store
 from server.utils import log_redis
 
@@ -18,19 +19,14 @@ def do_login():
     identifier = request.json.get("identifier", None)
     password = request.json.get("password", None)
     if identifier is None or password is None:
-        return (
-            jsonify(
-                error=401, message=f"Missing user: {identifier} or password: {password}"
-            ),
-            401,
-        )
+        return {"error": f"Missing user: {identifier} or password: {password}"}, 401
 
     current_app.logger.info(f"Received login request for: {identifier}")
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
     if identifier is None:
-        return (jsonify(error=401, message=f"User not found"), 401)
+        return {"error": f"User not found"}, 401
 
     t_now = strftime("%d/%m/%Y %H:%M")
     identifier.last_login = t_now
@@ -42,12 +38,10 @@ def do_login():
     # Reference: https://developer.mozilla.org/en-US/docs/Web/API/document/cookie
     # resp = make_response({"message": f"Logged in as {identifier}", "access_token": token})
     # resp.set_cookie("access_token", value=token)
-    return (
-        jsonify(
-            {"message": f"Logged in as {identifier.username}", "access_token": token}
-        ),
-        200,
-    )
+    return {
+        "message": f"Logged in as {identifier.username}",
+        "access_token": token,
+    }, 200
 
 
 @user_manager_blueprint.route("/api/v2/register", methods=["POST"])
@@ -60,30 +54,29 @@ def register_user():
     current_app.logger.info(f"Received register request for: {username}->{email}")
 
     if username is None or email is None or password is None:
-        return (
-            jsonify(
-                error=400, message=f"Missing user: {username} or password: {password}"
-            ),
-            400,
-        )
+        return {
+            "error": f"Missing user: {username}, email: {email} or password: {password}"
+        }, 400
 
     user_exists = User.query.filter_by(username=username).first() is not None
     email_exists = User.query.filter_by(email=email).first() is not None
 
     if user_exists or email_exists:
-        return (jsonify(error=400, message="Invalid data, check your input"), 400)
+        return {"error": "Invalid data, check your input"}, 400
 
     hashed_password = guard.hash_password(password)
     new_user = User(username=username, email=email, password=hashed_password)
     db.session.add(new_user)
     db.session.commit()
 
-    return (
-        jsonify(
-            {"id": new_user.id, "username": new_user.username, "email": new_user.email}
-        ),
-        200,
+    current_app.logger.info(
+        f"Registered new user: {new_user.id}@{new_user.username}->{new_user.email}"
     )
+    return {
+        "id": new_user.id,
+        "username": new_user.username,
+        "email": new_user.email,
+    }, 200
 
 
 @user_manager_blueprint.route("/api/v2/account-status", methods=["GET"])
@@ -92,53 +85,35 @@ def check_account_status():
     identifier = request.json.get("identifier", None)
     current_app.logger.info(f"Received status request for: {identifier}")
     if identifier is None:
-        return (
-            jsonify(
-                error=400, message="Please provide a valid identifier (Username|Email)"
-            ),
-            400,
-        )
+        return {"error": "Please provide a valid identifier (Username|Email)"}, 400
 
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
     if identifier is None:
-        return (
-            jsonify(error=404, message=f"The user {identifier} does not seem to exist"),
-            404,
-        )
+        return {"error": f"The user {identifier} does not seem to exist"}, 404
 
     status = "Active" if identifier.is_active else "Deactivated"
-    return jsonify(message=f"User {identifier.username} is {status}")
+    return {"message": f"User {identifier.username} is {status}"}
 
 
 @user_manager_blueprint.route("/api/v2/change-account-status", methods=["POST"])
 @roles_accepted("admin")
-def deactivate_account():
+def change_account_status():
     identifier = request.json.get("identifier", None)
     current_app.logger.info(f"Received change status request for: {identifier}")
     if identifier is None:
-        return (
-            jsonify(
-                error=400, message="Please provide a valid identifier (Username|Email)"
-            ),
-            400,
-        )
+        return {"error": "Please provide a valid identifier (Username|Email)"}, 400
 
     user = User.query.filter_by(username=identifier).first()
     email = User.query.filter_by(email=identifier).first()
     identifier = email if user is None else user
     if identifier is None:
-        return (
-            jsonify(error=404, message=f"The user {identifier} does not seem to exist"),
-            404,
-        )
+        return {"error": f"The user {identifier} does not seem to exist"}, 404
 
     identifier.is_active = not identifier.is_active
     db.session.commit()
-    return jsonify(
-        message=f"User {identifier.username} Status = ({identifier.is_active})"
-    )
+    return {"message": f"User: {identifier.username}, Status: {identifier.is_active}"}
 
 
 @user_manager_blueprint.route("/api/v2/refresh-token", methods=["POST"])
@@ -148,7 +123,7 @@ def refresh_token():
     current_app.logger.info(f"Received refresh token request for user with ID: {id}")
     new_token = guard.refresh_jwt_token(old_token)
     ret = {"access_token": new_token}
-    return jsonify(ret), 200
+    return ret, 200
 
 
 @user_manager_blueprint.route("/api/v2/check-token", methods=["GET"])
@@ -161,9 +136,19 @@ def check_if_token_is_revoked():
     current_app.logger.debug(f"DATA: {data}")
     token_in_redis = redis_store.get(data["jti"])
     current_app.logger.debug(f"TOKEN: {token_in_redis}")
-    if token_in_redis is None:
-        return jsonify(message=f"token allowed ({token})")
-    return jsonify(message=f"token blacklisted ({token})")
+    token_allowed = True if token_in_redis is None else False
+    try:
+        expiration = data["exp"]
+        current_time = int(time.time())
+
+        time_until_expiry = expiration - current_time
+        return {
+            "token_allowed": token_allowed,
+            "data": data,
+            "time_until_expiry": time_until_expiry,
+        }, 200
+    except:
+        return {"error": f"Token is invalid or blacklisted: {token}"}, 401
 
 
 @user_manager_blueprint.route("/api/v2/blacklist-token", methods=["GET"])
@@ -171,7 +156,23 @@ def check_if_token_is_revoked():
 def do_logout():
     token = guard.read_token_from_header()
     data = guard.extract_jwt_token(token)
-    id = data.get("id")
-    current_app.logger.info(f"Received blacklist token request for user with ID: {id}")
-    redis_store.set(data["jti"], "", ex=ACCESS_EXPIRES)
-    return jsonify(message="token blacklisted ({})".format(token))
+    try:
+        id = data.get("id")
+        issued_at = data["iat"]
+        expiration = data["exp"]
+        current_time = int(time.time())
+
+        # Get the time until expiry and add an hour on top
+        time_until_expiry = expiration - current_time
+        redis_store.set(data["jti"], "", ex=time_until_expiry + 60)
+        current_app.logger.info(
+            f"Received blacklist token request for user with ID: {id}"
+        )
+        return {
+            "token_allowed": False,
+            "issued_at": issued_at,
+            "expiration": expiration,
+            "time_until_expiry": time_until_expiry,
+        }, 200
+    except:
+        return {"error": f"Token is invalid or blacklisted: {token}"}, 401

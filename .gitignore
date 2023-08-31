@@ -44,3 +44,4 @@ sync_tests
 config.json
 config.dev.json
 davmail*.properties
+*.state

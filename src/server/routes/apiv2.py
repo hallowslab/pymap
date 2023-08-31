@@ -1,6 +1,6 @@
 from os import mkdir
 from os.path import isdir
-from flask import Blueprint, current_app, jsonify, request, url_for
+from flask import Blueprint, current_app, request, url_for
 from flask_praetorian import roles_accepted, auth_required, current_user_id
 
 # Core and Flask app
@@ -21,7 +21,7 @@ apiv2_blueprint = Blueprint("apiV2", __name__)
 def heartbeat():
     id: int = current_user_id()
     user = User.query.filter_by(id=id).first_or_404()
-    return (jsonify({"message": user.username}), 200)
+    return {"message": user.username}, 200
 
 
 @apiv2_blueprint.route("/api/v2/sync", methods=["POST"])
@@ -67,12 +67,7 @@ def sync_v2():
     if not isdir(f"{log_directory}/{task.id}"):
         mkdir(f"{log_directory}/{task.id}")
     current_app.logger.info("Starting background task with ID: %s", task.id)
-    return (
-        jsonify(
-            {
-                "location": url_for("tasks.task_status", task_id=task.id),
-                "taskID": task.id,
-            }
-        ),
-        202,
-    )
+    return {
+        "location": url_for("tasks.task_status", task_id=task.id),
+        "taskID": task.id,
+    }, 202

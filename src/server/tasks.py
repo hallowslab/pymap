@@ -10,13 +10,14 @@ import celery.signals
 from server import create_celery_app
 
 celery_app = create_celery_app(sys.argv[1:])
+LOG_DIRECTORY = celery_app.conf.get("LOG_DIRECTORY")
 logger = logging.getLogger(__name__)
 
 # TODO: This is not working, find a way to do proper logging....
 @celery.signals.setup_logging.connect
 def on_celery_setup_logging(**kwargs):
     if not logger.handlers:
-        handler = logging.FileHandler("celery_tasks.log")
+        handler = logging.FileHandler(f"{LOG_DIRECTORY}/celery.log")
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s >>> %(levelname)s: %(message)s"
         )
@@ -35,8 +36,8 @@ def call_system(self, cmd_list: List[str]) -> dict:
     # Replace the log directory in each command adding the current task id as the parent directory
     cmd_list = [
         cmd.replace(
-            "--logdir=/var/log/pymap",
-            f"--logdir=/var/log/pymap/{call_system.request.id}",
+            f"--logdir={LOG_DIRECTORY}",
+            f"--logdir={LOG_DIRECTORY}/{call_system.request.id}",
         )
         for cmd in cmd_list
     ]
