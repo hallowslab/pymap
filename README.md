@@ -89,6 +89,8 @@
 - `create-user USER EMAIL PASSWORD -r ROLES` -> Will add the USER identified by PASSWORD with the supplied roles to the database, the roles are a comma separated list, they are optional and the default is operator
 
 # DEV
+- The commands created trough the flask instance should be supplied the parameter `--debug` in order to add the user to the temporary database
+  * `flask --app manage --debug create-user username email@address password`
 
 # Dockers (not used atm)
 ### Pymap
@@ -108,6 +110,7 @@
 * If running the CLI remove the pipe to /dev/null
 * Add admin functionality (WIP)
 * Configure logging for both Flask and Celery (WIP)
+* need to finish the documentation for running the app with another webserver such as nginx or apache
 
 
 ### Notes
@@ -115,8 +118,6 @@
 #### Logout
 - There isn't really a logout method, the current implementation involves blacklisting the current token for the same amount of time it is possibly valid (*ACCESS_EXPIRES* configuration value)
 
-* [Configure poetry with VSCode](https://stackoverflow.com/a/64434542) 
- - `poetry config virtualenvs.in-project true`
 
 #### Bugs/Issues
 
@@ -128,4 +129,5 @@
 * Using eventlet and redis
 
 #### Other
-- need to finish the documentation for running the app with another webserver such as nginx or apache
+* [Configure poetry with VSCode](https://stackoverflow.com/a/64434542) 
+ - `poetry config virtualenvs.in-project true`

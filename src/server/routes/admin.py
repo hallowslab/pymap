@@ -12,6 +12,7 @@ from server.tasks import celery_app
 
 # Models
 from server.models.tasks import CeleryTask
+from server.models.users import User
 
 admin_blueprint = Blueprint("admin", __name__)
 
@@ -105,9 +106,9 @@ def archive_task():
     return {"message": processed}, status
 
 
-@admin_blueprint.route("/api/v2/admin/cancel-tasks")
+@admin_blueprint.route("/api/v2/admin/cancel-tasks", methods=["POST"])
 @roles_accepted("admin", "operator")
-def cancel_task(task_id):
+def cancel_task():
     status = 200
     content = request.json
     user = current_user()
@@ -147,3 +148,20 @@ def cancel_task(task_id):
         "Processed cancelation request from %s, %s", user.username, processed
     )
     return {"message": processed}, status
+
+@admin_blueprint.route("/api/v2/admin/list-users", methods=["GET"])
+@roles_accepted("admin")
+def list_users():
+    try:
+        users = []
+        for user in User.query.all():
+            users.append({
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "lastLogin": user.last_login,
+                "active": user.is_active
+            })
+        return {"users": users}, 200
+    except Exception as e:
+        return {"error": e.__str__()}, 400
