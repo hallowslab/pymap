@@ -21,6 +21,7 @@ apiv2_blueprint = Blueprint("apiV2", __name__)
 def heartbeat():
     id: int = current_user_id()
     user = User.query.filter_by(id=id).first_or_404()
+    current_app.logger.info("User: {%s}", user.username)
     return {"message": user.username}, 200
 
 

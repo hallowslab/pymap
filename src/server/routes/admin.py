@@ -58,15 +58,18 @@ def delete_task():
     return {"message": processed}, 200
 
 
-@admin_blueprint.route("/api/v2/admin/archive-tasks", methods=["POST"])
+@admin_blueprint.route("/api/v2/admin/archive-tasks")
 @roles_accepted("admin", "operator")
 def archive_task():
     status = 200
-    content = request.json
+    content = request.get_json()
     ids: List[str] = content.get("task_ids")
     user = current_user()
     extra_message = ""
     processed = {}
+    current_app.logger.info("content: {%s}", content)
+    current_app.logger.info("ids: {%s}", ids)
+    current_app.logger.info("user: {%s}", user)
     if not ids:
         return {"error": "You need to specify task id"}, 400
     for task_id in ids:

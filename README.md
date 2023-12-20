@@ -111,6 +111,7 @@
 * Add admin functionality (WIP)
 * Configure logging for both Flask and Celery (WIP)
 * need to finish the documentation for running the app with another webserver such as nginx or apache
+* Add a feature to schedule tasks you lazy bones
 
 
 ### Notes
