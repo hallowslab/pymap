@@ -1,6 +1,9 @@
-import os
 import pytest
 from core.pymap_core import ScriptGenerator
+
+# Just here for the dev log level
+from core import tools
+
 
 from tests import RANDOM_VALID_CREDS_2, RANDOM_VALID_CREDS
 
@@ -17,7 +20,7 @@ from tests import RANDOM_VALID_CREDS_2, RANDOM_VALID_CREDS
     ],
 )
 def test_discards_invalid_inputs(test_input):
-    x = ScriptGenerator("127.0.0.1", "127.0.0.1", test_input, domain="test.com")
+    x = ScriptGenerator("127.0.0.1", "127.0.0.1", domain="test.com")
     # Test scenario 1: All should return None except the last line
     if "This gets parsed" in test_input:
         # As explained above the fallback logic tries to find the user and password
@@ -30,4 +33,3 @@ def test_discards_invalid_inputs(test_input):
     else:
         # All others should fail and return None
         assert x.process_line(test_input) is None
-

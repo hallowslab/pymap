@@ -1,6 +1,9 @@
 import pytest
 from core.pymap_core import ScriptGenerator
 
+# Just here for the dev log level
+from core import tools
+
 from tests import (
     RANDOM_VALID_CREDS_3,
     RANDOM_VALID_CREDS_4,
@@ -18,7 +21,7 @@ from tests import (
     ],
 )
 def test_api_discards_invalid_inputs(test_input):
-    x = ScriptGenerator("127.0.0.1", "127.0.0.1", creds=test_input, domain="test.com")
+    x = ScriptGenerator("127.0.0.1", "127.0.0.1", domain="test.com")
     scripts = x.process_strings(test_input)
     assert isinstance(scripts, list)
     assert len(scripts) == 0
@@ -27,7 +30,7 @@ def test_api_discards_invalid_inputs(test_input):
 # USER PASSWORD
 @pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS_3)
 def test_returns_parsed_line_1_user(test_input):
-    x = ScriptGenerator("127.0.0.1", "127.0.0.2", test_input, domain="test.com")
+    x = ScriptGenerator("127.0.0.1", "127.0.0.2", domain="test.com")
     scripts = x.process_strings(test_input)
     for line in scripts:
         parts = line.split()
@@ -48,7 +51,7 @@ def test_returns_parsed_line_1_user(test_input):
 # USER1 PASSWORD1 USER2 PASSWORD2""
 @pytest.mark.parametrize("test_input", RANDOM_VALID_CREDS_4)
 def test_returns_parsed_line_2_users(test_input):
-    x = ScriptGenerator("127.0.0.1", "127.0.0.1", creds=test_input, domain="test.com")
+    x = ScriptGenerator("127.0.0.1", "127.0.0.1", domain="test.com")
     scripts = x.process_strings(test_input)
     for line in scripts:
         parts = line.split()
