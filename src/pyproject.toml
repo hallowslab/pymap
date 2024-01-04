@@ -20,7 +20,7 @@ coverage = "^6.3.2"
 runserver = "python manage.py runserver"
 migrate = "python manage.py migrate"
 ### Formatting, tests & coverage
-format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports --exclude client,migrations . && mypy core server"
+format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports core && mypy core"
 testCore = "pytest tests/core"
 coverage = "coverage run -m pytest && coverage report"
 

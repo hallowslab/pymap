@@ -18,6 +18,7 @@ imapsync
 .vscode
 *.txt
 *.db
+*.sqlite*
 *.rdb
 *.log
 *.deb
@@ -25,3 +26,5 @@ tmux.sh
 sync*.sh
 sync_tests
 davmail*.properties
+config.json
+config.dev.json

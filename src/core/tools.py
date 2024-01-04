@@ -1,13 +1,21 @@
 import logging
 import argparse
-import configparser
+import json
 
+# Define a new log level above CRITICAL
+DEV_LEVEL = 50
+logging.addLevelName(DEV_LEVEL, "DEV")
 
-def set_config(f_path="config.ini"):
-    config = configparser.ConfigParser()
-    config.read(f_path)
-    return config
+# Custom logger method for the new level
+def dev(self, message, *args, **kwargs):
+    """  ***DO NOT USE IN PRODUCTION***
+    Used for logging protected info like passwords, 
+    """
+    if self.isEnabledFor(DEV_LEVEL):
+        self._log(DEV_LEVEL, message, args, **kwargs)
 
+# Add the custom method to the Logger class
+logging.Logger.dev = dev
 
 # Try to parse log level, default to 20/INFO
 def set_logging(log_level):
@@ -22,6 +30,15 @@ def set_logging(log_level):
         "Logging instantiated with log level: %s",
         logging.getLevelName(logging.getLogger().level),
     )
+
+
+def load_config(f_path="config.json"):
+    """
+    Loads configuration from a json dictionary
+    """
+    with open(f_path, 'r') as config_file:
+        config = json.load(config_file)
+    return config
 
 
 def setup_argparse():
@@ -63,6 +80,9 @@ def setup_argparse():
         type=str,
         default="INFO",
         help="Defines log level (INFO, WARNING, ERROR, DEBUG)",
+    )
+    parser.add_argument(
+        "-c", "--config", default=None, help="Path of the configuration file"
     )
     parser.add_argument(
         "-dry",
