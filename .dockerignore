@@ -1,7 +1,0 @@
-**/node_modules
-**/.venv
-**/venv
-**/build
-**/sync*.sh
-**/tes*.txt
-**/*.db

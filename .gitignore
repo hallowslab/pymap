@@ -1,24 +1,7 @@
 # Python
 .venv
 venv
-sync*.sh
-test*.txt
 __pycache__
-
-# Javascript
-## dependencies
-node_modules
-/.pnp
-.pnp.js
-cache
-
-## testing
-coverage
-htmlcov
-.coverage
-
-## production
-build
 
 ## misc
 .DS_Store
@@ -26,21 +9,19 @@ build
 .env.development.local
 .env.test.local
 .env.production.local
-
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # Additional 
 imapsync
+.vscode
 *.txt
 *.db
-.vscode
+*.rdb
 *.log
 *.deb
 tmux.sh
-dump.rdb
+sync*.sh
 sync_tests
-config.json
-config.dev.json
 davmail*.properties
