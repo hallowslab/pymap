@@ -144,20 +144,19 @@ def test_write_output(mock_generator, monkeypatch):
     mock_open_func().writelines.assert_called_once_with(expected_lines)
 
 
-def test_verify_host(mock_generator):
-    result = mock_generator.verify_host("sv00")
-    assert result == "sv00.example.com"
-
-
-def test_verify_hosts(mock_generator):
+def test_verify_matches_hosts(mock_generator):
     mock_generator.config["HOSTS"] = [
-        ["sv[0-9]+", ".example.com"],
-        ["VPS[0-9]{1}", ".example.dev"],
+        ["^sv[0-9]{2}$", ".example.com"],
+        ["^VPS[0-9]{0,1}$", ".example.dev"],
     ]
     result1 = mock_generator.verify_host("sv00")
     result2 = mock_generator.verify_host("VPS1")
+    result3 = mock_generator.verify_host("ABC123")
+    result4 = mock_generator.verify_host("VPS1000")
     assert result1 == "sv00.example.com"
     assert result2 == "VPS1.example.dev"
+    assert result3 == "ABC123"
+    assert result4 == "VPS1000"
 
 
 def test_match_domain(mock_generator):
