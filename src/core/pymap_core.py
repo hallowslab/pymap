@@ -7,7 +7,7 @@ from core.tools import CustomLogger  # type: ignore
 
 class ScriptGenerator:
     # STATIC CONSTANTS
-    DOMAIN_IDENTIFIER = re.compile(r".*@(?P<domain>[\w]+.[\w]+)\s?.*")
+    DOMAIN_IDENTIFIER = re.compile(r"^.+@(?P<domain>[\w-]+\.[\w]+) +")
     USER_IDENTIFIER = re.compile(r"^[\w.]+(?P<mail_provider>@[\w.]+)*")
     PASS_IDENTIFIER = re.compile(r".*[\s|,|.]+(?P<pword>.+)$")
     # Finding a delimiter for the password can be difficult since passwords
@@ -42,29 +42,48 @@ class ScriptGenerator:
         )
 
     def match_domain(self, domain: str) -> Union[str, None]:
+        """
+        Uses the regex DOMAIN_IDENTIFIER and tries to match it to the string
+        returns the match or None
+        """
         has_match = re.match(self.DOMAIN_IDENTIFIER, domain)
         if has_match:
             return has_match.group("domain")
         return None
 
-    # Verifies if the hostname is matched in the config file
-    # and returns the apropriate FQDN
+    def find_domains(self, line: str) -> None:
+        """
+        Splits a line by spaces and tries to match domains, this is needed in case
+        the input is USER1@DOMAIN1 PASS1 USER2@DOMAIN2 PASS2 and DOMAIN1 != DOMAIN2
+        when synchronizing accounts from one domain to a different one
+        """
+        parts = line.split(" ")
+        for part in parts:
+            if len(part) > 4:
+                # Check for domains
+                domain = self.match_domain(part)
+                self.domains = (
+                    list(set(self.domains + [domain])) if domain else self.domains
+                )
+
     def verify_host(self, hostname: str) -> str:
-        if self.config and len(self.config.get("HOSTS", [])) > 1:
-            # Fetch hosts from config
-            all_hosts = self.config.get("HOSTS")
-            all_hosts = {k: v for k, v in [x for x in all_hosts]}
-            for k in all_hosts:
-                has_match = re.match(k, hostname)
-                if has_match:
-                    self.logger.debug("Matched hostname: %s", hostname)
-                    if re.match(self.IP_ADDR_RE, all_hosts[k]):
-                        self.logger.debug(
-                            "Matched hostname: %s To address: %s",
-                            hostname,
-                            all_hosts[k],
-                        )
-                    return f"{hostname}{all_hosts[k]}"
+        if self.config and "HOSTS" in self.config:
+            hosts = self.config["HOSTS"]
+            if isinstance(hosts, list):
+                if len(hosts) == 1:
+                    pattern, append_str = hosts[0]
+                    has_match = re.match(pattern, hostname)
+                    if has_match:
+                        self.logger.debug("Matched hostname: %s", hostname)
+                        return f"{hostname}{append_str}"
+                elif len(hosts) > 1:
+                    for pattern, append_str in hosts:
+                        has_match = re.match(pattern, hostname)
+                        if has_match:
+                            self.logger.debug("Matched hostname: %s", hostname)
+                            return f"{hostname}{append_str}"
+
+        self.logger.debug("Return original hostname: %s", hostname)
         return hostname
 
     def process_file(self, fpath: str) -> None:
@@ -156,8 +175,8 @@ class ScriptGenerator:
         else:
             self.logger.warning("Line did not match regex %s....", line[0:5])
             try:
-                new_line = re.sub("\t+", " ", line)
-                new_line = re.sub("\s+", " ", new_line)
+                new_line = re.sub(r"\t+", " ", line)
+                new_line = re.sub(r"\s+", " ", new_line)
                 new_line_split: List[str] = new_line.split(" ")
                 if len(new_line_split) > 1:
                     user1 = new_line_split[0]
