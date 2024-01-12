@@ -1,0 +1,66 @@
+{% extends 'structure/base.html' %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h2>Latest tasks</h2>
+        <div class="mb-3">
+            <button class="btn btn-success" onclick="handleArchive()">Archive</button>
+            <button class="btn btn-warning" onclick="handleCancel()">Cancel</button>
+            <button class="btn btn-danger" onclick="handleDelete()">Delete</button>
+        </div>
+        <table id="tasksTable" class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Source</th>
+                    <th>Destination</th>
+                    <th>Nº Accounts</th>
+                    <th>Owner</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Your dynamic data goes here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Sample data (replace this with your dynamic data)
+        const tasksData = [
+            {id: 1, source: 'Source 1', destination: 'Destination 1', n_accounts: 5, owner_username: 'Owner 1'},
+            // Add more rows as needed
+        ];
+
+        // DataTable initialization
+        $(document).ready(function () {
+            $('#tasksTable').DataTable({
+                data: tasksData,
+                columns: [
+                    {data: 'id'},
+                    {data: 'source'},
+                    {data: 'destination'},
+                    {data: 'n_accounts'},
+                    {data: 'owner_username'}
+                ],
+                paging: true,
+                pageLength: 15,
+                ordering: true,
+                searching: true,
+                responsive: true
+            });
+        });
+
+        // Placeholder functions for your button click handlers
+        function handleArchive() {
+            console.log('Archive button clicked');
+        }
+
+        function handleCancel() {
+            console.log('Cancel button clicked');
+        }
+
+        function handleDelete() {
+            console.log('Delete button clicked');
+        }
+    </script>
+{% endblock %}

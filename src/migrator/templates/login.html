@@ -1,0 +1,14 @@
+{% extends 'structure/base.html' %}
+
+{% block content %}
+<div class="container-fluid d-flex justify-content-center align-items-center">
+    <div class="text-center">
+        <h2>Login</h2>
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
