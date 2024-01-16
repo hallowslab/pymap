@@ -1,6 +1,70 @@
 {% extends 'structure/base.html' %}
 
+{% block script %}
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+{% endblock %}
+
 {% block content %}
+    <script>
+        // Function to initialize the DataTable
+        const initializeDataTable = () => {
+            new DataTable('#tasksTable', {
+                columns: [
+                    {data: 'task_id', width: '300px'},
+                    {data: 'source', width: '200px'},
+                    {data: 'destination', width: '200px'},
+                    {data: 'n_accounts', width: '100px'},
+                    {data: 'domains', width: '200px'},
+                    {data: 'archived', width: '100px'},
+                    {data: 'owner.username', width: '100px'}
+                ],
+                select: true,
+                ordering: true,
+                order: [[1, 'asc']],  // Order by the second column (adjust as needed)
+                paging: true,
+                pageLength: 15,
+                searching: true,
+                responsive: true
+            });
+        };
+
+        // Function to update the DataTable with new data
+        const updateDataTable = (data) => {
+            console.log(data)
+            if(data) {
+                // Get the DataTable instance
+                const dataTable = $('#tasksTable').DataTable();
+
+                // Clear existing data
+                dataTable.clear();
+
+                dataTable.rows.add(data);
+
+                // Redraw the DataTable
+                dataTable.draw();
+            } else {
+                console.warn("Missing data from API")
+            }
+            
+        };
+
+        // Function to fetch data from the API
+        const fetchData = () => {
+            fetch('/api/tasks-list')
+                .then(response => response.json())
+                .then(data => {
+                    // If DataTable is not initialized, initialize it
+                    if (!$.fn.DataTable.isDataTable('#tasksTable')) {
+                        initializeDataTable();
+                    }
+                    // Update the DataTable with new data
+                    updateDataTable(data);
+                })
+                .catch(error => console.error(error));
+        };
+    </script>
     <div class="container mt-5">
         <h2>Latest tasks</h2>
         <div class="mb-3">
@@ -15,6 +79,8 @@
                     <th>Source</th>
                     <th>Destination</th>
                     <th>Nº Accounts</th>
+                    <th>Domains</th>
+                    <th>Archived</th>
                     <th>Owner</th>
                 </tr>
             </thead>
@@ -25,30 +91,15 @@
     </div>
 
     <script>
-        // Sample data (replace this with your dynamic data)
-        const tasksData = [
-            {id: 1, source: 'Source 1', destination: 'Destination 1', n_accounts: 5, owner_username: 'Owner 1'},
-            // Add more rows as needed
-        ];
-
-        // DataTable initialization
+        // Run the fetch function on document load
         $(document).ready(function () {
-            $('#tasksTable').DataTable({
-                data: tasksData,
-                columns: [
-                    {data: 'id'},
-                    {data: 'source'},
-                    {data: 'destination'},
-                    {data: 'n_accounts'},
-                    {data: 'owner_username'}
-                ],
-                paging: true,
-                pageLength: 15,
-                ordering: true,
-                searching: true,
-                responsive: true
-            });
+            fetchData();
         });
+
+        // Run the fetch function again after a timeout (e.g., every 5 seconds)
+        setInterval(function () {
+            fetchData();
+        }, 5000);  // Adjust the timeout as needed (in milliseconds)
 
         // Placeholder functions for your button click handlers
         function handleArchive() {
@@ -62,5 +113,6 @@
         function handleDelete() {
             console.log('Delete button clicked');
         }
+        
     </script>
 {% endblock %}
