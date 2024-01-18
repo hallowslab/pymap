@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-#TODO: Debug toolbar should only be loaded in development environment
+# TODO: Debug toolbar should only be loaded in development environment
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("migrator.urls")),

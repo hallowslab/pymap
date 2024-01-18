@@ -146,7 +146,6 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
-# Logging config
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -157,6 +156,22 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "DEBUG",
+        "level": "INFO",
     },
 }
+
+# Custom settings
+PYMAP_SETTINGS = {}
+
+try:
+    from pymap.user_settings import (
+        load_user_settings,
+    )  # Adjust the import path based on your project structure
+
+    load_user_settings()
+except Exception as e:
+    print(
+        "Experienced a critical failure loading user settings, some functionality might be disabled"
+    )
+    print("ERROR: %s", e)
+    pass
