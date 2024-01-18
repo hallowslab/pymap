@@ -1,9 +1,11 @@
-from logging.config import dictConfig
 import sys
 import os
+import logging
+from logging.config import dictConfig
 from core.pymap_core import ScriptGenerator
 from core.tools import setup_argparse, set_logging, load_config, CustomLogger
 
+logger = logging.getLogger("PymapCLI")
 
 if __name__ == "__main__":
     args = setup_argparse()
@@ -16,8 +18,6 @@ if __name__ == "__main__":
         dictConfig(config["LOGGING"])
     else:
         set_logging(args.log_level)
-
-    logger = CustomLogger("PymapCLI")
 
     logger.info("Initialized PymapCLI logger")
 

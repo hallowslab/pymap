@@ -1,8 +1,9 @@
 import re
 import os
 from typing import Generator, Iterable, List, Optional, Union
+import logging
 
-from core.tools import CustomLogger  # type: ignore
+logger = logging.getLogger("pymap_core")
 
 
 class ScriptGenerator:
@@ -24,13 +25,13 @@ class ScriptGenerator:
         extra_args: str = "",
         **kwargs,
     ) -> None:
-        self.logger = CustomLogger("PymapCore")
         self.config = kwargs.get("config", {})
         self.host1 = self.verify_host(host1)
         self.host2 = self.verify_host(host2)
         self.extra_args: Optional[str] = extra_args
         self.dest: str = kwargs.get("destination", "sync")
         self.line_count: int = kwargs.get("split", 30)
+        self.dry_run: bool = kwargs.get("dry_run", False)
         self.file_count: int = 0
         self.domains: List[str] = []
         # STATIC VARIABLES
@@ -67,23 +68,23 @@ class ScriptGenerator:
                 )
 
     def verify_host(self, hostname: str) -> str:
-        if self.config and "HOSTS" in self.config:
-            hosts = self.config["HOSTS"]
-            if isinstance(hosts, list):
-                if len(hosts) == 1:
-                    pattern, append_str = hosts[0]
+        logger.debug("Verifying hostname: %s", hostname)
+        hosts = self.config.get("HOSTS", [])
+        if isinstance(hosts, list):
+            if len(hosts) == 1:
+                pattern, append_str = hosts[0]
+                has_match = re.match(pattern, hostname)
+                if has_match:
+                    logger.debug("Matched hostname: %s", hostname)
+                    return f"{hostname}{append_str}"
+            elif len(hosts) > 1:
+                for pattern, append_str in hosts:
                     has_match = re.match(pattern, hostname)
                     if has_match:
-                        self.logger.debug("Matched hostname: %s", hostname)
+                        logger.debug("Matched hostname: %s", hostname)
                         return f"{hostname}{append_str}"
-                elif len(hosts) > 1:
-                    for pattern, append_str in hosts:
-                        has_match = re.match(pattern, hostname)
-                        if has_match:
-                            self.logger.debug("Matched hostname: %s", hostname)
-                            return f"{hostname}{append_str}"
 
-        self.logger.debug("Return original hostname: %s", hostname)
+        logger.debug("No matches: %s", hostname)
         return hostname
 
     def process_file(self, fpath: str) -> None:
@@ -103,9 +104,7 @@ class ScriptGenerator:
                     if len(lines) >= 1:
                         self.write_output(lines)
             except Exception as e:
-                self.logger.critical(
-                    "Unhandled exception: %s", e.__str__(), exc_info=True
-                )
+                logger.critical("Unhandled exception: %s", e.__str__(), exc_info=True)
                 raise
         else:
             raise ValueError(f"File path was not supplied: {fpath}")
@@ -115,7 +114,7 @@ class ScriptGenerator:
         Processes data from a list with strings, uses self.line_generator to create the scripts,
         returns a list with all scripts
         """
-        self.logger.dev("Supplied data: %s", strings)
+        # logger.debug("STRINGS:\n%s", type(strings))
         scripts = [x for x in self.line_generator(strings) if x is not None]
         return scripts
 
@@ -147,7 +146,6 @@ class ScriptGenerator:
         """
         Processes individual Lines returns None or a formatted string
         """
-        self.logger.dev("Processing Line %s", line)
         has_match = re.match(self.WHOLE_STRING_ID, line)
         # FIXME: Regex has catastrophic backtracing, should not be used for now...
         # TODO: Maybe replace regex for the splitting logic
@@ -157,7 +155,7 @@ class ScriptGenerator:
             domain1 = has_match.group("domain1")
             domain2 = has_match.group("domain2")
             # Add domains to internal list
-            self.logger.debug(f"Adding task: {user1}{domain1} -> {user2}{domain2}")
+            logger.debug(f"Adding task: {user1}{domain1} -> {user2}{domain2}")
             username1: str = f"{user1}{domain1}" if user1 and domain1 else ""
             username2: str = f"{user2}{domain2}" if user2 and domain2 else ""
             if len(username1) > 5 and len(username2) > 5:
@@ -171,9 +169,9 @@ class ScriptGenerator:
                     f"{self.host1}__{self.host2}__{username1}--{username2}.log",
                 )
             else:
-                self.logger.warning("User missing domain or provider")
+                logger.warning("User missing domain or provider")
         else:
-            self.logger.warning("Line did not match regex %s....", line[0:5])
+            logger.warning("Line did not match regex %s....", line[0:5])
             try:
                 new_line = re.sub(r"\t+", " ", line)
                 new_line = re.sub(r"\s+", " ", new_line)
@@ -186,7 +184,7 @@ class ScriptGenerator:
                     if len(new_line_split) >= 4:
                         user2 = new_line_split[2]
                         pword2 = new_line_split[3]
-                    self.logger.info("Line %s Matched trough fallback", line[0:5])
+                    logger.info("Line %s Matched trough fallback", line[0:5])
                     return self.FORMAT_STRING.format(
                         self.host1,
                         user1,
@@ -197,15 +195,15 @@ class ScriptGenerator:
                         f"{self.host1}__{self.host2}__{user1}--{user2}.log",
                     )
             except Exception as e:
-                self.logger.error("Line did not match split %s", line[0:5])
-                self.logger.error("Error: %s", e)
+                logger.error("Line did not match split %s", line[0:5])
+                logger.error("Error: %s", e)
                 return None
         return None
 
     # Writes output to a file
     def write_output(self, lines: List[str]) -> None:
         dest = f"{self.dest}_{self.file_count}.sh"
-        self.logger.debug("Writting %s lines to file %s", len(lines), dest)
+        logger.debug("Writting %s lines to file %s", len(lines), dest)
         lines = [line + "\n" for line in lines]
         with open(dest, "w") as fh:
             fh.writelines(lines)

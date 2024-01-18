@@ -21,6 +21,7 @@ django-debug-toolbar = "^4.2.0"
 
 [tool.taskipy.tasks]
 runserver = "python manage.py runserver"
+worker = "celery -A pymap -l INFO"
 migrate = "python manage.py migrate"
 ### Formatting, tests & coverage
 format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports core && mypy core"

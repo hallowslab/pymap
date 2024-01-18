@@ -1,17 +1,6 @@
 import logging
 import argparse
 import json
-from typing import Any
-
-# Define a new log level above CRITICAL
-DEV_LEVEL: int = 50
-logging.addLevelName(DEV_LEVEL, "DEV")
-
-# Custom logger for the new level
-class CustomLogger(logging.Logger):
-    def dev(self, message: Any, *args: Any, **kwargs: Any) -> None:
-        if self.isEnabledFor(DEV_LEVEL):
-            self._log(DEV_LEVEL, message, args, **kwargs)
 
 
 # Try to parse log level, default to 20/INFO
