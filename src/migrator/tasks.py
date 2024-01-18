@@ -13,6 +13,7 @@ logger = get_task_logger(__name__)
 
 @shared_task(bind=True)
 def call_system(self, cmd_list: List[str]) -> dict:
+    log_directory = settings.PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
     total_cmds = len(cmd_list)
     max_procs = 4
     finished_procs = {}
