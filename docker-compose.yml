@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  redis:
+    image: "docker.io/library/redis:latest"
+    ports:
+      - "6379:6379"
+    restart: always
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfiles/celery.yml
+    command: poetry run task worker
+    depends_on:
+      - redis
+    volumes:
+      - ./src:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=pymap.settings
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+  django-app:
+    build:
+      context: .
+      dockerfile: Dockerfiles/django.yml
+    command: poetry run task server
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - celery-worker
+    volumes:
+      - ./src:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=pymap.settings
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    stdin_open: true
+    tty: true
