@@ -3,9 +3,10 @@ import logging
 from typing import List
 from os import mkdir
 from os.path import isdir
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.contrib.auth.views import LoginView
 from django.conf import settings
+from django.urls import reverse
 from rest_framework import generics
 
 
@@ -42,9 +43,9 @@ def sync(request):
             additional_arguments: str = form.cleaned_data["additional_arguments"]
             dry_run: bool = form.cleaned_data["dry_run"]
             config = settings.PYMAP_SETTINGS
-            user = request.user.username
-            logger.debug(
-                "USER: %s requested a sync for %s -> %s", user, source, destination
+            user = request.user
+            logger.info(
+                "USER: %s requested a sync for %s -> %s", user.username, source, destination
             )
             logger.debug(
                 "\nSource: %s\nDestination: %s\nAdditional arguments: %s\nDry run: %s",
@@ -53,6 +54,10 @@ def sync(request):
                 additional_arguments,
                 dry_run,
             )
+            # TODO: Strip out passwords before logging commands
+            # logger.debug(
+            #     "Received the following input from client:\n %s", input_text
+            # )
             gen = ScriptGenerator(
                 source,
                 destination,
@@ -68,6 +73,9 @@ def sync(request):
             # )
 
             task = call_system.delay(content)
+            logger.info("Starting background task with ID: %s from User: %s", task.id, user.username)
+
+            # Don't forget to save the task id and respective inputs to the database
             root_log_directory = config.get("LOGDIR", "/var/log/pymap")
             log_directory = f"{root_log_directory}/{task.id}"
             ctask = CeleryTask(
@@ -77,23 +85,22 @@ def sync(request):
                 log_path=log_directory,
                 n_accounts=len(content),
                 domains=gen.domains,
-                owner_username=user,
+                owner=user,
             )
             ctask.save()
+
+            # Check for existence of log directory
             if not isdir(log_directory):
                 mkdir(log_directory)
             else:
+                # TODO: Add logic for when this conflict might happen
                 logger.warning(
                     "Directory: %s seems to already exist, we might be writting over files",
                     log_directory,
                 )
-                # TODO: Add logic for when this conflict might happen
-            logger.info("Starting background task with ID: %s", task.id)
 
-            # logger.debug("INPUT:\n%s", input_text)
-            logger.debug("CONTENT:\n%s", content)
-
-            return render(request, "sync.html", {"form": form, "success": True})
+            target_url = reverse("tasks")
+            return redirect(target_url)
     else:
         form = SyncForm()
 
