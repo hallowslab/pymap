@@ -14,7 +14,7 @@ class CeleryTask(models.Model):
     archived = models.BooleanField(default=False)
     finished = models.BooleanField(default=False)
     start_time = models.DateTimeField(auto_now_add=True, blank=True)
-    run_time = models.IntegerField()
+    run_time = models.IntegerField(default=0)
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE
     )  # Assuming User is the Django User model
