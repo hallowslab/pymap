@@ -166,12 +166,14 @@ PYMAP_SETTINGS = {}
 try:
     from pymap.user_settings import (
         load_user_settings,
+        load_user_env,
     )  # Adjust the import path based on your project structure
 
     load_user_settings()
+    load_user_env()
 except Exception as e:
     print(
         "Experienced a critical failure loading user settings, some functionality might be disabled"
     )
-    print("ERROR: %s", e)
+    print("ERROR: ", e)
     pass

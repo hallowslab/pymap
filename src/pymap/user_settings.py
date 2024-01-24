@@ -17,8 +17,18 @@ def load_user_settings():
 
     # Override the logging with the user supplied if it exists
     if isinstance(log_config, dict) and len(log_config) > 0:
-        print("Settings overriden from config file")
         settings.LOGGING.update(log_config)
 
     # Store custom settings under a specific key in PYMAP_SETTINGS
     settings.PYMAP_SETTINGS.update(custom_settings)
+
+def load_user_env():
+    CONFIGS = [
+        "CELERY_BROKER_URL",
+        "CELERY_RESULT_BACKEND"
+        ]
+    custom_settings = {v: os.getenv(v) for v in CONFIGS if os.getenv(v)}
+    
+    if len(custom_settings.keys()) > 0:
+        for key, value in custom_settings.items():
+            setattr(settings, key, value)
