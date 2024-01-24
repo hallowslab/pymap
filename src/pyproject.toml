@@ -9,6 +9,8 @@ python = "^3.10"
 django = "^5.0.1"
 djangorestframework = "^3.14.0"
 celery = {extras = ["redis"], version = "^5.3.6"}
+flower = "^2.0.1"
+django-celery-beat = {git = "https://github.com/celery/django-celery-beat.git"}
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.3.0"
@@ -20,8 +22,10 @@ coverage = "^6.3.2"
 django-debug-toolbar = "^4.2.0"
 
 [tool.taskipy.tasks]
-runserver = "python manage.py runserver"
-worker = "celery -A pymap -l INFO"
+server = "python manage.py runserver 0.0.0.0:8000"
+worker = "celery -A pymap.celery worker -l INFO"
+monitor = "celery -A pymap.celery flower --basic-auth='admin:admin,dev:localhost' --address='localhost'"
+prepare = "python manage.py makemigrations"
 migrate = "python manage.py migrate"
 ### Formatting, tests & coverage
 format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports core && mypy core"

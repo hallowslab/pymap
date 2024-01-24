@@ -41,20 +41,16 @@ If you need to interact with the application for adding users or launch in debug
 
 # DEV
 
-# Dockers (not used atm)
+# Dockers (using podman-compose)
 ### Pymap
 #### This assumes you are on the project root directory
 
-* Building pymap
-  - `docker build -f .\dockers\ubuntu20.04\Dockerfile -t pymap .`
-* Running pymap
-  - ports are exposed with the following syntax HOST:GUEST
-  - `docker run --name pymap -it -p 5000:5000 -p20:20 -p21:21 -p22:22 -p 3001:3000 -t pymap`
-  - press 2 to automagically configure zsh
+* WIP
 
 #### TODO:
 * Make a logo
 * Add queue/requeue functionality, queue should also support starting a task after another is marked as finished
+  * [django-celery-beat](https://github.com/celery/django-celery-beat)
 * Add failsafe to pass --gmail or --office when it detects one of their hosts and the parameter missing
 * There is a bug where sometimes the additional arguments on the client side do not get passed correctly to the API,
   probably something to do with React state, TODO: Ensure the arguments get loaded as soon as the APP is, or save the arguments
