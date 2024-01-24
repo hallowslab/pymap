@@ -14,7 +14,7 @@ class ScriptGenerator:
     # Finding a delimiter for the password can be difficult since passwords
     # can be made up of almost any character
     WHOLE_STRING_ID = re.compile(
-        r"^(?P<user1>[\w.-]+)(?P<domain1>@[\w.-]+)[ |,|\||\t]+(?P<pword1>.+)[ |,|\||\t]+(?P<user2>[\w.-]+?)(?P<domain2>@[\w.-]+)[ |,|\||\t]+(?P<pword2>.+)$"
+        r"^(?P<user1>[\w.-]+)(?P<domain1>@[\w.-]+)[ |,|\||\t]+(?P<pword1>.+)([ |,|\||\t]+(?P<user2>[\w.-]+?)(?P<domain2>@[\w.-]+)[ |,|\||\t]+(?P<pword2>.+))?$"
     )
     IP_ADDR_RE = re.compile(r"[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}")
 
@@ -155,10 +155,9 @@ class ScriptGenerator:
             domain1 = has_match.group("domain1")
             domain2 = has_match.group("domain2")
             # Add domains to internal list
-            logger.debug(f"Adding task: {user1}{domain1} -> {user2}{domain2}")
             username1: str = f"{user1}{domain1}" if user1 and domain1 else ""
             username2: str = f"{user2}{domain2}" if user2 and domain2 else ""
-            if len(username1) > 5 and len(username2) > 5:
+            if len(username1) > 0 and len(username2) > 0:
                 return self.FORMAT_STRING.format(
                     self.host1,
                     username1,
@@ -167,6 +166,16 @@ class ScriptGenerator:
                     username2,
                     has_match.group("pword2"),
                     f"{self.host1}__{self.host2}__{username1}--{username2}.log",
+                )
+            elif len(username1) > 0:
+                return self.FORMAT_STRING.format(
+                    self.host1,
+                    username1,
+                    has_match.group("pword1"),
+                    self.host1,
+                    username1,
+                    has_match.group("pword1"),
+                    f"{self.host1}__{self.host1}__{username1}--{username1}.log",
                 )
             else:
                 logger.warning("User missing domain or provider")
