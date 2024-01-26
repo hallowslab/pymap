@@ -1,118 +1,135 @@
 {% extends 'structure/base.html' %}
 
 {% block script %}
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+    {% include 'structure/datatables.html' %}
 {% endblock %}
 
 {% block content %}
-    <script>
-        // Function to initialize the DataTable
+
+<div class="container mt-3 pb-5">
+    <h2>Latest tasks</h2>
+    <div class="mb-3">
+        <button class="btn btn-success" onclick="handleArchive()">Archive</button>
+        <button class="btn btn-warning" onclick="handleCancel()">Cancel</button>
+        <button class="btn btn-danger" onclick="handleDelete()">Delete</button>
+    </div>
+    <table id="tasksTable" class="table">
+        <thead>
+            <tr>
+                <th></th>
+                <th>ID</th>
+                <th>Source</th>
+                <th>Destination</th>
+                <th>Nº Accounts</th>
+                <th>Domains</th>
+                <th>Archived</th>
+                <th>Start time</th>
+                <th>Run time</th>
+                <th>Owner</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dynamic data goes here -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    var tasksTable;
+    // Placeholder functions for button click handlers
+    function handleArchive() {
+        console.log('Archive button clicked');
+        listSelected();
+    }
+    
+    function handleCancel() {
+        console.log('Cancel button clicked');
+    }
+    
+    function handleDelete() {
+        console.log('Delete button clicked');
+    }
+    
+    const listSelected = () => {
+        var table = document.getElementById('tasksTable');
+        alert(table + ' row(s) selected');
+    }
+    
+    // Datatable row onClick
+    $(document).on('click','#tasksTable tr',function(e){
+        var data = tasksTable.row(this).data();
+        if (data) {
+            var task_id = data['task_id'];
+            console.log(task_id);
+            window.location.href = '/tasks/' + task_id;
+        }
+    });
+    
+    $(document).ready(function () {
+        // Function to initialize the DataTable with server-side processing
         const initializeDataTable = () => {
-            new DataTable('#tasksTable', {
-                columns: [
-                    {data: 'task_id', width: '300px'},
-                    {data: 'source', width: '200px'},
-                    {data: 'destination', width: '200px'},
-                    {data: 'n_accounts', width: '100px'},
-                    {data: 'domains', width: '200px'},
-                    {data: 'archived', width: '100px'},
-                    {data: 'owner.username', width: '100px'}
+            tasksTable = $('#tasksTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                {
+                    extend: 'copy',
+                    text: 'Copy to clipboard'
+                },
                 ],
-                select: true,
+                serverSide: true,
+                processing: true,
+                ajax: {
+                    url: '/api/tasks-list',  // Replace with your server-side API endpoint
+                    type: 'GET',
+                },
+                columnDefs: [
+                {
+                    orderable: false,
+                    className: 'select-checkbox',
+                    targets: 0,
+                    defaultContent: ""
+                },
+                ],
+                columns: [
+                {data: null, orderable: false},
+                {data: 'task_id', width: '300px'},
+                {data: 'source', width: '150px'},
+                {data: 'destination', width: '150px'},
+                {data: 'n_accounts', width: '50px'},
+                {data: 'domains', width: '200px'},
+                {data: 'archived', width: '100px'},
+                {data: 'start_time', width: '70px'},
+                {data: 'run_time', width: '70px'},
+                {data: 'owner.username', width: '100px'}
+                ],
+                select: {
+                    style: 'multi+shift',
+                    selector: 'td:first-child'
+                },
                 ordering: true,
-                order: [[1, 'asc']],  // Order by the second column (adjust as needed)
+                order: [[1, 'asc']],
+                scrollX: true,
+                scrollY: true,
                 paging: true,
                 pageLength: 15,
                 searching: true,
                 responsive: true
             });
         };
-
-        // Function to update the DataTable with new data
-        const updateDataTable = (data) => {
-            console.log(data)
-            if(data) {
-                // Get the DataTable instance
-                const dataTable = $('#tasksTable').DataTable();
-
-                // Clear existing data
-                dataTable.clear();
-
-                dataTable.rows.add(data);
-
-                // Redraw the DataTable
-                dataTable.draw();
-            } else {
-                console.warn("Missing data from API")
-            }
-            
-        };
-
-        // Function to fetch data from the API
-        const fetchData = () => {
-            fetch('/api/tasks-list')
-                .then(response => response.json())
-                .then(data => {
-                    // If DataTable is not initialized, initialize it
-                    if (!$.fn.DataTable.isDataTable('#tasksTable')) {
-                        initializeDataTable();
-                    }
-                    // Update the DataTable with new data
-                    updateDataTable(data);
-                })
-                .catch(error => console.error(error));
-        };
-    </script>
-    <div class="container mt-5">
-        <h2>Latest tasks</h2>
-        <div class="mb-3">
-            <button class="btn btn-success" onclick="handleArchive()">Archive</button>
-            <button class="btn btn-warning" onclick="handleCancel()">Cancel</button>
-            <button class="btn btn-danger" onclick="handleDelete()">Delete</button>
-        </div>
-        <table id="tasksTable" class="table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Source</th>
-                    <th>Destination</th>
-                    <th>Nº Accounts</th>
-                    <th>Domains</th>
-                    <th>Archived</th>
-                    <th>Owner</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Your dynamic data goes here -->
-            </tbody>
-        </table>
-    </div>
-
-    <script>
-        // Run the fetch function on document load
-        $(document).ready(function () {
-            fetchData();
-        });
-
-        // Run the fetch function again after a timeout (e.g., every 5 seconds)
-        setInterval(function () {
-            fetchData();
-        }, 5000);  // Adjust the timeout as needed (in milliseconds)
-
-        // Placeholder functions for your button click handlers
-        function handleArchive() {
-            console.log('Archive button clicked');
-        }
-
-        function handleCancel() {
-            console.log('Cancel button clicked');
-        }
-
-        function handleDelete() {
-            console.log('Delete button clicked');
-        }
         
-    </script>
+        // Run the initializeDataTable function on document load
+        initializeDataTable();
+    });
+</script>
+<style>
+    table.dataTable>tbody>tr.selected>td.select-checkbox::after,
+    table.dataTable>tbody>tr.selected>th.select-checkbox::after {
+        content: "x"; /* Change the content to "✗" for X */
+        font-size: 17px;
+        margin-top: -10px;
+        margin-left: -6px;
+        text-align: center;
+        line-height: 1;
+    }
+</style>
 {% endblock %}
