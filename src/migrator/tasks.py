@@ -90,12 +90,12 @@ def call_system(self, cmd_list: List[str]) -> dict:
     # Calculate run time in seconds
     # TODO: Investigate celery's builtin runtime calculation
     # https://stackoverflow.com/questions/33860242/extract-runtime-and-time-of-completion-from-celery-task
-    
+
     start_time = ctask.start_time
     end_time = timezone.now()
     run_time_seconds = (end_time - start_time).total_seconds()
 
-    logger.debug("START TIME: %s",ctask.start_time)
+    logger.debug("START TIME: %s", ctask.start_time)
     logger.debug("RUN TIME: %s", run_time_seconds)
 
     # Update the run_time field in the database

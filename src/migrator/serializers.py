@@ -10,21 +10,8 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CeleryTaskSerializer(serializers.ModelSerializer):
-    owner = UserSerializer()  # Use the UserSerializer for the owner field
+    owner = UserSerializer()  # UserSerializer required for the owner field
 
     class Meta:
         model = CeleryTask
-        fields = [
-            "id",
-            "task_id",
-            "source",
-            "destination",
-            "log_path",
-            "n_accounts",
-            "domains",
-            "archived",
-            "finished",
-            "start_time",
-            "run_time",
-            "owner",
-        ]
+        fields = "__all__"
