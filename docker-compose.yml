@@ -6,12 +6,11 @@ services:
     ports:
       - "6379:6379"
     restart: always
-
+   
   celery-worker:
     build:
       context: .
-      dockerfile: Dockerfiles/celery.yml
-    command: poetry run task worker
+      dockerfile: Dockerfiles/celery/Dockerfile
     depends_on:
       - redis
     volumes:
@@ -20,12 +19,12 @@ services:
       - DJANGO_SETTINGS_MODULE=pymap.settings
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    hostname: celery.lan
 
   django-app:
     build:
       context: .
-      dockerfile: Dockerfiles/django.yml
-    command: poetry run task server
+      dockerfile: Dockerfiles/django/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -39,3 +38,33 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     stdin_open: true
     tty: true
+    hostname: pymap.lan
+
+  email-server:
+    build:
+      context: Dockerfiles/email-server
+      dockerfile: Dockerfile
+    networks:
+      - mail
+    ports:
+      - "2500:2500"
+      - "1430:1430"
+      - "4650:4650"
+      - "9930:9930"
+    hostname: example1.lan
+
+  rainloop:
+    build:
+      context: Dockerfiles/rainloop
+      dockerfile: Dockerfile
+    networks:
+      - mail
+    ports:
+      - "8080:8080"
+    depends_on:
+      - email-server
+
+
+networks:
+  mail:
+    driver: bridge

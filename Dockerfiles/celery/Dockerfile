@@ -12,4 +12,6 @@ RUN poetry --version
 COPY ./src /app/
 
 # Install dependecies trough poetry
-RUN poetry install
+RUN poetry install --without=dev
+
+CMD ["sh", "-c", "poetry shell && celery -A pymap.celery worker -l INFO"]

@@ -35,5 +35,6 @@ RUN poetry --version
 COPY ./src /app/
 
 # Install dependecies trough poetry
-RUN poetry install
+RUN poetry install --without=dev
 
+CMD ["sh", "-c", "poetry shell && python manage.py runserver 0.0.0.0:8000"]
