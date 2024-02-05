@@ -6,7 +6,24 @@ services:
     ports:
       - "6379:6379"
     restart: always
-   
+
+  aio:
+    build:
+      context: .
+      dockerfile: Dockerfiles/aio/Dockerfile
+      args:
+        DJANGO_ENV: production
+    depends_on:
+      - redis
+    volumes:
+      - ./src:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=pymap.settings
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+
   celery-worker:
     build:
       context: .
@@ -19,7 +36,6 @@ services:
       - DJANGO_SETTINGS_MODULE=pymap.settings
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    hostname: celery.lan
 
   django-app:
     build:
@@ -38,7 +54,6 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     stdin_open: true
     tty: true
-    hostname: pymap.lan
 
   email-server:
     build:
@@ -51,7 +66,6 @@ services:
       - "1430:1430"
       - "4650:4650"
       - "9930:9930"
-    hostname: example1.lan
 
   rainloop:
     build:

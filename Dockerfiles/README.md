@@ -1,7 +1,18 @@
-# Celery.yml
+# AIO
+
+### Issues:
+- Installing IO::Socket::INET6 failed
+    * Install libio-socket-inet6-perl from apt
+- Configure failed for Net-SSLeay-1.94
+    * Install zlib1g-dev libssl-dev from apt
+- Install Perl module Package::Stash::XS
+- Install Perl module Readonly
 
 
-# Django.yml
+# Celery
+
+
+# Django
 
 ### Issues:
 - cpan PAR::Packer failed.
