@@ -3,6 +3,7 @@
 venv
 __pycache__
 .coverage
+.python-version
 
 ## misc
 .DS_Store
@@ -16,7 +17,6 @@ yarn-error.log*
 
 # Additional 
 imapsync
-.vscode
 *.txt
 *.db
 *.sqlite*

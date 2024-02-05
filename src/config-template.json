@@ -20,7 +20,7 @@
       },
       "file": {
         "class": "logging.FileHandler",
-        "filename": "app.log",
+        "filename": "pymap.log",
         "level": "DEBUG",
         "formatter": "custom_formatter"
       }

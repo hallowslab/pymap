@@ -10,7 +10,7 @@ from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.urls import reverse
 from django.http import HttpResponse, JsonResponse
-from rest_framework import generics, status
+from rest_framework import generics
 from rest_framework.views import APIView, View
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError

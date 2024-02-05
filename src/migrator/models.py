@@ -4,6 +4,9 @@ from django.contrib.auth.models import User
 
 
 class CeleryTask(models.Model):
+    """
+        Model for an individual task
+    """
     id = models.AutoField(primary_key=True)
     task_id = models.CharField(max_length=255)  # Adjust the max_length as needed
     source = models.CharField(max_length=100)

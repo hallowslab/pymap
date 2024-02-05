@@ -134,7 +134,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # This should match the name of your login URL pattern
 # This setting specifies the URL where the user will be redirected
 # if they are not authenticated and try to access a protected view.
-LOGIN_URL = "login/"
+LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 
 # Celery configuration

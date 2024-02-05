@@ -1,5 +1,6 @@
 from django.urls import path, register_converter
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import views as auth_views
 
 from . import views
 
@@ -43,4 +44,7 @@ urlpatterns = [
         name="tasks-log-details",
     ),
     path("login/", views.CustomLoginView.as_view(), name="login"),
+    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("password-change/", login_required(auth_views.PasswordChangeView.as_view()), name="password-change"),
+    path("password-change-done/", login_required(auth_views.PasswordResetDoneView.as_view()), name="password-change-done"),
 ]

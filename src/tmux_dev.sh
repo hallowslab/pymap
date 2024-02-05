@@ -2,7 +2,7 @@
 
 session="Pymap"
 
-tmux new-session -d -s $session
+tmux new-session -s $session
 
 window=0
 
@@ -19,5 +19,3 @@ tmux send-keys "poetry run task worker" C-m
 
 tmux split-window -v -t $session:$window.2
 tmux send-keys "redis-server" C-m
-
-tmux attach-session -t $session
