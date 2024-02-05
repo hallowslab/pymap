@@ -43,22 +43,24 @@
             taskDetails = $('#taskDetails').DataTable({
                 serverSide: true,
                 processing: true,
+                searching: true,
+                ordering: true,
+                pageLength: 15,
+                paging: true,
+                search: {
+                    return: true
+                },
+                order: [[1, 'asc']],
                 ajax: {
                     url: '/api/tasks/'+'{{ task_id }}',
                     type: 'GET',
                 },
                 columns: [
                 {data: 'log_file', width: '900px'},
-                {data: 'start_time', width: '300px'},
-                {data: 'end_time', width: '300px'},
-                {data: 'status', width: '100px'},
-                ],
-                ordering: true,
-                order: [[1, 'asc']],
-                paging: true,
-                pageLength: 15,
-                searching: true,
-                responsive: true
+                {data: 'start_time', width: '250px'},
+                {data: 'end_time', width: '250px'},
+                {data: 'status', width: '200px'},
+                ]
             });
         };
         

@@ -55,13 +55,13 @@
         if (intervalId === null) {
             // Start executing
             await fetchData();
-            //intervalId = setInterval(fetchData, 5000);
+            intervalId = setInterval(fetchData, 5000);
             e.innerText = "Stop"
             e.classList.add('btn-success')
             e.classList.remove('btn-warning')
         } else {
             // Stop execution if already running
-            //clearInterval(intervalId);
+            clearInterval(intervalId);
             intervalId = null;
             e.innerText = "Start"
             e.classList.remove('btn-success')
@@ -70,7 +70,7 @@
     }
 
     const fetchData = async () => {
-        const textInput = document.getElementById('log-content');
+        const textArea = document.getElementById('log-content');
         const tailCountInput = document.getElementById('tail-count')
         const tailTimeoutInput = document.getElementById('tail-timeout')
         var tailCount = 100;
@@ -92,7 +92,8 @@
                 if (responseData.error) {
                     console.error(`Error: ${responseData.error}`);
                 }
-                textInput.value = responseData.content;
+                textArea.value = responseData.content;
+                textArea.scrollTop = textArea.scrollHeight;
             } else if (responseData.error) {
                 alert("Error, check console")
                 console.error(`API Error: ${responseData.error}, ${responseData.data}`);
@@ -104,6 +105,10 @@
             // Handle other errors as needed
         }
     };
+
+    $(document).ready(async ()=>{
+        await fetchData();
+    })
 
 </script>
 {% endblock %}

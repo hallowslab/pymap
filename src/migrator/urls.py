@@ -23,9 +23,14 @@ urlpatterns = [
         name="task-log-download",
     ),
     path(
-        "api/tasks-list/",
+        "api/tasks/list/",
         login_required(views.CeleryTaskList.as_view()),
         name="tasks-list",
+    ),
+    path(
+        "api/tasks/archive/",
+        login_required(views.ArchiveTask.as_view()),
+        name="tasks-archive",
     ),
     path(
         "api/tasks/<str:task_id>/",

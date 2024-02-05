@@ -60,9 +60,11 @@ def sub_check_output(command: list, filename: str, timeout=5) -> str:
 def get_logs_status(log_directory, log_path, timeout=5) -> Dict[str, str]:
     # FIXME: This might have some issues on directories with a large amount of files
     # TODO: Maybe stop using so many regular expressions and just use grep awk and whatever.....
-    status: str = sub_check_output(
+    has_status: str = sub_check_output(
         ["grep", "-E", "Exiting with return value *"], join(log_directory, log_path)
-    ).split(" ")[4]
+    )
+    print("HAS_STATUS", has_status)
+    status = "Running" if len(has_status) == 0 else has_status.split(" ")[4]
     print("STATUS", status)
     status_message: str = check_status(status)
     start_time: str = sub_check_output(

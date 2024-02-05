@@ -1,5 +1,6 @@
 # Create your views here.
 import logging
+import json
 from subprocess import PIPE, Popen, TimeoutExpired
 from typing import List
 from os import mkdir, listdir
@@ -9,13 +10,13 @@ from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.urls import reverse
 from django.http import HttpResponse, JsonResponse
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.views import APIView, View
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
 from .models import CeleryTask
-from .serializers import CeleryTaskSerializer
+from .serializers import CeleryTaskSerializer, TaskIdListSerializer
 from .forms import SyncForm
 from .tasks import call_system
 from .utilites.helpers import get_logs_status
@@ -164,11 +165,34 @@ class CeleryTaskList(generics.ListCreateAPIView):
         start = int(request.GET.get("start", 0))
         length = int(request.GET.get("length", 10))
         search_value = request.GET.get("search[value]", "")
+        order = request.GET.get("order", [])
+        columns = request.GET.get("columns", [])
+        print("GET", request.GET)
+
+        # Parsing the order parameter
+        order_str = request.GET.get("order", "")
+        print("ORDER_STR",order_str)
+        order = json.loads(order_str) if order_str else []
+
+        # Parsing the columns parameter
+        columns_str = request.GET.get("columns", "")
+        print("COLUMNS_STR",columns_str)
+        columns = json.loads(columns_str) if columns_str else []
+
+        # Now you can access information in the order and columns arrays
+        for column in columns:
+            # Access individual column properties
+            print(column)
+
+        # Access information in the order array
+        for order_item in order:
+            print(order_item)
 
         # Filtering based on search value
         queryset = self.filter_queryset(self.get_queryset())
-        if search_value:
+        if search_value != "":
             queryset = queryset.filter(source__icontains=search_value)
+            #queryset.order_by(search_value)
 
         # Total records without filtering
         total_records = self.get_queryset().count()
@@ -306,6 +330,42 @@ class CeleryTaskLogDetails(APIView):
             return JsonResponse(
                 {"error": "DJANGO:Unhandled exception", "data": e.__str__()}, status=400
             )
+
+
+class ArchiveTask(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = TaskIdListSerializer(data=request.data)
+
+        if serializer.is_valid():
+            task_ids = serializer.validated_data['task_ids']
+
+            # Check ownership for each task ID
+            user = self.request.user  # Assuming the user is authenticated
+            owned_task_ids = CeleryTask.objects.filter(user=user, id__in=task_ids).values_list('id', flat=True)
+
+            # Perform actions based on ownership
+            for task_id in task_ids:
+                if task_id in owned_task_ids:
+                    # User owns this task, perform your logic here
+                    print(f"User owns task with ID {task_id}")
+                    print(f"Task {owned_task_ids[task_id]}")
+                else:
+                    # User does not own this task, handle accordingly
+                    print(f"User does not own task with ID {task_id}")
+            return Response({'message': 'Ownership verification successful'}, status=200)
+        return Response(serializer.errors, status=400)
+
+
+class CancelTask(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = TaskIdListSerializer(data=request.data)
+        if serializer.is_valid():
+            task_ids = serializer.validated_data['task_ids']
+
+            user = self.request.user
+            #owned_tasks
+            return Response({'message': 'Ownership verification successful'}, status=200)
+        return Response(serializer.errors, status=400)
 
 
 class CustomLoginView(LoginView):
