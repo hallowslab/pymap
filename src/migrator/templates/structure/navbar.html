@@ -8,13 +8,13 @@
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav flex-grow-1">
         <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="/sync">Sync</a>
+          <a class="nav-link active" aria-current="page" href="{% url 'migrator:sync' %}">Sync</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/tasks">Tasks</a>
+          <a class="nav-link" href="{% url 'migrator:tasks' %}">Tasks</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/options">Options</a>
+          <a class="nav-link" href="/#">Options</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/admin">Administration</a>
@@ -26,7 +26,11 @@
             <i class="bi bi-person-circle"></i>
           </a>
           <ul class="dropdown-menu">
-            <li><button class="dropdown-item" href="#">Account <i class="bi bi-gear"></i></button></li>
+            <li>
+              <form action="{% url 'migrator:user-account' %}">
+                <button class="dropdown-item" href="#">Account <i class="bi bi-gear"></i></button>
+              </form>
+            </li>
             <li>
               <form action="{% url 'logout' %}" method="post">
                 {% csrf_token %}

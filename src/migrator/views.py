@@ -17,7 +17,7 @@ from rest_framework.exceptions import ValidationError
 
 from .models import CeleryTask
 from .serializers import CeleryTaskSerializer, TaskIdListSerializer
-from .forms import SyncForm
+from .forms import SyncForm, CustomUserChangeForm
 from .tasks import call_system
 from .utilites.helpers import get_logs_status
 from core.pymap_core import ScriptGenerator
@@ -28,6 +28,20 @@ logger = logging.getLogger(__name__)
 def index(request):
     return render(request, "home.html", {})
 
+def user_account(request):
+    user = request.user
+    return render(request, 'account.html', {'user': user})
+
+def update_account(request):
+    if request.method == 'POST':
+        form = CustomUserChangeForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('migrator:user-account')  # Redirect to user's account page after successful update
+    else:
+        form = CustomUserChangeForm(instance=request.user)
+    user = request.user
+    return render(request, 'update_account.html', {'form': form, "username": user.username})
 
 def tasks(request):
     """
@@ -135,7 +149,7 @@ def sync(request):
                     log_directory,
                 )
 
-            target_url = reverse("tasks")
+            target_url = reverse("migrator:tasks")
             return redirect(target_url)
     else:
         form = SyncForm()
@@ -145,6 +159,9 @@ def sync(request):
 
 ## CLASSES
 class DownloadLog(View):
+    """
+    Given a task id downloads to the user's browser the requested log file
+    """
     def get(self, request, task_id, log_file):
         logger.debug("Got request for a download for: %s/%s", task_id, log_file)
         config = settings.PYMAP_SETTINGS
@@ -345,6 +362,9 @@ class CeleryTaskLogDetails(APIView):
 
 
 class ArchiveTask(APIView):
+    """
+    API endpoint for setting a task as archived
+    """
     def post(self, request, *args, **kwargs):
         serializer = TaskIdListSerializer(data=request.data)
 
@@ -369,6 +389,9 @@ class ArchiveTask(APIView):
 
 
 class CancelTask(APIView):
+    """
+    API endpoint to stop a task execution or cancel it's scheduling
+    """
     def post(self, request, *args, **kwargs):
         serializer = TaskIdListSerializer(data=request.data)
         if serializer.is_valid():

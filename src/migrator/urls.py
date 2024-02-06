@@ -44,4 +44,6 @@ urlpatterns = [
         login_required(views.CeleryTaskLogDetails.as_view()),
         name="tasks-log-details",
     ),
+    path("account/", views.user_account, name="user-account"),
+    path('update-account/', views.update_account, name='update-account'),
 ]
