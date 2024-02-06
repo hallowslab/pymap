@@ -600,6 +600,17 @@ coreapi = ["coreapi (>=2.0.0)"]
 markdown = ["types-Markdown (>=0.1.5)"]
 
 [[package]]
+name = "docutils"
+version = "0.20.1"
+description = "Docutils -- Python Documentation Utilities"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "docutils-0.20.1-py3-none-any.whl", hash = "sha256:96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6"},
+    {file = "docutils-0.20.1.tar.gz", hash = "sha256:f08a4e276c3a1583a86dce3e34aba3fe04d02bba2dd51ed16106244e8a923e3b"},
+]
+
+[[package]]
 name = "flower"
 version = "2.0.1"
 description = "Celery Flower"
@@ -1176,4 +1187,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c9c4017e9b43ba3a7a3fd9d3a58f208f98464121e971e2696d28bc2173a837e1"
+content-hash = "a2aac2f7661cef1ac667c13c5f2a40ec82c7e39dea3095f030ed4f5f1e5350ec"

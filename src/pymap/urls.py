@@ -16,10 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from django.contrib.auth.decorators import login_required
 
 # TODO: Debug toolbar should only be loaded in development environment
 urlpatterns = [
+    path('admin/doc/', include('django.contrib.admindocs.urls')),
     path("admin/", admin.site.urls),
-    path("", include("migrator.urls")),
+    path("", include("migrator.urls", namespace="migrator")),
+    path("login/", auth_views.LoginView.as_view(template_name="admin/login.html",success_url="/"), name="login"),
+    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("password-change/", login_required(auth_views.PasswordChangeView.as_view()), name="password-change"),
+    path("password-change-done/", login_required(auth_views.PasswordResetDoneView.as_view()), name="password-change-done"),
     path("__debug__/", include("debug_toolbar.urls")),
 ]

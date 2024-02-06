@@ -30,20 +30,32 @@ def index(request):
 
 
 def tasks(request):
+    """
+    Renders task list template
+    """
     return render(request, "tasks.html", {})
 
 
 def task_details(request, task_id):
+    """
+    Renders task list details from the provided task_id
+    """
     return render(request, "task_details.html", {"task_id": task_id})
 
 
 def log_details(request, task_id, log_file):
+    """
+    Renders individual log details template from task_id and log_file
+    """
     return render(
         request, "log_details.html", {"task_id": task_id, "log_file": log_file}
     )
 
 
 def sync(request):
+    """
+    Endpoint for requesting a sync, creates a new task and signals the worker
+    """
     if request.method == "POST":
         form = SyncForm(request.POST)
         # logger.debug("POST data: %s", request.POST)
@@ -367,7 +379,3 @@ class CancelTask(APIView):
             return Response({'message': 'Ownership verification successful'}, status=200)
         return Response(serializer.errors, status=400)
 
-
-class CustomLoginView(LoginView):
-    template_name = "login.html"
-    success_url = "/"

@@ -12,6 +12,7 @@ celery = {extras = ["redis"], version = "^5.3.6"}
 flower = "^2.0.1"
 django-celery-beat = {git = "https://github.com/celery/django-celery-beat.git"}
 taskipy = "^1.8.0"
+docutils = "^0.20.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.3.0"
