@@ -160,12 +160,12 @@ def test_verify_matches_hosts(mock_generator):
 
 
 def test_match_domain(mock_generator):
-    result = mock_generator.match_domain("user@example.com LR`T%a@9!dM4QJD$YhF6")
+    result = mock_generator.match_domain("user@example.com LR`T@9!dM4QJD$YhF6")
     assert result == "example.com"
 
 
 def test_match_domain_fail(mock_generator):
-    r1 = mock_generator.match_domain("user@example LR`T%a@9!dM4QJD$YhF6")
-    r2 = mock_generator.match_domain("user@example LR`T%a@example.rdfgha")
+    r1 = mock_generator.match_domain("user@example LR`T@9!dM4QJD$YhF6")
+    r2 = mock_generator.match_domain("user@example LR`T@example.rdfgha")
     assert r1 is None
     assert r2 is None
