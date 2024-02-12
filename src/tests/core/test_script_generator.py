@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, mock_open, call
-from core.tools import CustomLogger
 from core.pymap_core import ScriptGenerator
+from scripts.utils import generate_line_creds
 
 
 @pytest.fixture
@@ -113,17 +113,17 @@ def test_process_file_multiple_lines(mock_generator, monkeypatch):
 
 
 def test_process_strings(mock_generator):
-    strings = ["user1@domain1.com pass1 user2@domain2.com pass2\n"]
+    strings = ["user1@example.com pass1 user2@domain.com pass2", "\n"]
     scripts = mock_generator.process_strings(strings)
     expected_output_calls = [
         mock_generator.FORMAT_STRING.format(
             mock_generator.host1,
-            "user1@domain1.com",
+            "user1@example.com",
             "pass1",
             mock_generator.host2,
-            "user2@domain2.com",
+            "user2@domain.com",
             "pass2",
-            f"{mock_generator.host1}__{mock_generator.host2}__user1@domain1.com--user2@domain2.com.log",
+            f"{mock_generator.host1}__{mock_generator.host2}__user1@example.com--user2@domain.com.log",
         )
     ]
     assert scripts == expected_output_calls
