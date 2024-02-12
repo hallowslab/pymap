@@ -71,12 +71,7 @@
     }
     
     function listSelected(dt) {
-        var taskIds = []
-        var selection = dt.rows( { selected: true } ).data().toArray();
-        selection.forEach(element => {
-            taskIds.push(element['task_id'])
-        });
-        return taskIds
+        return dt.rows( { selected: true } ).data().toArray();
     }
 
     const postRequest = (endpoint, idList) => {
