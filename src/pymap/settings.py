@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -164,6 +165,14 @@ LOGGING = {
 # Custom settings
 PYMAP_SETTINGS = {}
 
+def check_log_directory():
+    # Check logdir is loaded in settings, default in case it's missing
+    LOG_DIR = PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
+    if not os.path.exists(LOG_DIR):
+        raise FileNotFoundError(f"The log directory {LOG_DIR} does not exist.")
+    if not os.access(LOG_DIR, os.W_OK):
+        raise PermissionError(f"The log directory {LOG_DIR} is not writable.")
+
 try:
     from pymap.user_settings import (
         load_user_settings,
@@ -178,3 +187,6 @@ except Exception as e:
     )
     print("ERROR: ", e)
     pass
+
+# Call the check_log_directory function during startup
+check_log_directory()
