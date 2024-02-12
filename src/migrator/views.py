@@ -25,6 +25,8 @@ from core.pymap_core import ScriptGenerator
 logger = logging.getLogger(__name__)
 
 
+# IMPORTANT: All these views should be in the migrator: namespace
+
 def index(request):
     return render(request, "home.html", {})
 

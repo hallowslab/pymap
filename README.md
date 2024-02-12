@@ -3,14 +3,13 @@
 ## System
 * grep
 * tail
-* imapsync
+* [Imapsync](https://github.com/imapsync/imapsync)
 
 ## App
 * [Python](https://www.python.org/) >= 3.8.10
 * [Poetry](https://python-poetry.org/), make sure to use the new script at https://python-poetry.org/docs/master/#installing-with-the-official-installer
 * [Web-Server|Django deployment](https://docs.djangoproject.com/en/5.0/howto/deployment/)
 * [Redis-server](https://redis.com/)
-* [Imapsync](https://github.com/imapsync/imapsync)
 * Database SQLite(current)/PostGreSQL(WIP)
 
 # Initial setup
@@ -30,8 +29,7 @@
 
 # Additional Info
 
-* operator role is required for scheduling, archiving and cancelling tasks, and admin for  removal
-
+* operator role is required for scheduling, archiving and cancelling tasks, and admin for removal
 
 
 # Advanced Usage
