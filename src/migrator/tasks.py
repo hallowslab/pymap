@@ -3,6 +3,8 @@ import shlex
 import subprocess
 import time
 from typing import List
+from os import mkdir
+from os.path import isdir
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -16,20 +18,32 @@ logger = get_task_logger("CeleryTask")
 
 @shared_task(bind=True)
 def call_system(self, cmd_list: List[str]) -> dict:
-    log_directory = settings.PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
+    root_directory = settings.PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
     total_cmds = len(cmd_list)
     max_procs = 4
     finished_procs = {}
     running_procs = {}
     task_id = self.request.id
+    log_directory = f"{root_directory}/{task_id}"
 
     cmd_list = [
         cmd.replace(
+            f"--logdir={root_directory}",
             f"--logdir={log_directory}",
-            f"--logdir={log_directory}/{task_id}",
         )
         for cmd in cmd_list
     ]
+
+    # Moved the check to the task itself to verify for cases of overwritting contents,
+    # here none of the commands have been executed so even if they create the directory
+    # it should not exist yet
+    if not isdir(log_directory):
+        mkdir(log_directory)
+    else:
+        logger.warning(
+            "Directory: %s seems to already exist, we might be writting over files",
+            log_directory,
+        )
 
     def check_running(procs):
         for key in list(procs):

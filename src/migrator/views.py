@@ -75,8 +75,9 @@ def sync(request):
     if request.method == "POST":
         form = SyncForm(request.POST)
         # logger.debug("POST data: %s", request.POST)
-        logger.error("Form errors: %s", form.errors)
-        if form.is_valid():
+        if not form.is_valid():
+            logger.error("Form errors: %s", form.errors)
+        else:
             # Process the form data, e.g., call Celery task
             # Access form.cleaned_data to get the input values
             # Example: form.cleaned_data['source'], form.cleaned_data['destination']
@@ -140,16 +141,6 @@ def sync(request):
                 owner=user,
             )
             ctask.save()
-
-            # Check for existence of log directory
-            if not isdir(log_directory):
-                mkdir(log_directory)
-            else:
-                # TODO: Add logic for when this conflict might happen
-                logger.warning(
-                    "Directory: %s seems to already exist, we might be writting over files",
-                    log_directory,
-                )
 
             target_url = reverse("migrator:tasks")
             return redirect(target_url)
