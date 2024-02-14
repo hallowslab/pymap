@@ -29,6 +29,7 @@ services:
       - redis
     volumes:
       - ./src:/app
+      - shared_logs:/var/log/pymap
     environment:
       - DJANGO_ENV=production
       - DJANGO_SETTINGS_MODULE=pymap.settings
@@ -48,6 +49,7 @@ services:
       - celery-worker
     volumes:
       - ./src:/app
+      - shared_logs:/var/log/pymap
     environment:
       - DJANGO_ENV=production
       - DJANGO_SETTINGS_MODULE=pymap.settings
@@ -81,3 +83,6 @@ services:
 networks:
   mail:
     driver: bridge
+
+volumes:
+  shared_logs:

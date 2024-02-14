@@ -1,13 +1,11 @@
 FROM debian:bookworm
 
-# `DJANGO_ENV` arg is used to make prod / dev builds:
-ARG DJANGO_ENV \
-  # Needed for fixing permissions of files created by Docker:
-  UID=1000 \
+# Needed for fixing permissions of files created by Docker:
+ARG UID=1000 \
   GID=1000
 
 
-ENV DJANGO_ENV=${DJANGO_ENV} \
+ENV DJANGO_ENV=production \
   # python:
   PYTHONFAULTHANDLER=1 \
   PYTHONUNBUFFERED=1 \
@@ -21,7 +19,8 @@ ENV DJANGO_ENV=${DJANGO_ENV} \
   # poetry:
   POETRY_NO_INTERACTION=1 \
   POETRY_CACHE_DIR='/var/cache/pypoetry' \
-  POETRY_HOME='/usr/local'
+  POETRY_HOME='/usr/local' \
+  POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true
 
 # Helps track down issues in command execution
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
