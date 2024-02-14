@@ -33,7 +33,7 @@ class CeleryTask(models.Model):
         User, on_delete=models.CASCADE
     )  # Assuming User is the Django User model
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"<ID:{self.id} | TID:{self.task_id}><{self.source} | {self.destination}>"
         )

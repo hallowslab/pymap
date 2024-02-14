@@ -1,6 +1,6 @@
 import redis
 import time
-from typing import Dict, List
+from typing import Any, Dict, List
 from random import choice
 from celery.exceptions import TimeoutError
 from django.core.management.base import BaseCommand, CommandParser
@@ -40,7 +40,7 @@ class Command(BaseCommand):
         )
         return super().add_arguments(parser)
 
-    def generate_data(self) -> Dict[str, str]:
+    def generate_data(self) -> Dict[str, (str | object)]:
         source = f"vps{choice(range(100))}.pymap.tld"
         destination = f"vps{choice(range(100))}.pymap.tld"
         input_data = "\n".join(
@@ -89,7 +89,7 @@ class Command(BaseCommand):
             # Connection timed out
             return False
 
-    def handle(self, *args, **options) -> None:
+    def handle(self, *args: object, **options: Any) -> None:
         if not self.redis_is_running():
             self.stdout.write(self.style.ERROR(f"Error: Redis is not running"))
             return
@@ -97,7 +97,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"Error: Celery worker is not running"))
             return
         count = options["count"]
-        wait_time = options["wait_time"]
+        wait_time = float(options["wait_time"])
         # Check the arguments, (defaults to superuser, password may need to be updated/provided)
         username = "pymin" if options["user"] == "" else options["user"]
         password = "Pymin" if options["password"] == "" else options["password"]

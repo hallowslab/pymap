@@ -1,22 +1,26 @@
+from typing import Dict, Union
 import pytest
 from unittest.mock import patch, mock_open, call
 from core.pymap_core import ScriptGenerator
-from scripts.utils import generate_line_creds
+
+config_type = Dict[str, Union[list[list[str]], str]]
 
 
 @pytest.fixture
-def mock_config():
+def mock_config() -> config_type:
     return {"LOGDIR": "/var/log/test", "HOSTS": [["sv[0-9]+", ".example.com"]]}
 
 
 @pytest.fixture
-def mock_generator(mock_config):
+def mock_generator(mock_config: config_type) -> ScriptGenerator:
     generator = ScriptGenerator("sv00", "host2")
     generator.config = mock_config
     return generator
 
 
-def test_process_file_single_line(mock_generator, monkeypatch):
+def test_process_file_single_line(
+    mock_generator: ScriptGenerator, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Mocking isfile and open functions
     monkeypatch.setattr("os.path.isfile", lambda x: True)
     with patch(
@@ -46,7 +50,9 @@ def test_process_file_single_line(mock_generator, monkeypatch):
     # Add additional assertions based on your expected behavior
 
 
-def test_process_file_multiple_lines(mock_generator, monkeypatch):
+def test_process_file_multiple_lines(
+    mock_generator: ScriptGenerator, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Mocking isfile and open functions
     monkeypatch.setattr("os.path.isfile", lambda x: True)
     m = mock_open(
@@ -112,7 +118,7 @@ def test_process_file_multiple_lines(mock_generator, monkeypatch):
     # Add additional assertions based on your expected behavior
 
 
-def test_process_strings(mock_generator):
+def test_process_strings(mock_generator: ScriptGenerator) -> None:
     strings = ["user1@example.com pass1 user2@domain.com pass2", "\n"]
     scripts = mock_generator.process_strings(strings)
     expected_output_calls = [
@@ -130,7 +136,9 @@ def test_process_strings(mock_generator):
     # Add assertions here to check if the generated scripts match the expected output
 
 
-def test_write_output(mock_generator, monkeypatch):
+def test_write_output(
+    mock_generator: ScriptGenerator, monkeypatch: pytest.MonkeyPatch
+) -> None:
     mock_open_func = mock_open()
     monkeypatch.setattr("builtins.open", mock_open_func)
 
@@ -144,7 +152,7 @@ def test_write_output(mock_generator, monkeypatch):
     mock_open_func().writelines.assert_called_once_with(expected_lines)
 
 
-def test_verify_matches_hosts(mock_generator):
+def test_verify_matches_hosts(mock_generator: ScriptGenerator) -> None:
     mock_generator.config["HOSTS"] = [
         ["^sv[0-9]{2}$", ".example.com"],
         ["^VPS[0-9]{0,1}$", ".example.dev"],
@@ -159,12 +167,12 @@ def test_verify_matches_hosts(mock_generator):
     assert result4 == "VPS1000"
 
 
-def test_match_domain(mock_generator):
+def test_match_domain(mock_generator: ScriptGenerator) -> None:
     result = mock_generator.match_domain("user@example.com LR`T@9!dM4QJD$YhF6")
     assert result == "example.com"
 
 
-def test_match_domain_fail(mock_generator):
+def test_match_domain_fail(mock_generator: ScriptGenerator) -> None:
     r1 = mock_generator.match_domain("user@example LR`T@9!dM4QJD$YhF6")
     r2 = mock_generator.match_domain("user@example LR`T@example.rdfgha")
     assert r1 is None

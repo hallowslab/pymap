@@ -18,21 +18,19 @@ logger = get_task_logger("CeleryTask")
 
 @shared_task(bind=True)
 def call_system(self, cmd_list: List[str]) -> dict:
-    root_directory = settings.PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
-    total_cmds = len(cmd_list)
-    max_procs = 4
-    finished_procs = {}
+    root_directory: str = settings.PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
+    total_cmds: int = len(cmd_list)
+    max_procs: int = 4
+    finished_procs: dict[str, object] = {}
     running_procs = {}
     task_id = self.request.id
     log_directory = f"{root_directory}/{task_id}"
 
-    cmd_list = [
-        cmd.replace(
+    for i, cmd in enumerate(cmd_list):
+        cmd_list[i] = cmd.replace(
             f"--logdir={root_directory}",
             f"--logdir={log_directory}",
         )
-        for cmd in cmd_list
-    ]
 
     # Moved the check to the task itself to verify for cases of overwritting contents,
     # here none of the commands have been executed so even if they create the directory
@@ -107,7 +105,7 @@ def call_system(self, cmd_list: List[str]) -> dict:
 
     start_time = ctask.start_time
     end_time = timezone.now()
-    run_time_seconds = (end_time - start_time).total_seconds()
+    run_time_seconds = int((end_time - start_time).total_seconds())
 
     logger.debug("START TIME: %s", ctask.start_time)
     logger.debug("RUN TIME: %s", run_time_seconds)

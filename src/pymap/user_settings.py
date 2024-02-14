@@ -7,10 +7,13 @@ from django.conf import settings
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-def load_user_settings():
+def load_user_settings() -> None:
     # Load custom settings from JSON file
+    environment = settings.DJANGO_ENV
+    print("ENVIRON", environment)
+    config_file = "config.dev.json" if environment == "development" else "config.json"
     custom_settings = {}
-    with open(os.path.join(BASE_DIR, "config.json")) as f:
+    with open(os.path.join(BASE_DIR, config_file)) as f:
         custom_settings = json.load(f)
 
     log_config = custom_settings.get("LOGGING", {})
@@ -23,7 +26,7 @@ def load_user_settings():
     settings.PYMAP_SETTINGS.update(custom_settings)
 
 
-def load_user_env():
+def load_user_env() -> None:
     CONFIGS = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"]
     custom_settings = {v: os.getenv(v) for v in CONFIGS if os.getenv(v)}
 

@@ -3,15 +3,17 @@ import logging
 import json
 from subprocess import PIPE, Popen, TimeoutExpired
 from typing import List
-from os import mkdir, listdir
-from os.path import isdir, isfile, join
+from os import listdir
+from os.path import isfile, join, exists
 from django.shortcuts import redirect, render
-from django.contrib.auth.views import LoginView
 from django.conf import settings
 from django.urls import reverse
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, HttpRequest
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from rest_framework import generics
-from rest_framework.views import APIView, View
+from rest_framework.views import APIView
+from rest_framework.request import Request as APIRequest
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
@@ -28,46 +30,53 @@ logger = logging.getLogger(__name__)
 # IMPORTANT: All these views should be in the migrator: namespace
 
 
-def index(request):
+@login_required
+def index(request: HttpRequest) -> HttpResponse:
     return render(request, "home.html", {})
 
 
-def user_account(request):
+@login_required
+def user_account(request: HttpRequest) -> HttpResponse:
     user = request.user
     return render(request, "account.html", {"user": user})
 
 
-def update_account(request):
+@login_required
+def update_account(
+    request: HttpRequest,
+) -> (HttpResponse | HttpResponseRedirect):
+    assert isinstance(request.user, User)  # AbstractBaseUser has no .username
     if request.method == "POST":
         form = CustomUserChangeForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
             return redirect(
-                "migrator:user-account"
+                "migrator:user-account", permanent=False
             )  # Redirect to user's account page after successful update
     else:
         form = CustomUserChangeForm(instance=request.user)
-    user = request.user
-    return render(
-        request, "update_account.html", {"form": form, "username": user.username}
-    )
+    username = request.user.username
+    return render(request, "update_account.html", {"form": form, "username": username})
 
 
-def tasks(request):
+@login_required
+def tasks(request: HttpRequest) -> HttpResponse:
     """
     Renders task list template
     """
     return render(request, "tasks.html", {})
 
 
-def task_details(request, task_id):
+@login_required
+def task_details(request: HttpRequest, task_id: str) -> HttpResponse:
     """
     Renders task list details from the provided task_id
     """
     return render(request, "task_details.html", {"task_id": task_id})
 
 
-def log_details(request, task_id, log_file):
+@login_required
+def log_details(request: HttpRequest, task_id: str, log_file: str) -> HttpResponse:
     """
     Renders individual log details template from task_id and log_file
     """
@@ -76,10 +85,12 @@ def log_details(request, task_id, log_file):
     )
 
 
-def sync(request):
+@login_required
+def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
     """
     Endpoint for requesting a sync, creates a new task and signals the worker
     """
+    assert isinstance(request.user, User)  # AbstractBaseUser has no .username
     if request.method == "POST":
         form = SyncForm(request.POST)
         # logger.debug("POST data: %s", request.POST)
@@ -151,36 +162,29 @@ def sync(request):
             ctask.save()
 
             target_url = reverse("migrator:tasks")
-            return redirect(target_url)
+            return redirect(target_url, permanent=False)
     else:
         form = SyncForm()
 
     return render(request, "sync.html", {"form": form})
 
 
+@login_required
+def download_log(request: HttpRequest, task_id: str, log_file: str) -> HttpResponse:
+    logger.debug("Got request for a download for: %s/%s", task_id, log_file)
+    config = settings.PYMAP_SETTINGS
+    log_directory: str = config.get("LOGDIR")
+    log_path = join(log_directory, task_id, log_file)
+    if exists(log_path):
+        with open(log_path, "rb") as fh:
+            response = HttpResponse(fh.read(), content_type="application/text")
+            response["Content-Disposition"] = f'attachment; filename="{log_file}"'
+            return response
+    else:
+        return HttpResponse("Log file not found.", status=404)
+
+
 ## CLASSES
-class DownloadLog(View):
-    """
-    Given a task id downloads to the user's browser the requested log file
-    """
-
-    def get(self, request, task_id, log_file):
-        logger.debug("Got request for a download for: %s/%s", task_id, log_file)
-        config = settings.PYMAP_SETTINGS
-        log_directory = config.get("LOGDIR")
-
-        log_path = join(log_directory, task_id, log_file)
-
-        # Check if the file exists
-        if isfile(log_path):
-            with open(log_path, "rb") as fh:
-                response = HttpResponse(fh.read(), content_type="text/plain")
-                response["Content-Disposition"] = f'attachment; filename="{log_file}"'
-                return response
-        else:
-            return HttpResponse("Log file not found.", status=404)
-
-
 class CeleryTaskList(generics.ListCreateAPIView):
     """
     API endpoint to fetch all tasks
@@ -190,7 +194,7 @@ class CeleryTaskList(generics.ListCreateAPIView):
     queryset = CeleryTask.objects.all()
     serializer_class = CeleryTaskSerializer
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: APIRequest, *args: object, **kwargs: object) -> Response:
         # Handle DataTables parameters
         draw = int(request.GET.get("draw", 1))
         start = int(request.GET.get("start", 0))
@@ -198,26 +202,26 @@ class CeleryTaskList(generics.ListCreateAPIView):
         search_value = request.GET.get("search[value]", "")
         order = request.GET.get("order", [])
         columns = request.GET.get("columns", [])
-        print("GET", request.GET)
+        logger.debug("GET", request.GET)
 
         # Parsing the order parameter
         order_str = request.GET.get("order", "")
-        print("ORDER_STR", order_str)
+        logger.debug("ORDER_STR", order_str)
         order = json.loads(order_str) if order_str else []
 
         # Parsing the columns parameter
         columns_str = request.GET.get("columns", "")
-        print("COLUMNS_STR", columns_str)
+        logger.debug("COLUMNS_STR", columns_str)
         columns = json.loads(columns_str) if columns_str else []
 
         # Now you can access information in the order and columns arrays
         for column in columns:
             # Access individual column properties
-            print(column)
+            logger.debug(column)
 
         # Access information in the order array
         for order_item in order:
-            print(order_item)
+            logger.debug(order_item)
 
         # Filtering based on search value
         queryset = self.filter_queryset(self.get_queryset())
@@ -245,7 +249,7 @@ class CeleryTaskList(generics.ListCreateAPIView):
             "data": serializer.data,
         }
 
-        return JsonResponse(response_data, safe=False)
+        return Response(response_data, status=200)
 
 
 class CeleryTaskDetails(APIView):
@@ -253,7 +257,7 @@ class CeleryTaskDetails(APIView):
     API endpoint to fetch all jobs inside a task
     """
 
-    def get(self, request, task_id):
+    def get(self, request: APIRequest, task_id: str) -> JsonResponse:
         config = settings.PYMAP_SETTINGS
         log_directory = config.get("LOG_DIRECTORY", "/var/log/pymap")
 
@@ -286,7 +290,7 @@ class CeleryTaskDetails(APIView):
             # Paginate the data
             paginated_logs = all_logs[start : start + length]
 
-            return Response(
+            return JsonResponse(
                 {
                     "draw": draw,
                     "recordsTotal": total_records,
@@ -297,20 +301,20 @@ class CeleryTaskDetails(APIView):
             )
 
         except ValidationError:
-            return Response(
+            return JsonResponse(
                 {"error": "DJANGO:Failed to serialize data", "data": all_logs},
                 status=500,
             )
         except FileNotFoundError:
-            return Response(
+            return JsonResponse(
                 {
                     "error": "DJANGO:The directory does not exist on the system",
                     "data": logs_dir,
                 }
             )
         except Exception as e:
-            logger.critical("Unhandled exception: %s", str(e), exc_info=1)
-            return Response(
+            logger.critical("Unhandled exception: %s", str(e), exc_info=True)
+            return JsonResponse(
                 {"error": "DJANGO:Unhandled exception", "data": str(e)}, status=500
             )
 
@@ -320,7 +324,7 @@ class CeleryTaskLogDetails(APIView):
     API endpoint for accessing imapsync logfile contents
     """
 
-    def get(self, request, task_id, log_file):
+    def get(self, request: APIRequest, task_id: str, log_file: str) -> JsonResponse:
         logger.debug("Got request for task %s logs", task_id)
         config = settings.PYMAP_SETTINGS
         log_directory = config.get("LOGDIR")
@@ -348,7 +352,7 @@ class CeleryTaskLogDetails(APIView):
             _status: int = 300 if error else 200
             return JsonResponse({"content": content, "error": error}, status=_status)
         except TimeoutExpired:
-            logger.error("Failed to tail the file: %s", f_path, exc_info=1)
+            logger.error("Failed to tail the file: %s", f_path, exc_info=True)
             return JsonResponse(
                 {
                     "error": f"DJANGO:Could not fetch data",
@@ -357,7 +361,7 @@ class CeleryTaskLogDetails(APIView):
                 status=400,
             )
         except Exception as e:
-            logger.critical("Unhandled exception: %s", e.__str__(), exc_info=1)
+            logger.critical("Unhandled exception: %s", e.__str__(), exc_info=True)
             return JsonResponse(
                 {"error": "DJANGO:Unhandled exception", "data": e.__str__()}, status=400
             )
@@ -368,31 +372,36 @@ class ArchiveTask(APIView):
     API endpoint for setting a task as archived
     """
 
-    def post(self, request, *args, **kwargs):
+    def post(
+        self, request: APIRequest, *args: object, **kwargs: object
+    ) -> JsonResponse:
+        # Required User so we can validate the lookup on owned tasks
+        # Incompatible type for lookup 'owner': AnonymousUser
+        assert isinstance(request.user, User)
         serializer = TaskIdListSerializer(data=request.data)
 
         if serializer.is_valid():
             task_ids = serializer.validated_data["task_ids"]
 
             # Check ownership for each task ID
-            user = self.request.user  # Assuming the user is authenticated
+            user = request.user  # Assuming the user is authenticated
             owned_task_ids = CeleryTask.objects.filter(
-                user=user, id__in=task_ids
+                owner=user, id__in=task_ids
             ).values_list("id", flat=True)
 
             # Perform actions based on ownership
             for task_id in task_ids:
                 if task_id in owned_task_ids:
                     # User owns this task, perform your logic here
-                    print(f"User owns task with ID {task_id}")
-                    print(f"Task {owned_task_ids[task_id]}")
+                    logger.debug(f"User owns task with ID {task_id}")
+                    logger.debug(f"Task {owned_task_ids[task_id]}")
                 else:
                     # User does not own this task, handle accordingly
-                    print(f"User does not own task with ID {task_id}")
-            return Response(
+                    logger.debug(f"User does not own task with ID {task_id}")
+            return JsonResponse(
                 {"message": "Ownership verification successful"}, status=200
             )
-        return Response(serializer.errors, status=400)
+        return JsonResponse({"error": serializer.errors}, status=400)
 
 
 class CancelTask(APIView):
@@ -400,14 +409,16 @@ class CancelTask(APIView):
     API endpoint to stop a task execution or cancel it's scheduling
     """
 
-    def post(self, request, *args, **kwargs):
+    def post(
+        self, request: APIRequest, *args: object, **kwargs: object
+    ) -> JsonResponse:
         serializer = TaskIdListSerializer(data=request.data)
         if serializer.is_valid():
             task_ids = serializer.validated_data["task_ids"]
 
-            user = self.request.user
+            user = request.user
             # owned_tasks
-            return Response(
+            return JsonResponse(
                 {"message": "Ownership verification successful"}, status=200
             )
-        return Response(serializer.errors, status=400)
+        return JsonResponse({"error": serializer.errors}, status=400)

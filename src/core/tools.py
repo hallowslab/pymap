@@ -2,9 +2,11 @@ import logging
 import argparse
 import json
 
+from argparse import Namespace
+
 
 # Try to parse log level, default to 20/INFO
-def set_logging(log_level):
+def set_logging(log_level: str) -> None:
     # On dry run DEBUG is always enabled
     numeric_level = getattr(logging, log_level.upper(), 20)
     logging.basicConfig(
@@ -27,7 +29,7 @@ def load_config(f_path="config.json"):
     return config
 
 
-def setup_argparse():
+def setup_argparse() -> Namespace:
     parser = argparse.ArgumentParser(
         description="Processes a file, outputs a script for imapsync",
         prog="pymap",

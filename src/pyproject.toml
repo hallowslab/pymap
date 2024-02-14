@@ -26,15 +26,25 @@ django-stubs = {extras = ["compatible-mypy"], version = "^4.2.7"}
 djangorestframework-stubs = {extras = ["compatible-mypy"], version = "^3.14.5"}
 
 [tool.taskipy.tasks]
-server = "DJANGO_ENV='production' python manage.py runserver 0.0.0.0:8000"
-serverDev = "DJANGO_ENV='development' python manage.py runserver 0.0.0.0:8000"
-worker = "celery -A pymap.celery worker -l INFO"
+serverDev = "DJANGO_ENV='development' task server"
+workerDev = "DJANGO_ENV='development' task worker"
+monitorDev = "DJANGO_ENV='development' task monitor"
+server = "python manage.py runserver 0.0.0.0:8000"
+worker = "celery -A pymap.celery worker"
 monitor = "celery -A pymap.celery flower --basic-auth='admin:admin,dev:localhost' --address='localhost'"
-prepare = "python manage.py makemigrations"
-migrate = "python manage.py migrate"
-### Formatting, tests & coverage
-format = "black . && autoflake -i -r  --remove-unused-variables --remove-all-unused-imports core && mypy core"
+### Database tasks
+upgradeDev = "DJANGO_ENV='development' task upgrade"
+upgrade = "task prep && task migr"
+prep = "python manage.py makemigrations"
+migr = "python manage.py migrate"
+### Formatting, tests
+check = "DJANGO_ENV='development' task format"
+format = "task black && task flake && task mypy"
+black = "black . "
+flake = "autoflake -i -r ."
+mypy = "mypy --strict ."
 testCore = "pytest tests/core"
+### Coverage
 coverage = "coverage run -m pytest && coverage report"
 
 [build-system]

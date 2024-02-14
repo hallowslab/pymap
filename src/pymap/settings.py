@@ -9,13 +9,13 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
+from typing import List
 import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-DJANGO_ENV:str = os.getenv("DJANGO_ENV", "production")
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
+DJANGO_ENV: str = os.getenv("DJANGO_ENV", "production")
 
 
 # Quick-start development settings - unsuitable for production
@@ -25,12 +25,12 @@ DJANGO_ENV:str = os.getenv("DJANGO_ENV", "production")
 SECRET_KEY = "django-insecure-1puxfc@9e$3zghbc-itn)dl4)yg&wsu(dflf(#bv4fu3gc$f#p"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG:bool = True if DJANGO_ENV == "development" else False
+DEBUG: bool = True if DJANGO_ENV == "development" else False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: List[str] = []
 
 # The Debug Toolbar is shown only if your IP address is listed in Django’s INTERNAL_IPS setting.
-INTERNAL_IPS = [
+INTERNAL_IPS: List[str] = [
     # ...
     "127.0.0.1",
     # ...
@@ -170,7 +170,7 @@ try:
     from pymap.user_settings import (
         load_user_settings,
         load_user_env,
-    )  # Adjust the import path based on your project structure
+    )
 
     load_user_settings()
     load_user_env()
@@ -179,15 +179,19 @@ except Exception as e:
         "Experienced a critical failure loading user settings, some functionality might be disabled"
     )
     print("ERROR: ", e)
-    pass
 
-def check_log_directory():
+
+def check_log_directory() -> None:
     # Check logdir is loaded in settings, default in case it's missing
-    LOG_DIR = PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
+    environ_default = (
+        "./pymap_logs" if DJANGO_ENV == "development" else "/var/log/pymap"
+    )
+    LOG_DIR = PYMAP_SETTINGS.get("LOGDIR", environ_default)
     if not os.path.exists(LOG_DIR):
         raise FileNotFoundError(f"The log directory {LOG_DIR} does not exist.")
     if not os.access(LOG_DIR, os.W_OK):
         raise PermissionError(f"The log directory {LOG_DIR} is not writable.")
+
 
 # Call the check_log_directory function during startup
 check_log_directory()

@@ -1,7 +1,3 @@
-import random
-import string
-from typing import List
-
 from scripts.utils import generate_line_creds
 
 

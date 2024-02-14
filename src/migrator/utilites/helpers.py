@@ -20,7 +20,7 @@ def check_status(code: str) -> str:
     return code
 
 
-def grep_errors(log_directory, log_path, timeout=5) -> str:
+def grep_errors(log_directory: str, log_path: str, timeout: int = 5) -> str:
     try:
         content = subprocess.check_output(
             ["grep", "Err", join(log_directory, log_path)],
@@ -33,9 +33,9 @@ def grep_errors(log_directory, log_path, timeout=5) -> str:
         return ""
 
 
-def check_failed_is_only_spam(content) -> bool:
-    content = [x for x in content.split("\n") if len(x) > 1]
-    for line in content:
+def check_failed_is_only_spam(content: str) -> bool:
+    lines: List[str] = [x for x in content.split("\n") if len(x) > 1]
+    for line in lines:
         if re.match(SPAM_ERROR, line):
             continue
         else:
@@ -43,7 +43,7 @@ def check_failed_is_only_spam(content) -> bool:
     return True
 
 
-def sub_check_output(command: list, filename: str, timeout=5) -> str:
+def sub_check_output(command: List[str], filename: str, timeout: int = 5) -> str:
     f_path = abspath(filename)
     try:
         return subprocess.check_output(
@@ -57,20 +57,26 @@ def sub_check_output(command: list, filename: str, timeout=5) -> str:
         return "Timeout expired"
 
 
-def get_logs_status(log_directory, log_path, timeout=5) -> Dict[str, str]:
+def get_logs_status(
+    log_directory: str, log_path: str, timeout: int = 5
+) -> Dict[str, str]:
     # FIXME: This might have some issues on directories with a large amount of files
     # TODO: Maybe stop using so many regular expressions and just use grep awk and whatever.....
     has_status: str = sub_check_output(
-        ["grep", "-E", "Exiting with return value *"], join(log_directory, log_path)
+        ["grep", "-E", "Exiting with return value *"],
+        join(log_directory, log_path),
+        timeout=timeout,
     )
     print("HAS_STATUS", has_status)
     status = "Running" if len(has_status) == 0 else has_status.split(" ")[4]
     print("STATUS", status)
     status_message: str = check_status(status)
     start_time: str = sub_check_output(
-        ["grep", "-E", "Transfer started at *"], join(log_directory, log_path)
+        ["grep", "-E", "Transfer started at *"],
+        join(log_directory, log_path),
+        timeout=timeout,
     )
-    start_time_match: Optional[re.Match] = re.match(DATE_REGEX, start_time)
+    start_time_match: Optional[re.Match[str]] = re.match(DATE_REGEX, start_time)
     if start_time_match:
         start_time = start_time_match.group("time")
     else:
@@ -78,9 +84,11 @@ def get_logs_status(log_directory, log_path, timeout=5) -> Dict[str, str]:
 
     # start_time = time.strptime(start_time, "%A  %B %Y-%m-%d")
     end_time: str = sub_check_output(
-        ["grep", "-E", "Transfer ended on *"], join(log_directory, log_path)
+        ["grep", "-E", "Transfer ended on *"],
+        join(log_directory, log_path),
+        timeout=timeout,
     )
-    end_time_match: Optional[re.Match] = re.match(DATE_REGEX, end_time)
+    end_time_match: Optional[re.Match[str]] = re.match(DATE_REGEX, end_time)
     if end_time_match:
         end_time = end_time_match.group("time")
     else:
@@ -94,7 +102,7 @@ def get_logs_status(log_directory, log_path, timeout=5) -> Dict[str, str]:
     }
 
 
-def get_task_info(task_path):
+def get_task_info(task_path: str):
     file_list: List[str] = [f for f in listdir(task_path) if isfile(join(task_path, f))]
     if len(file_list) == 0:
         return {"error": f"No files found in the task directory: {task_path}"}
