@@ -11,18 +11,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/aio/Dockerfile
-      args:
-        DJANGO_ENV: production
-    depends_on:
-      - redis
+    ports:
+      - "8000:8000"
     volumes:
       - ./src:/app
     environment:
+      - DJANGO_ENV=production
       - DJANGO_SETTINGS_MODULE=pymap.settings
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    ports:
-      - "8000:8000"
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      - CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
   celery-worker:
     build:
@@ -33,6 +30,7 @@ services:
     volumes:
       - ./src:/app
     environment:
+      - DJANGO_ENV=production
       - DJANGO_SETTINGS_MODULE=pymap.settings
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -41,6 +39,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/django/Dockerfile
+    stdin_open: true
+    tty: true
     ports:
       - "8000:8000"
     depends_on:
@@ -49,11 +49,10 @@ services:
     volumes:
       - ./src:/app
     environment:
+      - DJANGO_ENV=production
       - DJANGO_SETTINGS_MODULE=pymap.settings
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    stdin_open: true
-    tty: true
 
   email-server:
     build:

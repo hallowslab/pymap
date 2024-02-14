@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM debian:bookworm
 
 # `DJANGO_ENV` arg is used to make prod / dev builds:
 ARG DJANGO_ENV \
@@ -28,33 +28,37 @@ SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
 WORKDIR /app
 
-# Install imapsync dependencies
+# Install system and perl dependencies
 RUN apt-get update && \
-    apt-get install -y git curl tmux supervisor apt-file make gcc cpanminus libtest-mock-guard-perl \
-    libjson-webtoken-perl libjson-perl libpar-packer-perl libwww-perl libio-socket-inet6-perl zlib1g-dev libssl-dev libpackage-stash-xs-perl \
-    # Installing `poetry` package manager:
-    # https://github.com/python-poetry/poetry
-    && curl -sSL 'https://install.python-poetry.org' | python - \
-    && poetry --version \
-    # Cleaning cache:
+    apt-get install -y redis git curl tmux supervisor apt-file make time gcc lsb-release procps python3 pipx cpanminus \
+    libauthen-ntlm-perl libcgi-pm-perl libcrypt-openssl-rsa-perl libdata-uniqid-perl libpar-packer-perl \
+    libencode-imaputf7-perl libfile-copy-recursive-perl libfile-tail-perl libio-socket-inet6-perl \
+    libio-socket-ssl-perl libio-tee-perl libhtml-parser-perl libjson-webtoken-perl libmail-imapclient-perl libtest-requires-perl \
+    libparse-recdescent-perl libproc-processtable-perl libmodule-scandeps-perl libreadonly-perl libregexp-common-perl libtest-mock-guard-perl \
+    libsys-meminfo-perl libterm-readkey-perl libtest-mockobject-perl libtest-pod-perl libunicode-string-perl liburi-perl libwww-perl \
+    libtest-nowarnings-perl libtest-deep-perl libtest-warn-perl libnet-server-perl libpackage-stash-perl libpackage-stash-xs-perl \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Perl modules for imapsync
+# See https://imapsync.lamiral.info/FAQ.d/FAQ.SSL_errors.txt
+RUN cpanm Dist::CheckConflicts Module::Implementation IO::Socket::SSL
 
 # Required for imapsync dependecy check
 RUN apt-file update
 
-# Perl modules for imapsync
-RUN cpanm Mail::IMAPClient Authen::NTLM CGI Crypt::OpenSSL::RSA Data::Uniqid \
-    Digest::HMAC Digest::HMAC_MD5 Dist::CheckConflicts Encode::IMAPUTF7 File::Copy::Recursive \
-    File::Tail IO::Socket::INET6 IO::Socket::SSL IO::Tee JSON JSON::WebToken::Crypt::RSA \
-    LWP::UserAgent Module::ScanDeps Net::SSLeay Proc::ProcessTable Regexp::Common \
-    Sys::MemInfo Term::ReadKey Test::Fatal Test::MockObject Test::Pod \
-    Test::Requires Test::Deep Unicode::String Readonly Package::Stash
-
-
 # Clone and install imapsync
 RUN git clone https://github.com/imapsync/imapsync.git
 RUN cd imapsync && make install
+
+# Install poetry
+RUN pipx install poetry
+# Add pipx executables to path
+RUN pipx ensurepath
+
+# Set PATH to include pipx binary directory
+# ensurepath does not refresh the environment during the build it seems
+ENV PATH="/root/.local/bin:$PATH"
 
 # supervisor config
 COPY Dockerfiles/aio/supervisord.conf /etc/supervisord.conf
@@ -74,6 +78,9 @@ RUN echo "$DJANGO_ENV" && poetry install
 
 # copy the app
 COPY ./src /app/
+
+# Create the log directory
+RUN mkdir -p /var/log/pymap
 
 # makemigrations and migrate (required for aio in first time setup)
 RUN poetry run task prepare && poetry run task migrate

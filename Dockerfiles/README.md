@@ -5,8 +5,9 @@
     * Install libio-socket-inet6-perl from apt
 - Configure failed for Net-SSLeay-1.94
     * Install zlib1g-dev libssl-dev from apt
-- Install Perl module Package::Stash::XS
-- Install Perl module Readonly
+- Install Perl module Package::Stash::XS, Readonly, HTTP::Request
+- Installing Unicode::String, Term::ReadKey, Sys::MemInfo failed
+    * Install libunicode-string-perl, libterm-readkey-perl, libsys-meminfo-perl from apt
 
 
 # Celery
