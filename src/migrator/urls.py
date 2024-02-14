@@ -7,13 +7,15 @@ from .converters import LogfileConverter
 
 register_converter(LogfileConverter, "log")
 
-app_name="migrator"
+app_name = "migrator"
 
 urlpatterns = [
     path("", login_required(views.index), name="index"),
     path("sync/", login_required(views.sync), name="sync"),
     path("tasks/", login_required(views.tasks), name="tasks"),
-    path("tasks/<str:task_id>/", login_required(views.task_details), name="tasks-details"),
+    path(
+        "tasks/<str:task_id>/", login_required(views.task_details), name="tasks-details"
+    ),
     path(
         "tasks/<str:task_id>/<log:log_file>/",
         login_required(views.log_details),
@@ -45,5 +47,7 @@ urlpatterns = [
         name="api-tasks-log-details",
     ),
     path("account/", login_required(views.user_account), name="user-account"),
-    path('update-account/', login_required(views.update_account), name='update-account'),
+    path(
+        "update-account/", login_required(views.update_account), name="update-account"
+    ),
 ]

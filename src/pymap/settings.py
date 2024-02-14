@@ -15,6 +15,7 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+DJANGO_ENV:str = os.getenv("DJANGO_ENV", "production")
 
 
 # Quick-start development settings - unsuitable for production
@@ -24,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-1puxfc@9e$3zghbc-itn)dl4)yg&wsu(dflf(#bv4fu3gc$f#p"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG:bool = True if DJANGO_ENV == "development" else False
 
 ALLOWED_HOSTS = []
 
@@ -165,14 +166,6 @@ LOGGING = {
 # Custom settings
 PYMAP_SETTINGS = {}
 
-def check_log_directory():
-    # Check logdir is loaded in settings, default in case it's missing
-    LOG_DIR = PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
-    if not os.path.exists(LOG_DIR):
-        raise FileNotFoundError(f"The log directory {LOG_DIR} does not exist.")
-    if not os.access(LOG_DIR, os.W_OK):
-        raise PermissionError(f"The log directory {LOG_DIR} is not writable.")
-
 try:
     from pymap.user_settings import (
         load_user_settings,
@@ -187,6 +180,14 @@ except Exception as e:
     )
     print("ERROR: ", e)
     pass
+
+def check_log_directory():
+    # Check logdir is loaded in settings, default in case it's missing
+    LOG_DIR = PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
+    if not os.path.exists(LOG_DIR):
+        raise FileNotFoundError(f"The log directory {LOG_DIR} does not exist.")
+    if not os.access(LOG_DIR, os.W_OK):
+        raise PermissionError(f"The log directory {LOG_DIR} is not writable.")
 
 # Call the check_log_directory function during startup
 check_log_directory()

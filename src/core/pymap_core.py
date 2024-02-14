@@ -149,9 +149,6 @@ class ScriptGenerator:
         has_match = re.match(self.WHOLE_STRING_ID, line)
         # FIXME: Regex has catastrophic backtracing, should not be used for now...
         # TODO: Maybe replace regex for the splitting logic
-        print("LINE", line)
-        print("group(pword1)", has_match.group("pword1"))
-        print("group(pword2)", has_match.group("pword2"))
         if has_match:
             user1 = has_match.group("user1")
             user2 = has_match.group("user2")
@@ -160,8 +157,6 @@ class ScriptGenerator:
             # Add domains to internal list
             username1: str = f"{user1}{domain1}" if user1 and domain1 else ""
             username2: str = f"{user2}{domain2}" if user2 and domain2 else ""
-            print("username1",username1)
-            print("username2",username2)
             if len(username1) > 0 and len(username2) > 0:
                 return self.FORMAT_STRING.format(
                     self.host1,

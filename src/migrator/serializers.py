@@ -16,5 +16,6 @@ class CeleryTaskSerializer(serializers.ModelSerializer):
         model = CeleryTask
         fields = "__all__"
 
+
 class TaskIdListSerializer(serializers.Serializer):
     task_ids = serializers.ListField(child=serializers.CharField())

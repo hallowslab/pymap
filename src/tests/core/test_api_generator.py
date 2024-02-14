@@ -32,8 +32,6 @@ def test_api_discards_invalid_inputs(test_input):
 def test_returns_parsed_line_1_user(test_input):
     x = ScriptGenerator("127.0.0.1", "127.0.0.2", domain="test.com")
     scripts = x.process_strings(test_input)
-    print("X1",x.host1)
-    print("X2",x.host2)
     for line in scripts:
         parts = line.split()
         host1 = parts[parts.index("--host1") + 1]

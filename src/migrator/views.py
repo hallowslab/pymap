@@ -27,23 +27,31 @@ logger = logging.getLogger(__name__)
 
 # IMPORTANT: All these views should be in the migrator: namespace
 
+
 def index(request):
     return render(request, "home.html", {})
 
+
 def user_account(request):
     user = request.user
-    return render(request, 'account.html', {'user': user})
+    return render(request, "account.html", {"user": user})
+
 
 def update_account(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CustomUserChangeForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
-            return redirect('migrator:user-account')  # Redirect to user's account page after successful update
+            return redirect(
+                "migrator:user-account"
+            )  # Redirect to user's account page after successful update
     else:
         form = CustomUserChangeForm(instance=request.user)
     user = request.user
-    return render(request, 'update_account.html', {'form': form, "username": user.username})
+    return render(
+        request, "update_account.html", {"form": form, "username": user.username}
+    )
+
 
 def tasks(request):
     """
@@ -155,6 +163,7 @@ class DownloadLog(View):
     """
     Given a task id downloads to the user's browser the requested log file
     """
+
     def get(self, request, task_id, log_file):
         logger.debug("Got request for a download for: %s/%s", task_id, log_file)
         config = settings.PYMAP_SETTINGS
@@ -193,12 +202,12 @@ class CeleryTaskList(generics.ListCreateAPIView):
 
         # Parsing the order parameter
         order_str = request.GET.get("order", "")
-        print("ORDER_STR",order_str)
+        print("ORDER_STR", order_str)
         order = json.loads(order_str) if order_str else []
 
         # Parsing the columns parameter
         columns_str = request.GET.get("columns", "")
-        print("COLUMNS_STR",columns_str)
+        print("COLUMNS_STR", columns_str)
         columns = json.loads(columns_str) if columns_str else []
 
         # Now you can access information in the order and columns arrays
@@ -214,7 +223,7 @@ class CeleryTaskList(generics.ListCreateAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         if search_value != "":
             queryset = queryset.filter(source__icontains=search_value)
-            #queryset.order_by(search_value)
+            # queryset.order_by(search_value)
 
         # Total records without filtering
         total_records = self.get_queryset().count()
@@ -358,15 +367,18 @@ class ArchiveTask(APIView):
     """
     API endpoint for setting a task as archived
     """
+
     def post(self, request, *args, **kwargs):
         serializer = TaskIdListSerializer(data=request.data)
 
         if serializer.is_valid():
-            task_ids = serializer.validated_data['task_ids']
+            task_ids = serializer.validated_data["task_ids"]
 
             # Check ownership for each task ID
             user = self.request.user  # Assuming the user is authenticated
-            owned_task_ids = CeleryTask.objects.filter(user=user, id__in=task_ids).values_list('id', flat=True)
+            owned_task_ids = CeleryTask.objects.filter(
+                user=user, id__in=task_ids
+            ).values_list("id", flat=True)
 
             # Perform actions based on ownership
             for task_id in task_ids:
@@ -377,7 +389,9 @@ class ArchiveTask(APIView):
                 else:
                     # User does not own this task, handle accordingly
                     print(f"User does not own task with ID {task_id}")
-            return Response({'message': 'Ownership verification successful'}, status=200)
+            return Response(
+                {"message": "Ownership verification successful"}, status=200
+            )
         return Response(serializer.errors, status=400)
 
 
@@ -385,13 +399,15 @@ class CancelTask(APIView):
     """
     API endpoint to stop a task execution or cancel it's scheduling
     """
+
     def post(self, request, *args, **kwargs):
         serializer = TaskIdListSerializer(data=request.data)
         if serializer.is_valid():
-            task_ids = serializer.validated_data['task_ids']
+            task_ids = serializer.validated_data["task_ids"]
 
             user = self.request.user
-            #owned_tasks
-            return Response({'message': 'Ownership verification successful'}, status=200)
+            # owned_tasks
+            return Response(
+                {"message": "Ownership verification successful"}, status=200
+            )
         return Response(serializer.errors, status=400)
-

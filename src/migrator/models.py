@@ -3,18 +3,20 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class TaskStatistics(models.Model):
-    total_task_count = models.IntegerField(default=0)
-    total_run_time = models.IntegerField(default=0)
+# (WIP)
+# class TaskStatistics(models.Model):
+#     total_task_count = models.IntegerField(default=0)
+#     total_run_time = models.IntegerField(default=0)
 
-    def __str__(self):
-        return f"Global Task Statistics"
+#     def __str__(self):
+#         return f"Global Task Statistics"
 
 
 class CeleryTask(models.Model):
     """
-        Model for an individual task
+    Model for an individual task
     """
+
     id = models.AutoField(primary_key=True)
     task_id = models.CharField(max_length=255)  # Adjust the max_length as needed
     source = models.CharField(max_length=100)
