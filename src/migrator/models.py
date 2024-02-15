@@ -1,6 +1,14 @@
 # Create your models here.
+import os
+import shutil
+import logging
+from typing import Any
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.contrib.auth.models import User
+
+logger = logging.getLogger(__name__)
 
 
 # (WIP)
@@ -37,3 +45,15 @@ class CeleryTask(models.Model):
         return (
             f"<ID:{self.id} | TID:{self.task_id}><{self.source} | {self.destination}>"
         )
+
+
+@receiver(post_delete, sender=CeleryTask)
+def delete_related_files(
+    sender: CeleryTask, instance: CeleryTask, **kwargs: Any
+) -> None:
+    log_path = instance.log_path
+    if os.path.exists(log_path):
+        logger.info("Deleting task directory: %s", log_path)
+        shutil.rmtree(log_path)
+    else:
+        logger.warning("The task directory does not exist: %s", log_path)
