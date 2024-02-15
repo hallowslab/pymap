@@ -1,6 +1,6 @@
 import re
 import os
-from typing import Generator, Iterable, List, Optional, Union
+from typing import Any, Generator, Iterable, List, Optional, Union
 import logging
 
 logger = logging.getLogger("pymap_core")
@@ -23,7 +23,7 @@ class ScriptGenerator:
         host1: str,
         host2: str,
         extra_args: str = "",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         self.config = kwargs.get("config", {})
         self.host1 = self.verify_host(host1)
@@ -115,18 +115,18 @@ class ScriptGenerator:
         returns a list with all scripts
         """
         # logger.debug("STRINGS:\n%s", type(strings))
-        scripts = [x for x in self.line_generator(strings) if x is not None]
+        scripts = [x for x in self.line_generator(strings) if len(x) > 0]
         return scripts
 
     # processes input -> yields str
-    def line_generator(self, uinput: Iterable) -> Generator:
+    def line_generator(self, uinput: Iterable[str]) -> Generator[str, None, None]:
         """
         Just a generator wrapper for the process_line function,
         also appends <self.extra_args> if they exist
 
         Entrypoint for the data, other functions like process_strings and process_file should always call this
         """
-        new_line = None
+        new_line = ""
         for line in uinput:
             if line and len(line) > 1:
                 # Check for domains
