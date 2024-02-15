@@ -2,7 +2,7 @@
 import logging
 import json
 from subprocess import PIPE, Popen, TimeoutExpired
-from typing import List
+from typing import List, Optional
 from os import listdir
 from os.path import isfile, join, exists
 from django.shortcuts import redirect, render
@@ -11,11 +11,11 @@ from django.urls import reverse
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, HttpRequest
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.request import Request as APIRequest
-from rest_framework.response import Response
+from rest_framework.response import Response as APIResponse
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import ListCreateAPIView
 
 from .models import CeleryTask
 from .serializers import CeleryTaskSerializer, TaskIdListSerializer
@@ -147,7 +147,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             )
 
             # Don't forget to save the task id and respective inputs to the database
-            root_log_directory = config.get("LOGDIR", "/var/log/pymap")
+            root_log_directory = config.get("LOGDIR")
             log_directory = f"{root_log_directory}/{task.id}"
             domains = ", ".join(gen.domains)
             ctask = CeleryTask(
@@ -172,20 +172,19 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
 @login_required
 def download_log(request: HttpRequest, task_id: str, log_file: str) -> HttpResponse:
     logger.debug("Got request for a download for: %s/%s", task_id, log_file)
-    config = settings.PYMAP_SETTINGS
-    log_directory: str = config.get("LOGDIR")
-    log_path = join(log_directory, task_id, log_file)
-    if exists(log_path):
-        with open(log_path, "rb") as fh:
-            response = HttpResponse(fh.read(), content_type="application/text")
-            response["Content-Disposition"] = f'attachment; filename="{log_file}"'
+    log_directory: Optional[str] = settings.PYMAP_SETTINGS.get("LOGDIR")
+    if log_directory:
+        log_path = join(log_directory, task_id, log_file)
+        if exists(log_path):
+            with open(log_path, "rb") as fh:
+                response = HttpResponse(fh.read(), content_type="application/text")
+                response["Content-Disposition"] = f'attachment; filename="{log_file}"'
             return response
-    else:
-        return HttpResponse("Log file not found.", status=404)
+    return HttpResponse("Log file not found.", status=404)
 
 
 ## CLASSES
-class CeleryTaskList(generics.ListCreateAPIView):
+class CeleryTaskList(ListCreateAPIView):
     """
     API endpoint to fetch all tasks
     """
@@ -194,14 +193,12 @@ class CeleryTaskList(generics.ListCreateAPIView):
     queryset = CeleryTask.objects.all()
     serializer_class = CeleryTaskSerializer
 
-    def list(self, request: APIRequest, *args: object, **kwargs: object) -> Response:
+    def list(self, request: APIRequest, *args: object, **kwargs: object) -> APIResponse:
         # Handle DataTables parameters
         draw = int(request.GET.get("draw", 1))
         start = int(request.GET.get("start", 0))
         length = int(request.GET.get("length", 10))
         search_value = request.GET.get("search[value]", "")
-        order = request.GET.get("order", [])
-        columns = request.GET.get("columns", [])
         logger.debug("GET", request.GET)
 
         # Parsing the order parameter
@@ -249,7 +246,7 @@ class CeleryTaskList(generics.ListCreateAPIView):
             "data": serializer.data,
         }
 
-        return Response(response_data, status=200)
+        return APIResponse(response_data, status=200)
 
 
 class CeleryTaskDetails(APIView):
@@ -259,9 +256,12 @@ class CeleryTaskDetails(APIView):
 
     def get(self, request: APIRequest, task_id: str) -> JsonResponse:
         config = settings.PYMAP_SETTINGS
-        log_directory = config.get("LOG_DIRECTORY", "/var/log/pymap")
+        log_directory: Optional[str] = config.get("LOGDIR")
+        all_logs = []
 
         try:
+            if not log_directory:
+                raise FileNotFoundError("")
             # Handle DataTables parameters
             draw = int(request.GET.get("draw", 1))
             start = int(request.GET.get("start", 0))
@@ -309,7 +309,7 @@ class CeleryTaskDetails(APIView):
             return JsonResponse(
                 {
                     "error": "DJANGO:The directory does not exist on the system",
-                    "data": logs_dir,
+                    "data": log_directory,
                 }
             )
         except Exception as e:
@@ -332,8 +332,8 @@ class CeleryTaskLogDetails(APIView):
         tail_count: int = int(request.GET.get("tcount", 100))
         logger.debug("Full request GET parameters: %s", request.GET)
         # Tail the last X lines from the log file and return it
+        f_path = f"{log_directory}/{task_id}/{log_file}"
         try:
-            f_path = f"{log_directory}/{task_id}/{log_file}"
             if not isfile(f_path):
                 return JsonResponse(
                     {"error": f"DJANGO:File {f_path} was not found"}, status=404
@@ -384,7 +384,7 @@ class ArchiveTask(APIView):
             task_ids = serializer.validated_data["task_ids"]
 
             # Check ownership for each task ID
-            user = request.user  # Assuming the user is authenticated
+            user = request.user
             owned_task_ids = CeleryTask.objects.filter(
                 owner=user, id__in=task_ids
             ).values_list("id", flat=True)

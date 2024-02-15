@@ -3,7 +3,7 @@ import re
 from os import listdir
 from os.path import isfile, join, abspath
 
-from typing import Optional, Dict, List
+from typing import Any, Dict, List, Optional
 
 from migrator.utilites.strings import (
     LOGFILE_REGEX,
@@ -14,7 +14,7 @@ from migrator.utilites.strings import (
 )
 
 
-def check_status(code: str) -> str:
+def match_status(code: str) -> str:
     if code in IMAPSYNC_CODES.keys():
         return IMAPSYNC_CODES[code]
     return code
@@ -57,23 +57,22 @@ def sub_check_output(command: List[str], filename: str, timeout: int = 5) -> str
         return "Timeout expired"
 
 
-def get_logs_status(
-    log_directory: str, log_path: str, timeout: int = 5
-) -> Dict[str, str]:
-    # FIXME: This might have some issues on directories with a large amount of files
-    # TODO: Maybe stop using so many regular expressions and just use grep awk and whatever.....
+def get_status(full_path: str, timeout: int) -> str:
     has_status: str = sub_check_output(
         ["grep", "-E", "Exiting with return value *"],
-        join(log_directory, log_path),
+        full_path,
         timeout=timeout,
     )
-    print("HAS_STATUS", has_status)
     status = "Running" if len(has_status) == 0 else has_status.split(" ")[4]
-    print("STATUS", status)
-    status_message: str = check_status(status)
+    status_message: str = match_status(status)
+    return status_message
+
+
+def get_start_time(full_path: str, timeout: int) -> str:
+    # start_time = time.strptime(start_time, "%A  %B %Y-%m-%d")
     start_time: str = sub_check_output(
         ["grep", "-E", "Transfer started at *"],
-        join(log_directory, log_path),
+        full_path,
         timeout=timeout,
     )
     start_time_match: Optional[re.Match[str]] = re.match(DATE_REGEX, start_time)
@@ -81,11 +80,13 @@ def get_logs_status(
         start_time = start_time_match.group("time")
     else:
         start_time = "Failed to parse"
+    return start_time
 
-    # start_time = time.strptime(start_time, "%A  %B %Y-%m-%d")
+
+def get_end_time(full_path: str, timeout: int) -> str:
     end_time: str = sub_check_output(
         ["grep", "-E", "Transfer ended on *"],
-        join(log_directory, log_path),
+        full_path,
         timeout=timeout,
     )
     end_time_match: Optional[re.Match[str]] = re.match(DATE_REGEX, end_time)
@@ -93,7 +94,18 @@ def get_logs_status(
         end_time = end_time_match.group("time")
     else:
         end_time = "Check status ->"
+    return end_time
 
+
+def get_logs_status(
+    log_directory: str, log_path: str, timeout: int = 5
+) -> Dict[str, str]:
+    # FIXME: This might have some issues on directories with a large amount of files
+    # TODO: Maybe stop using so many regular expressions and just use grep awk and whatever.....
+    full_path = join(log_directory, log_path)
+    status_message = get_status(full_path, timeout)
+    start_time = get_start_time(full_path, timeout)
+    end_time = get_end_time(full_path, timeout)
     return {
         "log_file": log_path,
         "start_time": start_time,
@@ -102,7 +114,11 @@ def get_logs_status(
     }
 
 
-def get_task_info(task_path: str):
+# This function needs to be split or requires a more
+# complex type definition for its return values
+def get_task_info(
+    task_path: str,
+) -> Any:
     file_list: List[str] = [f for f in listdir(task_path) if isfile(join(task_path, f))]
     if len(file_list) == 0:
         return {"error": f"No files found in the task directory: {task_path}"}

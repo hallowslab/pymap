@@ -3,6 +3,7 @@ import argparse
 import json
 
 from argparse import Namespace
+from typing import Any
 
 
 # Try to parse log level, default to 20/INFO
@@ -20,7 +21,7 @@ def set_logging(log_level: str) -> None:
     )
 
 
-def load_config(f_path="config.json"):
+def load_config(f_path: str = "config.json") -> Any:
     """
     Loads configuration from a json dictionary
     """

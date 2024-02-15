@@ -2,7 +2,7 @@
 import shlex
 import subprocess
 import time
-from typing import List
+from typing import List, Dict, Any
 from os import mkdir
 from os.path import isdir
 
@@ -15,14 +15,17 @@ from migrator.models import CeleryTask
 
 logger = get_task_logger("CeleryTask")
 
+FProc = Dict[str, (str | int)]
+RProc = Dict[str, Any]
+
 
 @shared_task(bind=True)
-def call_system(self, cmd_list: List[str]) -> dict:
+def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
     root_directory: str = settings.PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
     total_cmds: int = len(cmd_list)
     max_procs: int = 4
-    finished_procs: dict[str, object] = {}
-    running_procs = {}
+    finished_procs: Dict[str, (str | int)] = {}
+    running_procs: RProc = {}
     task_id = self.request.id
     log_directory = f"{root_directory}/{task_id}"
 
@@ -43,16 +46,17 @@ def call_system(self, cmd_list: List[str]) -> dict:
             log_directory,
         )
 
-    def check_running(procs):
+    def check_running(procs: RProc) -> RProc:
         for key in list(procs):
             proc = procs[key]
-            status = proc.poll()
-            if status is None:
-                continue
-            else:
-                logger.info("Marked for removal: %s", key)
-                finished_procs[key] = status
-                procs.pop(key, None)
+            if isinstance(proc, subprocess.Popen):
+                status = proc.poll()
+                if status is None:
+                    continue
+                else:
+                    logger.info("Marked for removal: %s", key)
+                    finished_procs[key] = status
+                    procs.pop(key, None)
         return procs
 
     for index, cmd in enumerate(cmd_list):
