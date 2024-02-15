@@ -9,7 +9,8 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-from typing import List
+import json
+from typing import Dict, List
 import os
 from pathlib import Path
 
@@ -164,21 +165,33 @@ LOGGING = {
 }
 
 # Custom settings
-PYMAP_SETTINGS = {}
+PYMAP_SETTINGS: Dict[str, str] = {}
 
-try:
-    from pymap.user_settings import (
-        load_user_settings,
-        load_user_env,
-    )
 
-    load_user_settings()
-    load_user_env()
-except Exception as e:
-    print(
-        "Experienced a critical failure loading user settings, some functionality might be disabled"
-    )
-    print("ERROR: ", e)
+def load_user_settings() -> None:
+    # Load custom settings from JSON file
+    config_file = "config.dev.json" if DJANGO_ENV == "development" else "config.json"
+    custom_settings = {}
+    with open(os.path.join(BASE_DIR, config_file)) as f:
+        custom_settings = json.load(f)
+
+    log_config = custom_settings.get("LOGGING", {})
+
+    # Override the logging with the user supplied if it exists
+    if isinstance(log_config, dict) and len(log_config) > 0:
+        LOGGING.update(log_config)
+
+    # Store custom settings under a specific key in PYMAP_SETTINGS
+    PYMAP_SETTINGS.update(custom_settings)
+
+
+def load_user_env() -> None:
+    CONFIGS = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"]
+    custom_settings = {v: os.getenv(v) for v in CONFIGS if os.getenv(v)}
+
+    if len(custom_settings.keys()) > 0:
+        for key, value in custom_settings.items():
+            globals()[key] = value
 
 
 def check_log_directory() -> None:
@@ -193,5 +206,8 @@ def check_log_directory() -> None:
         raise PermissionError(f"The log directory {LOG_DIR} is not writable.")
 
 
+# Load custom settings and env variables
+load_user_settings()
+load_user_env()
 # Call the check_log_directory function during startup
 check_log_directory()
