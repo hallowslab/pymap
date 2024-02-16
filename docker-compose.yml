@@ -7,12 +7,26 @@ services:
       - "6379:6379"
     restart: always
 
+  postgres:
+    image: "docker.io/library/postgres:latest"
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=your_username
+      - POSTGRES_PASSWORD=your_password
+      - POSTGRES_DB=your_database_name
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   aio:
     build:
       context: .
       dockerfile: Dockerfiles/aio/Dockerfile
+    hostname: pymap.lan
     ports:
       - "8000:8000"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./src:/app
     environment:
@@ -47,6 +61,7 @@ services:
     depends_on:
       - redis
       - celery-worker
+      - postgres
     volumes:
       - ./src:/app
       - shared_logs:/var/log/pymap
@@ -86,3 +101,4 @@ networks:
 
 volumes:
   shared_logs:
+  postgres_data:

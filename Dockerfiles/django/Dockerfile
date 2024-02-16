@@ -30,16 +30,15 @@ WORKDIR /app
 
 # Install imapsync dependencies
 RUN apt-get update && \
-    apt-get install -y apt-file make gcc cpanminus pipx libtest-mock-guard-perl libjson-webtoken-perl libjson-perl \
-    libpar-packer-perl libwww-perl libpackage-stash-perl libpackage-stash-xs-perl libio-socket-inet6-perl
+    apt-get install -y apt-file pipx make time cpanminus libauthen-ntlm-perl libcgi-pm-perl libcrypt-openssl-rsa-perl \
+    libdata-uniqid-perl libencode-imaputf7-perl libfile-copy-recursive-perl libfile-tail-perl libio-socket-inet6-perl \
+    libio-socket-ssl-perl libio-tee-perl libhtml-parser-perl libjson-webtoken-perl libmail-imapclient-perl libparse-recdescent-perl \
+    libproc-processtable-perl libmodule-scandeps-perl libreadonly-perl libregexp-common-perl libsys-meminfo-perl libterm-readkey-perl \
+    libtest-mockobject-perl libtest-pod-perl libunicode-string-perl liburi-perl libwww-perl libtest-nowarnings-perl libtest-deep-perl \
+    libtest-warn-perl libnet-server-perl libpar-packer-perl libtest-requires-perl libtest-mock-guard-perl
 
 # Perl modules for imapsync
-RUN cpanm Mail::IMAPClient Authen::NTLM CGI Crypt::OpenSSL::RSA Data::Uniqid \
-    Digest::HMAC Digest::HMAC_MD5 Dist::CheckConflicts Encode::IMAPUTF7 File::Copy::Recursive \
-    File::Tail IO::Socket::INET6 IO::Socket::SSL IO::Tee JSON JSON::WebToken::Crypt::RSA \
-    LWP::UserAgent Module::ScanDeps Net::SSLeay Proc::ProcessTable Regexp::Common \
-    Sys::MemInfo Term::ReadKey Test::Fatal Test::MockObject Test::Pod \
-    Test::Requires Test::Deep Unicode::String
+RUN cpanm Dist::CheckConflicts IO::Socket::SSL
 
 # Required for imapsync dependecy check
 RUN apt-file update
@@ -66,4 +65,4 @@ RUN mkdir -p /var/log/pymap
 # Install dependecies trough poetry
 RUN poetry install --without=dev
 
-CMD ["sh", "-c", "poetry shell && python manage.py runserver 0.0.0.0:8000"]
+CMD ["sh", "-c", "poetry run task server"]
