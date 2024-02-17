@@ -29,3 +29,4 @@ sync_tests
 davmail*.properties
 config.json
 config.dev.json
+*.env

@@ -203,22 +203,22 @@ class CeleryTaskList(ListCreateAPIView):
 
         # Parsing the order parameter
         order_str = request.GET.get("order", "")
-        logger.debug("ORDER_STR", order_str)
+        logger.debug("ORDER_STR: %s", order_str)
         order = json.loads(order_str) if order_str else []
 
         # Parsing the columns parameter
         columns_str = request.GET.get("columns", "")
-        logger.debug("COLUMNS_STR", columns_str)
+        logger.debug("COLUMNS_STR: %s", columns_str)
         columns = json.loads(columns_str) if columns_str else []
 
         # Now you can access information in the order and columns arrays
-        for column in columns:
-            # Access individual column properties
-            logger.debug(column)
+        # for column in columns:
+        #     # Access individual column properties
+        #     logger.debug(column)
 
-        # Access information in the order array
-        for order_item in order:
-            logger.debug(order_item)
+        # # Access information in the order array
+        # for order_item in order:
+        #     logger.debug(order_item)
 
         # Filtering based on search value
         queryset = self.filter_queryset(self.get_queryset())

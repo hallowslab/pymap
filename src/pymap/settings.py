@@ -28,7 +28,11 @@ SECRET_KEY = "django-insecure-1puxfc@9e$3zghbc-itn)dl4)yg&wsu(dflf(#bv4fu3gc$f#p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG: bool = True if DJANGO_ENV == "development" else False
 
-ALLOWED_HOSTS: List[str] = []
+ALLOWED_HOSTS: List[str] = [
+    # ...
+    "127.0.0.1",
+    # ...
+]
 
 # The Debug Toolbar is shown only if your IP address is listed in Django’s INTERNAL_IPS setting.
 INTERNAL_IPS: List[str] = [
@@ -129,6 +133,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = "/home/pymap/app/static"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -186,7 +191,18 @@ def load_user_settings() -> None:
 
 
 def load_user_env() -> None:
-    CONFIGS = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"]
+    """
+    Load custom environment variables into global variables.
+
+    This function loads specific environment variables into global variables if they are defined. 
+    The environment variables to be loaded are specified in the CONFIGS list. 
+    If any of these environment variables are found, they are assigned to the corresponding 
+    global variables in the current namespace.
+
+    Returns:
+        None
+    """
+    CONFIGS = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND", "STATIC_ROOT"]
     custom_settings = {v: os.getenv(v) for v in CONFIGS if os.getenv(v)}
 
     if len(custom_settings.keys()) > 0:

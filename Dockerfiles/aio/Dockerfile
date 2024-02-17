@@ -2,24 +2,28 @@ FROM debian:bookworm
 
 # Needed for fixing permissions of files created by Docker:
 ARG UID=1000 \
-  GID=1000
+    GID=1000 \
+    DJANGO_ENV \
+    DJANGO_SETTINGS_MODULE \
+    CELERY_BROKER_URL \
+    CELERY_RESULT_BACKEND \
+    STATIC_ROOT
 
-
-ENV DJANGO_ENV=production \
-  # python:
-  PYTHONFAULTHANDLER=1 \
-  PYTHONUNBUFFERED=1 \
-  PYTHONHASHSEED=random \
-  PYTHONDONTWRITEBYTECODE=1 \
-  # pip:
-  PIP_NO_CACHE_DIR=1 \
-  PIP_DISABLE_PIP_VERSION_CHECK=1 \
-  PIP_DEFAULT_TIMEOUT=100 \
-  PIP_ROOT_USER_ACTION=ignore \
-  # poetry:
-  POETRY_NO_INTERACTION=1 \
-  POETRY_HOME='/opt/pypoetry' \
-  POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true
+# python:
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PYTHONDONTWRITEBYTECODE=1 \
+    # pip:
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100 \
+    PIP_ROOT_USER_ACTION=ignore \
+    # poetry:
+    POETRY_NO_INTERACTION=1 \
+    POETRY_HOME='/opt/pypoetry' \
+    POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true \
+    POETRY_INSTALLER_MAX_WORKERS=10
 
 # Helps track down issues in command execution
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
@@ -56,6 +60,12 @@ COPY Dockerfiles/aio/nginx.conf /etc/nginx/nginx.conf
 # supervisor program users 
 RUN adduser --system --home /var/lib/redis --no-create-home --shell /bin/false --group redis
 RUN adduser pymap
+# Set environment variables for the pymap user
+RUN echo "export DJANGO_ENV=$DJANGO_ENV" >> /home/pymap/.bashrc
+RUN echo "export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE" >> /home/pymap/.bashrc
+RUN echo "export CELERY_BROKER_URL=$CELERY_BROKER_URL" >> /home/pymap/.bashrc
+RUN echo "export CELERY_RESULT_BACKEND=$CELERY_RESULT_BACKEND" >> /home/pymap/.bashrc
+RUN echo "export STATIC_ROOT=$STATIC_ROOT" >> /home/pymap/.bashrc
 
 # Create the log directory
 RUN mkdir -p /var/log/pymap
@@ -64,6 +74,10 @@ RUN chown -R pymap:pymap /var/log/pymap
 # Fix poetry directory permissions
 RUN mkdir -p /opt/pypoetry
 RUN chmod -R a+rx /opt/pypoetry
+
+# Allow access to $STATIC_ROOT for nginx
+RUN mkdir -p $STATIC_ROOT
+RUN chown -R pymap:www-data $STATIC_ROOT
 
 # Switch user
 USER pymap
@@ -88,17 +102,22 @@ COPY ./src/pyproject.toml /home/pymap/app/pyproject.toml
 
 # Project initialization:
 # RUN --mount=type=cache,target="$POETRY_CACHE_DIR" \
-#   echo "$DJANGO_ENV" \
 #   && poetry install \
 #     $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \
 #     --no-interaction --no-ansi --sync
-RUN echo "$DJANGO_ENV" && poetry install
+
+RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \
+    --no-interaction --no-ansi --sync
 
 # copy the app
 COPY ./src /home/pymap/app/
 
+# Collect static assets
+RUN poetry run python manage.py collectstatic
+
 # makemigrations and migrate (required for aio in first time setup)
-RUN poetry run task upgrade
+RUN poetry run python manage.py makemigrations
+RUN poetry run python manage.py migrate
 
 # Switch to root for supervisor
 USER root

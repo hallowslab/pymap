@@ -15,7 +15,14 @@ include/
 *.tmp
 *.pid
 
+# Versioning and metadata
+.git
+.gitignore
+.dockerignore
+
 # Ignore development and editor-specific files
+*.mypy_cache/
+*.pytest_cache/
 *.pyc
 *.pyo
 *.swp

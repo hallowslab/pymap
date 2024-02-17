@@ -1,4 +1,4 @@
-version: '3'
+version: '3.4'
 
 services:
   redis:
@@ -19,41 +19,48 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   aio:
+    hostname: pymap.lan
     build:
       context: .
       dockerfile: Dockerfiles/aio/Dockerfile
-    hostname: pymap.lan
+      args:
+        - DJANGO_ENV
+        - DJANGO_SETTINGS_MODULE
+        - CELERY_BROKER_URL
+        - CELERY_RESULT_BACKEND
+        - STATIC_ROOT
     ports:
-      - "8000:8000"
       - "80:80"
-      - "443:443"
     volumes:
       - ./src:/app
-    environment:
-      - DJANGO_ENV=production
-      - DJANGO_SETTINGS_MODULE=pymap.settings
-      - CELERY_BROKER_URL=redis://localhost:6379/0
-      - CELERY_RESULT_BACKEND=redis://localhost:6379/0
+      - aio_postgres_data:/var/lib/postgresql/data
 
   celery-worker:
     build:
       context: .
       dockerfile: Dockerfiles/celery/Dockerfile
+      args:
+        - DJANGO_ENV
+        - DJANGO_SETTINGS_MODULE
+        - CELERY_BROKER_URL
+        - CELERY_RESULT_BACKEND
+        - STATIC_ROOT
     depends_on:
       - redis
     volumes:
       - ./src:/app
       - shared_logs:/var/log/pymap
-    environment:
-      - DJANGO_ENV=production
-      - DJANGO_SETTINGS_MODULE=pymap.settings
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   django-app:
     build:
       context: .
       dockerfile: Dockerfiles/django/Dockerfile
+      args:
+        - DJANGO_ENV
+        - DJANGO_SETTINGS_MODULE
+        - CELERY_BROKER_URL
+        - CELERY_RESULT_BACKEND
+        - STATIC_ROOT
     stdin_open: true
     tty: true
     ports:
@@ -65,11 +72,6 @@ services:
     volumes:
       - ./src:/app
       - shared_logs:/var/log/pymap
-    environment:
-      - DJANGO_ENV=production
-      - DJANGO_SETTINGS_MODULE=pymap.settings
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   email-server:
     build:
@@ -102,3 +104,4 @@ networks:
 volumes:
   shared_logs:
   postgres_data:
+  aio_postgres_data:
