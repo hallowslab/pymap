@@ -29,5 +29,14 @@
       "handlers": ["console", "file"],
       "level": "DEBUG"
     }
+  },
+  "DATABASES": {
+    "default": {
+      "ENGINE": "django.db.backends.postgresql",
+      "OPTIONS": {
+        "service": "pymap",
+        "passfile": ".pgpass"
+      }
+    }
   }
 }

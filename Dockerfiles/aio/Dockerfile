@@ -53,10 +53,6 @@ RUN apt-file update
 RUN git clone https://github.com/imapsync/imapsync.git
 RUN cd imapsync && make install
 
-# supervisor config
-COPY Dockerfiles/aio/supervisord.conf /etc/supervisord.conf
-# nginx config
-COPY Dockerfiles/aio/nginx.conf /etc/nginx/nginx.conf
 # supervisor program users 
 RUN adduser --system --home /var/lib/redis --no-create-home --shell /bin/false --group redis
 RUN adduser pymap
@@ -79,8 +75,24 @@ RUN chmod -R a+rx /opt/pypoetry
 RUN mkdir -p $STATIC_ROOT
 RUN chown -R pymap:www-data $STATIC_ROOT
 
+# Switch to the postgres user to execute psql commands
+USER postgres
+
+# Start the PostgreSQL service and create a database and user
+RUN /etc/init.d/postgresql start && \
+    psql --command "CREATE DATABASE pymap;" > /var/log/postgresql/postgresql_setup.log 2>&1 && \
+    psql --command "CREATE USER pymap WITH PASSWORD 'Pymap123' SUPERUSER CREATEDB CREATEROLE LOGIN;" >> /var/log/postgresql/postgresql_setup.log 2>&1 && \
+    psql --command "GRANT ALL PRIVILEGES ON DATABASE pymap TO pymap;" >> /var/log/postgresql/postgresql_setup.log 2>&1
+
 # Switch user
 USER pymap
+WORKDIR /home/pymap
+
+# Create .pgpass file
+RUN echo "localhost:5432:pymap:pymap:Pymap123" > .pgpass
+RUN chmod 600 .pgpass
+# Create .pg_service.conf
+RUN echo "[pymap]\nhost=localhost\nuser=pymap\ndbname=pymap\nport=5432" > .pg_service.conf
 WORKDIR /home/pymap/app
 
 # Install poetry
@@ -115,12 +127,19 @@ COPY ./src /home/pymap/app/
 # Collect static assets
 RUN poetry run python manage.py collectstatic
 
-# makemigrations and migrate (required for aio in first time setup)
-RUN poetry run python manage.py makemigrations
-RUN poetry run python manage.py migrate
+# migrate (required for aio in first time setup)
+# use --run-syncdb if this step becomes slow due to the amount of changes
+#RUN poetry run python manage.py migrate --no-input
+# Can't seem to connect before startup with supervisor so we use a init script
+COPY Dockerfiles/aio/django_init.sh django_init.sh
 
 # Switch to root for supervisor
 USER root
 
+# supervisor config
+COPY Dockerfiles/aio/supervisord.conf /etc/supervisor/supervisord.conf
+# nginx config
+COPY Dockerfiles/aio/nginx.conf /etc/nginx/nginx.conf
+
 # Handle tasks with supervisor
-CMD ["supervisord", "-c", "/etc/supervisord.conf"]
+CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]

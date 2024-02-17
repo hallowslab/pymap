@@ -45,7 +45,6 @@ INTERNAL_IPS: List[str] = [
 
 INSTALLED_APPS = [
     "migrator",
-    "debug_toolbar",
     "django.contrib.admin",
     "django.contrib.admindocs",
     "django.contrib.auth",
@@ -53,7 +52,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-]
+] + (["debug_toolbar"] if DEBUG else [])
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -63,8 +62,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
-]
+] + (["debug_toolbar.middleware.DebugToolbarMiddleware"] if DEBUG else [])
 
 ROOT_URLCONF = "pymap.urls"
 
@@ -173,7 +171,7 @@ LOGGING = {
 PYMAP_SETTINGS: Dict[str, str] = {}
 
 
-def load_user_settings() -> None:
+def load_settings_file() -> None:
     # Load custom settings from JSON file
     config_file = "config.dev.json" if DJANGO_ENV == "development" else "config.json"
     custom_settings = {}
@@ -182,28 +180,38 @@ def load_user_settings() -> None:
 
     log_config = custom_settings.get("LOGGING", {})
 
-    # Override the logging with the user supplied if it exists
+    # Override the LOGGING config with the user supplied if it exists
     if isinstance(log_config, dict) and len(log_config) > 0:
         LOGGING.update(log_config)
 
+    databases_config = custom_settings.get("DATABASES", {})
+
+    # Override the DATABASES config with the user supplied if it exists
+    if isinstance(databases_config, dict) and len(databases_config) > 0:
+        DATABASES.update(databases_config)
+
     # Store custom settings under a specific key in PYMAP_SETTINGS
-    PYMAP_SETTINGS.update(custom_settings)
+    # I don't think anything besides the app should access the database settings
+    # so they are excluded for now
+    PYMAP_SETTINGS.update(
+        {k: v for k, v in custom_settings.items() if k != "DATABASES"}
+    )
 
 
-def load_user_env() -> None:
+def load_settings_env() -> None:
     """
     Load custom environment variables into global variables.
 
-    This function loads specific environment variables into global variables if they are defined. 
-    The environment variables to be loaded are specified in the CONFIGS list. 
-    If any of these environment variables are found, they are assigned to the corresponding 
+    This function loads specific environment variables into global variables if they are defined.
+    The environment variables to be loaded are specified in the SETTINGS list.
+    If any of these environment variables are found, they are assigned to the corresponding
     global variables in the current namespace.
 
     Returns:
         None
     """
-    CONFIGS = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND", "STATIC_ROOT"]
-    custom_settings = {v: os.getenv(v) for v in CONFIGS if os.getenv(v)}
+    SETTINGS = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND", "STATIC_ROOT"]
+    custom_settings = {v: os.getenv(v) for v in SETTINGS if os.getenv(v)}
 
     if len(custom_settings.keys()) > 0:
         for key, value in custom_settings.items():
@@ -223,7 +231,7 @@ def check_log_directory() -> None:
 
 
 # Load custom settings and env variables
-load_user_settings()
-load_user_env()
+load_settings_file()
+load_settings_env()
 # Call the check_log_directory function during startup
 check_log_directory()

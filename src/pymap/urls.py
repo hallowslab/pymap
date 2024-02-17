@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 
 # TODO: Debug toolbar should only be loaded in development environment
 urlpatterns = [
@@ -40,5 +41,4 @@ urlpatterns = [
         login_required(auth_views.PasswordResetDoneView.as_view()),
         name="password-change-done",
     ),
-    path("__debug__/", include("debug_toolbar.urls")),
-]
+] + ([path("__debug__/", include("debug_toolbar.urls"))] if settings.DEBUG else [])

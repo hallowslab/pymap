@@ -2,25 +2,29 @@ FROM python:3.11
 
 # Needed for fixing permissions of files created by Docker:
 ARG UID=1000 \
-  GID=1000
+    GID=1000 \
+    DJANGO_ENV \
+    DJANGO_SETTINGS_MODULE \
+    CELERY_BROKER_URL \
+    CELERY_RESULT_BACKEND \
+    STATIC_ROOT
 
-
-ENV DJANGO_ENV=production \
-  # python:
-  PYTHONFAULTHANDLER=1 \
-  PYTHONUNBUFFERED=1 \
-  PYTHONHASHSEED=random \
-  PYTHONDONTWRITEBYTECODE=1 \
-  # pip:
-  PIP_NO_CACHE_DIR=1 \
-  PIP_DISABLE_PIP_VERSION_CHECK=1 \
-  PIP_DEFAULT_TIMEOUT=100 \
-  PIP_ROOT_USER_ACTION=ignore \
-  # poetry:
-  POETRY_NO_INTERACTION=1 \
-  POETRY_CACHE_DIR='/var/cache/pypoetry' \
-  POETRY_HOME='/usr/local' \
-  POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true
+# python:
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PYTHONDONTWRITEBYTECODE=1 \
+    # pip:
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100 \
+    PIP_ROOT_USER_ACTION=ignore \
+    # poetry:
+    POETRY_NO_INTERACTION=1 \
+    POETRY_CACHE_DIR='/var/cache/pypoetry' \
+    POETRY_HOME='/opt/pypoetry' \
+    POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true \
+    POETRY_INSTALLER_MAX_WORKERS=10
 
 
 # Helps track down issues in command execution
@@ -60,7 +64,7 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY ./src /app/
 
 # Create the log directory
-RUN mkdir -p /var/log/pymap
+#RUN mkdir -p /var/log/pymap
 
 # Install dependecies trough poetry
 RUN poetry install --without=dev

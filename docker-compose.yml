@@ -44,7 +44,6 @@ services:
         - DJANGO_SETTINGS_MODULE
         - CELERY_BROKER_URL
         - CELERY_RESULT_BACKEND
-        - STATIC_ROOT
     depends_on:
       - redis
     volumes:

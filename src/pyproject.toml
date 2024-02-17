@@ -15,6 +15,7 @@ docutils = "^0.20.1"
 redis = {extras = ["hiredis"], version = "^5.0.1"}
 uvicorn = "^0.27.1"
 gunicorn = "^21.2.0"
+psycopg = {extras = ["binary"], version = "^3.1.18"}
 
 [tool.poetry.group.dev.dependencies]
 taskipy = "^1.8.0"
@@ -22,8 +23,8 @@ black = "^22.3.0"
 pytest = "^6.2.5"
 autoflake = "^1.4"
 coverage = "^6.3.2"
-django-debug-toolbar = "^4.2.0"
 mypy = ">=1.7.0"
+django-debug-toolbar = "^4.2.0"
 django-stubs = {extras = ["compatible-mypy"], version = "^4.2.7"}
 djangorestframework-stubs = {extras = ["compatible-mypy"], version = "^3.14.5"}
 
