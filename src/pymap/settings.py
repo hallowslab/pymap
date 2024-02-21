@@ -10,9 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import json
-from typing import Dict, List
 import os
 from pathlib import Path
+from typing import Dict, List
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
@@ -23,10 +24,22 @@ DJANGO_ENV: str = os.getenv("DJANGO_ENV", "production")
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-1puxfc@9e$3zghbc-itn)dl4)yg&wsu(dflf(#bv4fu3gc$f#p"
+SECRET_KEY = os.getenv("SECRET_KEY", None) if DJANGO_ENV == "production" else get_random_secret_key()
+
+if SECRET_KEY is None:
+    raise ValueError("You need to set the environment variable for the secret key, make it a random string around 50 characters")
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG: bool = True if DJANGO_ENV == "development" else False
+
+if DEBUG:
+    # We use print logging is not yet configured
+    print("""WARNING: Debug is turned on, if running in production,
+          change the value of the environment variable to production,
+          current value: DJANGO_ENV=%s""",
+          DJANGO_ENV
+        )
 
 ALLOWED_HOSTS: List[str] = [
     # ...
@@ -117,7 +130,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
-
+#TODO: consider adding internationalization
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "Europe/Lisbon"
@@ -153,6 +166,7 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
+# Initial logging configuration
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -226,8 +240,8 @@ def check_log_directory() -> None:
     LOG_DIR = PYMAP_SETTINGS.get("LOGDIR", environ_default)
     if not os.path.exists(LOG_DIR):
         raise FileNotFoundError(f"The log directory {LOG_DIR} does not exist.")
-    if not os.access(LOG_DIR, os.W_OK):
-        raise PermissionError(f"The log directory {LOG_DIR} is not writable.")
+    if not os.access(LOG_DIR, os.W_OK) or not os.access(LOG_DIR, os.R_OK):
+        raise PermissionError(f"The log directory {LOG_DIR} is not readable/writable.")
 
 
 # Load custom settings and env variables

@@ -2,7 +2,7 @@ FROM debian:bookworm as debian-base
 
 # Install system and perl dependencies
 RUN apt-get update && \
-    apt-get install -y redis nginx supervisor postgresql python3 pipx tmux git curl apt-file make time gcc lsb-release procps cpanminus \
+    apt-get install --no-install-recommends -y git curl apt-file make time gcc lsb-release procps cpanminus \
     libauthen-ntlm-perl libcgi-pm-perl libcrypt-openssl-rsa-perl libdata-uniqid-perl libpar-packer-perl \
     libencode-imaputf7-perl libfile-copy-recursive-perl libfile-tail-perl libio-socket-inet6-perl \
     libio-socket-ssl-perl libio-tee-perl libhtml-parser-perl libjson-webtoken-perl libmail-imapclient-perl libtest-requires-perl \
@@ -22,11 +22,11 @@ RUN cpanm Dist::CheckConflicts Module::Implementation IO::Socket::SSL
 RUN apt-file update
 
 # Clone and install imapsync
-RUN git clone https://github.com/imapsync/imapsync.git
-RUN cd imapsync && make install
+WORKDIR /opt/imapsync
+RUN git clone https://github.com/imapsync/imapsync.git . && make install
 
 
-FROM debian-base as debian-builder
+FROM debian:bookworm
 # Needed for fixing permissions of files created by Docker:
 ARG UID=1000 \
     GID=1000 \
@@ -52,19 +52,26 @@ ENV PYTHONFAULTHANDLER=1 \
     POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true \
     POETRY_INSTALLER_MAX_WORKERS=10
 
+# Install app dependencies
+RUN apt-get update && apt-get install --no-install-recommends -y redis nginx supervisor postgresql python3 pipx tmux
+# Clean apt
+RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
 # Helps track down issues in command execution
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
 
 # supervisor program users 
-RUN adduser --system --home /var/lib/redis --no-create-home --shell /bin/false --group redis
-RUN adduser pymap
+RUN adduser --system --home /var/lib/redis --no-create-home --shell /bin/false --group redis \
+    && adduser pymap
+
 # Set environment variables for the pymap user
-RUN echo "export DJANGO_ENV=$DJANGO_ENV" >> /home/pymap/.bashrc
-RUN echo "export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE" >> /home/pymap/.bashrc
-RUN echo "export CELERY_BROKER_URL=$CELERY_BROKER_URL" >> /home/pymap/.bashrc
-RUN echo "export CELERY_RESULT_BACKEND=$CELERY_RESULT_BACKEND" >> /home/pymap/.bashrc
-RUN echo "export STATIC_ROOT=$STATIC_ROOT" >> /home/pymap/.bashrc
+RUN echo "export DJANGO_ENV=$DJANGO_ENV" >> /home/pymap/.bashrc \
+    && echo "export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE" >> /home/pymap/.bashrc \
+    && echo "export CELERY_BROKER_URL=$CELERY_BROKER_URL" >> /home/pymap/.bashrc \
+    && echo "export CELERY_RESULT_BACKEND=$CELERY_RESULT_BACKEND" >> /home/pymap/.bashrc \
+    && echo "export STATIC_ROOT=$STATIC_ROOT" >> /home/pymap/.bashrc
 
 # Create the log directory
 RUN mkdir -p /var/log/pymap
