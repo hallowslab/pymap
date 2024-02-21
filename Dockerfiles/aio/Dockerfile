@@ -1,5 +1,32 @@
-FROM debian:bookworm
+FROM debian:bookworm as debian-base
 
+# Install system and perl dependencies
+RUN apt-get update && \
+    apt-get install -y redis nginx supervisor postgresql python3 pipx tmux git curl apt-file make time gcc lsb-release procps cpanminus \
+    libauthen-ntlm-perl libcgi-pm-perl libcrypt-openssl-rsa-perl libdata-uniqid-perl libpar-packer-perl \
+    libencode-imaputf7-perl libfile-copy-recursive-perl libfile-tail-perl libio-socket-inet6-perl \
+    libio-socket-ssl-perl libio-tee-perl libhtml-parser-perl libjson-webtoken-perl libmail-imapclient-perl libtest-requires-perl \
+    libparse-recdescent-perl libproc-processtable-perl libmodule-scandeps-perl libreadonly-perl libregexp-common-perl libtest-mock-guard-perl \
+    libsys-meminfo-perl libterm-readkey-perl libtest-mockobject-perl libtest-pod-perl libunicode-string-perl liburi-perl libwww-perl \
+    libtest-nowarnings-perl libtest-deep-perl libtest-warn-perl libnet-server-perl libpackage-stash-perl libpackage-stash-xs-perl
+
+# Clean apt
+RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Perl modules for imapsync
+# See https://imapsync.lamiral.info/FAQ.d/FAQ.SSL_errors.txt
+RUN cpanm Dist::CheckConflicts Module::Implementation IO::Socket::SSL
+
+# Required for imapsync dependecy check
+RUN apt-file update
+
+# Clone and install imapsync
+RUN git clone https://github.com/imapsync/imapsync.git
+RUN cd imapsync && make install
+
+
+FROM debian-base as debian-builder
 # Needed for fixing permissions of files created by Docker:
 ARG UID=1000 \
     GID=1000 \
@@ -28,30 +55,6 @@ ENV PYTHONFAULTHANDLER=1 \
 # Helps track down issues in command execution
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
-# Install system and perl dependencies
-RUN apt-get update && \
-    apt-get install -y redis nginx supervisor postgresql git curl tmux apt-file make time gcc lsb-release procps python3 pipx cpanminus \
-    libauthen-ntlm-perl libcgi-pm-perl libcrypt-openssl-rsa-perl libdata-uniqid-perl libpar-packer-perl \
-    libencode-imaputf7-perl libfile-copy-recursive-perl libfile-tail-perl libio-socket-inet6-perl \
-    libio-socket-ssl-perl libio-tee-perl libhtml-parser-perl libjson-webtoken-perl libmail-imapclient-perl libtest-requires-perl \
-    libparse-recdescent-perl libproc-processtable-perl libmodule-scandeps-perl libreadonly-perl libregexp-common-perl libtest-mock-guard-perl \
-    libsys-meminfo-perl libterm-readkey-perl libtest-mockobject-perl libtest-pod-perl libunicode-string-perl liburi-perl libwww-perl \
-    libtest-nowarnings-perl libtest-deep-perl libtest-warn-perl libnet-server-perl libpackage-stash-perl libpackage-stash-xs-perl
-
-# Clean apt
-RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
-# Perl modules for imapsync
-# See https://imapsync.lamiral.info/FAQ.d/FAQ.SSL_errors.txt
-RUN cpanm Dist::CheckConflicts Module::Implementation IO::Socket::SSL
-
-# Required for imapsync dependecy check
-RUN apt-file update
-
-# Clone and install imapsync
-RUN git clone https://github.com/imapsync/imapsync.git
-RUN cd imapsync && make install
 
 # supervisor program users 
 RUN adduser --system --home /var/lib/redis --no-create-home --shell /bin/false --group redis

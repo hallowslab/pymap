@@ -3,22 +3,38 @@
 ## System
 * grep
 * tail
+* [Python](https://www.python.org/) >= 3.10
 * [Imapsync](https://github.com/imapsync/imapsync)
+* PostgreSQL
+* [Redis-server](https://redis.com/)
 * [Docker-Engine](https://docs.docker.com/engine/) **Optional*
-* python3.10+
 
 ## App
-* [Python](https://www.python.org/) >= 3.8.10
-* [Poetry](https://python-poetry.org/), make sure to use the new script at https://python-poetry.org/docs/master/#installing-with-the-official-installer
+* [Python](https://www.python.org/) >= 3.10
+* [Poetry](https://python-poetry.org/), make sure to use the new script at https://python-poetry.org/docs/master/#installing-with-the-official-installer or pipx
 * [Web-Server|Django deployment](https://docs.djangoproject.com/en/5.0/howto/deployment/)
-  * builtin support for Gunicorn with Uvicorn worker
-* [Redis-server](https://redis.com/)
-* Database SQLite(current)/PostGreSQL(WIP)
+  * builtin support for Gunicorn using Uvicorn worker for ASGI with nginx as reverse proxy
+* Database:
+  * SQLite -> Should only be used for development it might be capable of handling a few users but since tasks run asynchronously we don't want to try to write to the database while it's locked in another thread, there are no failsafes for that at the moment.
+  * PostGreSQL -> Recommended for performance and to avoid locking issues
 
 # Initial setup
+
+## Barebones
 ### See [requirements](#requirements)
 **NOTE: poetry commands should be run in `pymap/src` folder**
 
+This setup focus on running the app natively on a linux environment, the app should be run by a regular non root user to avoid exposing unecessary parts of the system
+- First export the following variables in your current shell or shell config file
+  ```
+  DJANGO_ENV=production # This defines if the app is running in production or development mode, development mode is unsafe to run in an environment exposed to the web
+  DJANGO_SETTINGS_MODULE=pymap.settings # Defines the app settings modules to be used, should not be changed, the configs are set in the json file
+  CELERY_BROKER_URL=redis://localhost:6379/0 # The URL of the redis instance that will be used for the background tasks handling
+  CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task
+  STATIC_ROOT=/var/www/static # The path to collect the static files from the app (javascript, css and html), needs to be writable by the app user
+  ```
+- Create the LOG_DIRECTORY that's defined in your config file (additional information in [Addtional Info - Config File](#config-file)) and set the ownership to the user that runs the app
+- Create the STATIC_ROOT if necessary and make sure nginx processes can read it, if you defined the static root to /var/html/static, then ensure the user has write access otherwise just define the variable it to some other directory copy the files over and verify permissions
 - Clone the repo
 - Install the python requirements
   * `poetry install`
@@ -33,7 +49,7 @@
 
 # Additional Info
 
-
+## Config File
 
 # Advanced Usage
 
@@ -55,6 +71,7 @@ If you need to interact with the application for adding users or launch in debug
 * Add failsafe to pass --gmail or --office when it detects one of their hosts and the parameter missing
 * If running the CLI remove the pipe to /dev/null
 * Configure logging for both Django and Celery (WIP)
+* Add failsafes to check if the database is locked while saving tasks in another thread and using sqlite
 
 
 ### Bugs/Issues
