@@ -35,11 +35,12 @@
     function handleArchive(e,dt,node,config) {
         //e.disabled = true
         var selection = listSelected(dt);
-        if (selection.length>0) {
+        if (Object.keys(selection).length>0) {
             console.debug("Requesting archival of", selection);
             postRequest('archive', selection)
             .then(result=>{
-                console.log('Success:', result);
+                console.log('Accepted:', result.message);
+                console.log('The following tasks where changed:', result.tasks);
             }).catch(error=>{
                 console.error('Error caught:', error.message);
             })
@@ -52,8 +53,15 @@
     
     function handleCancel(e,dt,node,config) {
         var selection = listSelected(dt);
-        if (selection.length>0) {
+        if (Object.keys(selection).length>0) {
             console.log("Trying to stop the following task(s)", selection)
+            postRequest('cancel', selection)
+            .then(result=>{
+                console.log('Accepted:', result.message);
+                console.log('The following tasks where changed:', result.tasks);
+            }).catch(error=>{
+                console.error('Error caught:', error.message);
+            })
         } else {
             alert("You need to select items in order to cancel them")
             console.debug("Selection is:", selection)
@@ -62,8 +70,15 @@
     
     function handleDelete(e,dt,node,config) {
         var selection = listSelected(dt);
-        if (selection.length>0) {
+        if (Object.keys(selection).length>0) {
             console.log("Requesting deletion of", selection)
+            postRequest('delete', selection)
+            .then(result=>{
+                console.log('Accepted:', result.message);
+                console.log('The following tasks where changed:', result.tasks);
+            }).catch(error=>{
+                console.error("Error caught:", error.message)
+            })
         } else {
             alert("You need to select items in order to delete them")
             console.debug("Selection is:", selection)
@@ -71,15 +86,17 @@
     }
     
     function listSelected(dt) {
-        return dt.rows( { selected: true } ).data().toArray();
+        const selectionArray = dt.rows( { selected: true } ).data().toArray();
+        return {"task_ids": selectionArray.map(item=>item["task_id"])}
     }
 
     const postRequest = (endpoint, idList) => {
-        const APIURL = `/api/tasks/${endpoint}`;
+        const APIURL = `/api/tasks/${endpoint}/`;
         const data = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
             },
             body: JSON.stringify(idList),
         };
@@ -151,7 +168,7 @@
                     return: true
                 },
                 ajax: {
-                    url: '/api/tasks/list',
+                    url: '/api/tasks/list/',
                     type: 'GET',
                 },
                 columnDefs: [
@@ -198,7 +215,7 @@
     table.dataTable>tbody>tr.selected>th.select-checkbox::after {
         content: "x"; /* Change the content to "✗" for X */
         font-size: 17px;
-        margin-top: -10px;
+        margin-top: -11px;
         margin-left: -6px;
         text-align: center;
         line-height: 1;

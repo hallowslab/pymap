@@ -6,12 +6,13 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
+      {% with request.path as current_url %}
       <ul class="navbar-nav flex-grow-1">
         <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="{% url 'migrator:sync' %}">Sync</a>
+          <a class="nav-link {% if current_url == '/sync/' %}active{% endif %}" href="{% url 'migrator:sync' %}">Sync</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'migrator:tasks' %}">Tasks</a>
+          <a class="nav-link {% if current_url == '/tasks/' %}active{% endif %}" href="{% url 'migrator:tasks' %}">Tasks</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/#">Options</a>
@@ -20,6 +21,7 @@
           <a class="nav-link" href="/admin">Administration</a>
         </li>
       </ul>
+      {% endwith %}
       <ul class="navbar-nav">
         <li class="nav-item dropdown dropstart">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
