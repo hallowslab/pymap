@@ -64,14 +64,55 @@ If you need to interact with the application for adding users or launch in debug
 
 
 # DEV
+### Notes:
+I can change the celery stored results with something like this:
+https://docs.celeryq.dev/en/stable/userguide/tasks.html#hiding-sensitive-information-in-arguments
+```
+add.apply_async((2, 3), argsrepr='(<secret-x>, <secret-y>)')
+```
+
+however my arguments are just a whole string of the command, I could refactor the core.....
+
+I could also open a PR to the celery repo with a solution for encrypting this data provided a new argument/variable
+```
+class TaskExtended(Task):
+    """For the extend result."""
+
+    __tablename__ = 'celery_taskmeta'
+    __table_args__ = {'sqlite_autoincrement': True, 'extend_existing': True}
+
+    name = sa.Column(sa.String(155), nullable=True)
+    args = sa.Column(sa.LargeBinary, nullable=True)
+    kwargs = sa.Column(sa.LargeBinary, nullable=True)
+    worker = sa.Column(sa.String(155), nullable=True)
+    retries = sa.Column(sa.Integer, nullable=True)
+    queue = sa.Column(sa.String(155), nullable=True)
+
+    def to_dict(self):
+        task_dict = super().to_dict()
+        task_dict.update({
+            'name': self.name,
+            'args': self.args,
+            'kwargs': self.kwargs,
+            'worker': self.worker,
+            'retries': self.retries,
+            'queue': self.queue,
+        })
+        return task_dict
+```
+
+#### Celery support
+revoke: Revoking tasks
+pool support: all, terminate only supported by prefork and eventlet
+
 #### TODO:
 * Make a logo
 * Add queue/requeue functionality, queue should also support starting a task after another is marked as finished
-  * [django-celery-beat](https://github.com/celery/django-celery-beat)
 * Add failsafe to pass --gmail or --office when it detects one of their hosts and the parameter missing
 * If running the CLI remove the pipe to /dev/null
 * Configure logging for both Django and Celery (WIP)
-* Add failsafes to check if the database is locked while saving tasks in another thread and using sqlite
+* MEMOIZE and cache some common operations
+* Encrypt celery task results
 
 
 ### Bugs/Issues
