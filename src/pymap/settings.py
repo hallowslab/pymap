@@ -24,22 +24,26 @@ DJANGO_ENV: str = os.getenv("DJANGO_ENV", "production")
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", None) if DJANGO_ENV == "production" else get_random_secret_key()
+SECRET_KEY = os.getenv("SECRET_KEY", None)
 
-if SECRET_KEY is None:
-    raise ValueError("You need to set the environment variable for the secret key, make it a random string around 50 characters")
-
+if SECRET_KEY is None and DJANGO_ENV == "production":
+    raise ValueError(
+        "You need to set the environment variable for the secret key, make it a random string around 50 characters"
+    )
+elif SECRET_KEY is None and DJANGO_ENV != "production":
+    SECRET_KEY = get_random_secret_key()
+    print("Generated new secret key %s", SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG: bool = True if DJANGO_ENV == "development" else False
 
 if DEBUG:
     # We use print logging is not yet configured
-    print("""WARNING: Debug is turned on, if running in production,
+    print(
+        f"""WARNING: Debug is turned on, if running in production,
           change the value of the environment variable to production,
-          current value: DJANGO_ENV=%s""",
-          DJANGO_ENV
-        )
+          current value: DJANGO_ENV={DJANGO_ENV}"""
+    )
 
 ALLOWED_HOSTS: List[str] = [
     # ...
@@ -58,6 +62,7 @@ INTERNAL_IPS: List[str] = [
 
 INSTALLED_APPS = [
     "migrator",
+    "django_celery_results",
     "django.contrib.admin",
     "django.contrib.admindocs",
     "django.contrib.auth",
@@ -130,7 +135,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
-#TODO: consider adding internationalization
+# TODO: consider adding internationalization
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "Europe/Lisbon"
@@ -155,16 +160,19 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # This setting specifies the URL where the user will be redirected
 # if they are not authenticated and try to access a protected view.
 LOGIN_URL = "/login/"
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "sync/"
 
 # Celery configuration
 CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 CELERY_TIMEZONE = "Europe/Lisbon"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+# TODO: Check if this setting does not expose any data that it shouldn't
+CELERY_RESULT_EXTENDED = True
 
 # Initial logging configuration
 LOGGING = {

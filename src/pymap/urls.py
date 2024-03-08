@@ -20,14 +20,17 @@ from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
-# TODO: Debug toolbar should only be loaded in development environment
 urlpatterns = [
     path("admin/doc/", include("django.contrib.admindocs.urls")),
     path("admin/", admin.site.urls),
     path("", include("migrator.urls", namespace="migrator")),
     path(
         "login/",
-        auth_views.LoginView.as_view(template_name="admin/login.html", success_url="/"),
+        auth_views.LoginView.as_view(
+            template_name="admin/login.html",
+            success_url="sync/",
+            redirect_authenticated_user=True,
+        ),
         name="login",
     ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
