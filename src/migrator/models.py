@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 logger = logging.getLogger(__name__)
 
 
-# (WIP)
+# TODO:WIP
 # class TaskStatistics(models.Model):
 #     total_task_count = models.IntegerField(default=0)
 #     total_run_time = models.IntegerField(default=0)

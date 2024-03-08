@@ -8,11 +8,15 @@ from os.path import isfile, join, exists
 from django.shortcuts import redirect, render
 from django.conf import settings
 from django.urls import reverse
+from django.utils.functional import SimpleLazyObject
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, HttpRequest
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.db.models import Sum
+
 from rest_framework.views import APIView
 from rest_framework.request import Request as APIRequest
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response as APIResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView
@@ -21,6 +25,7 @@ from .models import CeleryTask
 from .serializers import CeleryTaskSerializer, TaskIdListSerializer
 from .forms import SyncForm, CustomUserChangeForm
 from .tasks import call_system
+from pymap import celery_app
 from .utilites.helpers import get_logs_status
 from core.pymap_core import ScriptGenerator
 
@@ -32,7 +37,22 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def index(request: HttpRequest) -> HttpResponse:
-    return render(request, "home.html", {})
+    total_tasks = CeleryTask.objects.count()
+    total_run_time = CeleryTask.objects.aggregate(Sum("run_time"))["run_time__sum"]
+    total_n_accounts = CeleryTask.objects.aggregate(Sum("n_accounts"))[
+        "n_accounts__sum"
+    ]
+    active_users_count = User.objects.filter(is_active=True).count()
+    staff_count = User.objects.filter(is_active=True, is_staff=True).count()
+
+    context = {
+        "total_tasks": total_tasks,
+        "total_run_time": total_run_time,
+        "total_n_accounts": total_n_accounts,
+        "active_users_count": active_users_count,
+        "staff_count": staff_count,
+    }
+    return render(request, "home.html", context)
 
 
 @login_required
@@ -95,7 +115,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
         form = SyncForm(request.POST)
         # logger.debug("POST data: %s", request.POST)
         if not form.is_valid():
-            logger.error("Form errors: %s", form.errors)
+            logger.error(f"Form errors: {form.errors}")
         else:
             # Process the form data, e.g., call Celery task
             # Access form.cleaned_data to get the input values
@@ -108,12 +128,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             dry_run: bool = form.cleaned_data["dry_run"]
             config = settings.PYMAP_SETTINGS
             user = request.user
-            logger.info(
-                "USER: %s requested a sync for %s -> %s",
-                user.username,
-                source,
-                destination,
-            )
+            logger.info(f"USER: {user.username} requested a sync for {source} -> {destination}")
             logger.debug(
                 "\nSource: %s\nDestination: %s\nAdditional arguments: %s\nDry run: %s",
                 source,
@@ -140,11 +155,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             # )
 
             task = call_system.delay(content)
-            logger.info(
-                "Starting background task with ID: %s from User: %s",
-                task.id,
-                user.username,
-            )
+            logger.info(f"Starting background task with ID: {task.id} from User: {user.username}")
 
             # Don't forget to save the task id and respective inputs to the database
             root_log_directory = config.get("LOGDIR")
@@ -171,7 +182,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
 
 @login_required
 def download_log(request: HttpRequest, task_id: str, log_file: str) -> HttpResponse:
-    logger.debug("Got request for a download for: %s/%s", task_id, log_file)
+    logger.debug(f"Got request for a download for: {task_id}/{log_file}")
     log_directory: Optional[str] = settings.PYMAP_SETTINGS.get("LOGDIR")
     if log_directory:
         log_path = join(log_directory, task_id, log_file)
@@ -189,9 +200,13 @@ class CeleryTaskList(ListCreateAPIView):
     API endpoint to fetch all tasks
     """
 
+    permission_classes = [IsAuthenticated]
     # Here we obtain a queryset from the model itself
     queryset = CeleryTask.objects.all()
     serializer_class = CeleryTaskSerializer
+
+    def _get_user_queryset(self) -> None:
+        pass
 
     def list(self, request: APIRequest, *args: object, **kwargs: object) -> APIResponse:
         # Handle DataTables parameters
@@ -254,7 +269,11 @@ class CeleryTaskDetails(APIView):
     API endpoint to fetch all jobs inside a task
     """
 
-    def get(self, request: APIRequest, task_id: str) -> JsonResponse:
+    permission_classes = [IsAuthenticated]
+
+    def get(
+        self, request: APIRequest, task_id: str, format: Optional[str] = None
+    ) -> JsonResponse:
         config = settings.PYMAP_SETTINGS
         log_directory: Optional[str] = config.get("LOGDIR")
         all_logs = []
@@ -269,6 +288,7 @@ class CeleryTaskDetails(APIView):
             search_value = request.GET.get("search[value]", "")
 
             # Since this data does not get stored we need to generate it
+            # TODO: MEMOIZE OR CACHE THIS
             logs_dir = join(log_directory, str(task_id))
             all_logs = [
                 get_logs_status(logs_dir, f)
@@ -306,11 +326,13 @@ class CeleryTaskDetails(APIView):
                 status=500,
             )
         except FileNotFoundError:
+            logger.error(f"DJANGO:The log directory: {log_directory} does not exist or was not obtained")
             return JsonResponse(
                 {
                     "error": "DJANGO:The directory does not exist on the system",
                     "data": log_directory,
-                }
+                },
+                status=404
             )
         except Exception as e:
             logger.critical("Unhandled exception: %s", str(e), exc_info=True)
@@ -324,13 +346,21 @@ class CeleryTaskLogDetails(APIView):
     API endpoint for accessing imapsync logfile contents
     """
 
-    def get(self, request: APIRequest, task_id: str, log_file: str) -> JsonResponse:
-        logger.debug("Got request for task %s logs", task_id)
+    permission_classes = [IsAuthenticated]
+
+    def get(
+        self,
+        request: APIRequest,
+        task_id: str,
+        log_file: str,
+        format: Optional[str] = None,
+    ) -> JsonResponse:
+        logger.debug(f"Got request for task {task_id} logs")
         config = settings.PYMAP_SETTINGS
         log_directory = config.get("LOGDIR")
         tail_timeout: int = int(request.GET.get("ttimeout", 5))
         tail_count: int = int(request.GET.get("tcount", 100))
-        logger.debug("Full request GET parameters: %s", request.GET)
+        logger.debug(f"Full request GET parameters: {request.GET}")
         # Tail the last X lines from the log file and return it
         f_path = f"{log_directory}/{task_id}/{log_file}"
         try:
@@ -338,9 +368,7 @@ class CeleryTaskLogDetails(APIView):
                 return JsonResponse(
                     {"error": f"DJANGO:File {f_path} was not found"}, status=404
                 )
-            logger.debug(
-                "Tail timeout is: %s\nTail count is: %s", tail_timeout, tail_count
-            )
+            logger.debug(f"Tail timeout is: {tail_timeout}\nTail count is: {tail_count}")
 
             p1 = Popen(
                 ["tail", "-n", str(tail_count), f_path],
@@ -352,7 +380,7 @@ class CeleryTaskLogDetails(APIView):
             _status: int = 300 if error else 200
             return JsonResponse({"content": content, "error": error}, status=_status)
         except TimeoutExpired:
-            logger.error("Failed to tail the file: %s", f_path, exc_info=True)
+            logger.error(f"Failed to tail the file: {f_path}", exc_info=True)
             return JsonResponse(
                 {
                     "error": f"DJANGO:Could not fetch data",
@@ -372,53 +400,138 @@ class ArchiveTask(APIView):
     API endpoint for setting a task as archived
     """
 
-    def post(
-        self, request: APIRequest, *args: object, **kwargs: object
-    ) -> JsonResponse:
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: APIRequest, format: Optional[str] = None) -> JsonResponse:
         # Required User so we can validate the lookup on owned tasks
         # Incompatible type for lookup 'owner': AnonymousUser
-        assert isinstance(request.user, User)
+        assert isinstance(request.user, SimpleLazyObject)
+        # .user .DATA .auth
+        # print(request.user)
+        # print(type(request.user))
+        # print(dir(request.user))
+        # print("DATA",request.data)
         serializer = TaskIdListSerializer(data=request.data)
-
         if serializer.is_valid():
-            task_ids = serializer.validated_data["task_ids"]
+            received_task_ids = serializer.validated_data["task_ids"]
 
-            # Check ownership for each task ID
             user = request.user
-            owned_task_ids = CeleryTask.objects.filter(
-                owner=user, id__in=task_ids
-            ).values_list("id", flat=True)
-
-            # Perform actions based on ownership
-            for task_id in task_ids:
-                if task_id in owned_task_ids:
-                    # User owns this task, perform your logic here
-                    logger.debug(f"User owns task with ID {task_id}")
-                    logger.debug(f"Task {owned_task_ids[task_id]}")
-                else:
-                    # User does not own this task, handle accordingly
-                    logger.debug(f"User does not own task with ID {task_id}")
-            return JsonResponse(
-                {"message": "Ownership verification successful"}, status=200
+            tasks = CeleryTask.objects.filter(task_id__in=received_task_ids)
+            changes = {}
+            logger.info(
+                f"User {user} requested archival of the following tasks: {tasks}"
             )
-        return JsonResponse({"error": serializer.errors}, status=400)
+            # Check ownership for each task ID
+            for task in tasks:
+                # Perform actions based on ownership
+                if user.is_superuser or task.owner.id == user.id:
+                    logger.debug(
+                        f"User {user.username} archived task with ID {task.task_id}"
+                    )
+                    task.archived = True
+                    task.save()
+                    changes[task.task_id] = True
+                else:
+                    logger.debug(
+                        f"User {user.username} does not own task with ID {task.task_id}"
+                    )
+                    changes[task.task_id] = False
+            return JsonResponse(
+                {"message": "Request accepted", "tasks": changes}, status=200
+            )
+        logger.error(
+            f"Invalid request for user {request.user} reason was :{serializer.errors}",
+            request.user,
+            serializer.errors,
+        )
+        return JsonResponse({"errors": serializer.errors}, status=400)
 
 
 class CancelTask(APIView):
     """
-    API endpoint to stop a task execution or cancel it's scheduling
+    API endpoint for canceling a scheduled or running task
     """
 
-    def post(
-        self, request: APIRequest, *args: object, **kwargs: object
-    ) -> JsonResponse:
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: APIRequest, format: Optional[str] = None) -> JsonResponse:
+        # Required User so we can validate the lookup on owned tasks
+        # Incompatible type for lookup 'owner': AnonymousUser
+        assert isinstance(request.user, SimpleLazyObject)
         serializer = TaskIdListSerializer(data=request.data)
         if serializer.is_valid():
-            task_ids = serializer.validated_data["task_ids"]
+            received_task_ids = serializer.validated_data["task_ids"]
 
             user = request.user
-            # owned_tasks
-            return JsonResponse(
-                {"message": "Ownership verification successful"}, status=200
+            owner = User.objects.get(id=str(user.id))
+            tasks = CeleryTask.objects.filter(task_id__in=received_task_ids)
+            changes = {}
+            logger.info(
+                f"User {user} requested cancellation of the following tasks: {tasks}"
             )
-        return JsonResponse({"error": serializer.errors}, status=400)
+            # Check ownership for each task ID
+            for task in tasks:
+                # Perform actions based on ownership
+                if user.is_superuser or owner.id == user.id:
+                    logger.debug(
+                        f"User {user.username} cancelled task with ID {task.task_id}"
+                    )
+                    celery_app.control.revoke(task.task_id, terminate=True)
+                    changes[task.task_id] = True
+                else:
+                    logger.debug(
+                        f"User {user.username} does not own task with ID {task.task_id}"
+                    )
+                    changes[task.task_id] = False
+            return JsonResponse(
+                {"message": "Request accepted", "tasks": changes}, status=200
+            )
+        logger.error(f"Invalid request for user {request.user} reason was :{serializer.errors}")
+        return JsonResponse({"errors": serializer.errors}, status=400)
+
+
+class DeleteTask(APIView):
+    """
+    API endpoint for deleting a task and respective log files
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def post(self, request: APIRequest, format: Optional[str] = None) -> JsonResponse:
+        # Required User so we can validate the lookup on owned tasks
+        # Incompatible type for lookup 'owner': AnonymousUser
+        assert isinstance(request.user, SimpleLazyObject)
+        serializer = TaskIdListSerializer(data=request.data)
+        if serializer.is_valid():
+            received_task_ids = serializer.validated_data["task_ids"]
+
+            user = request.user
+            tasks = CeleryTask.objects.filter(task_id__in=received_task_ids)
+            changes = {}
+            logger.info(
+                f"User {user} requested deletion of the following tasks: {tasks}"
+            )
+            # Check ownership for each task ID
+            for task in tasks:
+                # Perform actions based on ownership
+                # TODO: Add another group to allow others besides admins to delete tasks
+                if user.is_superuser:
+                    # Preserve the ID before deletion
+                    task_id = task.task_id
+                    logger.debug(f"User {user.username} deleted task with ID {task_id}")
+                    task.delete()
+                    changes[task_id] = True
+                else:
+                    logger.debug(
+                        f"User {user.username} does not own task with ID {task.task_id}"
+                    )
+                    changes[task.task_id] = False
+            return JsonResponse(
+                {"message": "Request accepted", "tasks": changes}, status=200
+            )
+        logger.error(
+            "Invalid request for user %s reason was :%s",
+            request.user,
+            serializer.errors,
+        )
+        return JsonResponse({"errors": serializer.errors}, status=400)

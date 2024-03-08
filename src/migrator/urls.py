@@ -34,6 +34,16 @@ urlpatterns = [
         name="api-tasks-archive",
     ),
     path(
+        "api/tasks/cancel/",
+        views.CancelTask.as_view(),
+        name="api-tasks-cancel",
+    ),
+    path(
+        "api/tasks/delete/",
+        views.DeleteTask.as_view(),
+        name="api-tasks-delete",
+    ),
+    path(
         "api/tasks/<str:task_id>/",
         views.CeleryTaskDetails.as_view(),
         name="api-tasks-details",
