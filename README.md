@@ -26,15 +26,13 @@
 
 This setup focus on running the app natively on a linux environment, the app should be run by a regular non root user to avoid exposing unecessary parts of the system
 - First export the following variables in your current shell or shell config file
-  ```
-  DJANGO_ENV=production # This defines if the app is running in production or development mode, development mode is unsafe to run in an environment exposed to the web
-  DJANGO_SETTINGS_MODULE=pymap.settings # Defines the app settings modules to be used, should not be changed, the configs are set in the json file
-  CELERY_BROKER_URL=redis://localhost:6379/0 # The URL of the redis instance that will be used for the background tasks handling
-  CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task
-  STATIC_ROOT=/var/www/static # The path to collect the static files from the app (javascript, css and html), needs to be writable by the app user
-  ```
-- Create the LOG_DIRECTORY that's defined in your config file (additional information in [Addtional Info - Config File](#config-file)) and set the ownership to the user that runs the app
-- Create the STATIC_ROOT if necessary and make sure nginx processes can read it, if you defined the static root to /var/html/static, then ensure the user has write access otherwise just define the variable it to some other directory copy the files over and verify permissions
+  * DJANGO_ENV=production # This defines if the app is running in production or development mode, development mode is unsafe to run in an environment exposed to the web
+  * DJANGO_SETTINGS_MODULE=pymap.settings # Defines the app settings modules to be used, should not be changed, the configs are set in the json file
+  * CELERY_BROKER_URL=redis://localhost:6379/0 # The URL of the redis instance that will be used for the background tasks handling <b>*can be set in config</b>
+  * CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task <b>*can be set in config</b>
+  * STATIC_ROOT=/var/www/static # The path to collect the static files from the app (javascript, css and html), needs to be writable by the app user
+- Create the LOG_DIRECTORY that's defined in your config file (additional information in [Addtional Info - Config File](#config-file)), set the ownership to the user that runs the app
+- Create the STATIC_ROOT if necessary and make sure nginx processes can read it, if you defined the static root to /var/html/static, then ensure the user has write access otherwise just define the variable to some other directory, copy the files over and verify permissions.
 - Clone the repo
 - Install the python requirements
   * `poetry install`
@@ -53,14 +51,19 @@ This setup focus on running the app natively on a linux environment, the app sho
 
 # Advanced Usage
 
-If you need to interact with the application for adding users or launch in debug mode, you will need to access the environment so that it recognizes the proper python interpreter and adittional packages, for this you can run the following command `poetry shell`
+If you need to interact with the application for adding users or running in debug mode, you will need to access the environment so that it recognizes the proper python interpreter and adittional packages, for this you can run the following command `poetry shell`
 
-# Dockers (with docker or podman-compose)
+# Dockers (docker or podman with compose)
 ### AIO
 
 * The AIO(All In One) image runs all services in a single container, altought this is not ideal for scaling it might be easier to manage
 * It's using supervisor to run multiple processes, the system processes like postgresql, nginx, and redis run under their own users and the app runs under the `pymap` user
 * Nginx handles the traffic incoming to Gunicorn, which then uses the Uvicorn class worker to be able to process more requests(ASGI)
+
+#### Notes
+
+You can specify multiple files as cli params: docker compose --env-file .env --env-file dev.env build aio
+
 
 
 # DEV

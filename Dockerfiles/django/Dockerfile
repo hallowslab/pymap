@@ -2,7 +2,7 @@ FROM debian:bookworm as debian-builder
 
 # Install system and perl dependencies
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y git curl apt-file make time gcc lsb-release procps cpanminus \
+    apt-get install -y git curl apt-file make time gcc lsb-release procps cpanminus \
     libauthen-ntlm-perl libcgi-pm-perl libcrypt-openssl-rsa-perl libdata-uniqid-perl libpar-packer-perl \
     libencode-imaputf7-perl libfile-copy-recursive-perl libfile-tail-perl libio-socket-inet6-perl \
     libio-socket-ssl-perl libio-tee-perl libhtml-parser-perl libjson-webtoken-perl libmail-imapclient-perl libtest-requires-perl \
@@ -34,7 +34,8 @@ ARG UID=1000 \
     DJANGO_SETTINGS_MODULE \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
-    STATIC_ROOT
+    STATIC_ROOT \
+    SECRET_KEY
 
 # python:
 ENV PYTHONFAULTHANDLER=1 \
@@ -61,8 +62,8 @@ COPY --from=debian-builder /usr/bin/imapsync /usr/bin/imapsync
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install --no-recommends pipx \
-    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+RUN apt-get update && apt-get install -y pipx \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Poetry install
@@ -81,6 +82,9 @@ COPY ./src /app/
 #RUN mkdir -p /var/log/pymap
 
 # Install dependecies trough poetry
-RUN poetry install --without=dev
+RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \
+    --no-interaction --no-ansi --sync
 
-CMD ["sh", "-c", "poetry run task server"]
+RUN echo $DJANGO_ENV
+
+CMD ["sh", "-c", "poetry run python manage.py migrate && poetry run python -m gunicorn pymap.asgi:application -k uvicorn.workers.UvicornWorker"]

@@ -34,7 +34,11 @@ ARG UID=1000 \
     DJANGO_SETTINGS_MODULE \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
-    STATIC_ROOT
+    STATIC_ROOT \
+    SECRET_KEY \
+    POSTGRES_DB \
+    POSTGRES_USER \
+    POSTGRES_PASSWORD
 
 # python:
 ENV PYTHONFAULTHANDLER=1 \
@@ -50,7 +54,18 @@ ENV PYTHONFAULTHANDLER=1 \
     POETRY_NO_INTERACTION=1 \
     POETRY_HOME='/opt/pypoetry' \
     POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true \
-    POETRY_INSTALLER_MAX_WORKERS=10
+    POETRY_INSTALLER_MAX_WORKERS=10 \
+    # app:
+    DJANGO_ENV=${DJANGO_ENV} \
+    DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE} \
+    CELERY_BROKER_URL=${CELERY_BROKER_URL} \
+    CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND} \
+    STATIC_ROOT=${STATIC_ROOT} \
+    SECRET_KEY=${SECRET_KEY} \
+    POSTGRES_DB=${POSTGRES_DB} \
+    POSTGRES_USER=${POSTGRES_USER} \
+    POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
 
 # Install app dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y redis nginx supervisor postgresql python3 pipx tmux
@@ -65,13 +80,6 @@ SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 # supervisor program users 
 RUN adduser --system --home /var/lib/redis --no-create-home --shell /bin/false --group redis \
     && adduser pymap
-
-# Set environment variables for the pymap user
-RUN echo "export DJANGO_ENV=$DJANGO_ENV" >> /home/pymap/.bashrc \
-    && echo "export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE" >> /home/pymap/.bashrc \
-    && echo "export CELERY_BROKER_URL=$CELERY_BROKER_URL" >> /home/pymap/.bashrc \
-    && echo "export CELERY_RESULT_BACKEND=$CELERY_RESULT_BACKEND" >> /home/pymap/.bashrc \
-    && echo "export STATIC_ROOT=$STATIC_ROOT" >> /home/pymap/.bashrc
 
 # Create the log directory
 RUN mkdir -p /var/log/pymap
@@ -90,19 +98,19 @@ USER postgres
 
 # Start the PostgreSQL service and create a database and user
 RUN /etc/init.d/postgresql start && \
-    psql --command "CREATE DATABASE pymap;" > /var/log/postgresql/postgresql_setup.log 2>&1 && \
-    psql --command "CREATE USER pymap WITH PASSWORD 'Pymap123' SUPERUSER CREATEDB CREATEROLE LOGIN;" >> /var/log/postgresql/postgresql_setup.log 2>&1 && \
-    psql --command "GRANT ALL PRIVILEGES ON DATABASE pymap TO pymap;" >> /var/log/postgresql/postgresql_setup.log 2>&1
+    psql --command "CREATE DATABASE $POSTGRES_DB;" > /var/log/postgresql/postgresql_setup.log 2>&1 && \
+    psql --command "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD' SUPERUSER CREATEDB CREATEROLE LOGIN;" >> /var/log/postgresql/postgresql_setup.log 2>&1 && \
+    psql --command "GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;" >> /var/log/postgresql/postgresql_setup.log 2>&1
 
 # Switch user
 USER pymap
 WORKDIR /home/pymap
 
 # Create .pgpass file
-RUN echo "localhost:5432:pymap:pymap:Pymap123" > .pgpass
+RUN echo "localhost:5432:$POSTGRES_DB:$POSTGRES_USER:$POSTGRES_PASSWORD" > .pgpass
 RUN chmod 600 .pgpass
 # Create .pg_service.conf
-RUN echo "[pymap]\nhost=localhost\nuser=pymap\ndbname=pymap\nport=5432" > .pg_service.conf
+RUN echo "[pymap]\nhost=localhost\nuser=$POSTGRES_USER\ndbname=$POSTGRES_DB\nport=5432" > .pg_service.conf
 WORKDIR /home/pymap/app
 
 # Install poetry
@@ -140,7 +148,7 @@ RUN poetry run python manage.py collectstatic
 # migrate (required for aio in first time setup)
 # use --run-syncdb if this step becomes slow due to the amount of changes
 #RUN poetry run python manage.py migrate --no-input
-# Can't seem to connect before startup with supervisor so we use a init script
+# Can't seem to connect before supervisor startup, so we use a init script
 COPY Dockerfiles/aio/django_init.sh django_init.sh
 
 # Switch to root for supervisor

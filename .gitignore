@@ -37,3 +37,5 @@ config.dev.json
 .secret
 *.coverage
 celery/
+# Don't track version since we support 3.10+, poetry will check requirements and constraints on install
+.python-version

@@ -1,5 +1,3 @@
-version: '3.4'
-
 services:
   redis:
     image: "docker.io/library/redis:latest"
@@ -12,11 +10,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=your_username
-      - POSTGRES_PASSWORD=your_password
-      - POSTGRES_DB=your_database_name
+      POSTGRES_DB: ${POSTGRES_DB:-pymap}
+      POSTGRES_USER: ${POSTGRES_USER:-pymin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_HOST: ${POSTGRES_HOST:-127.0.0.1}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
 
   aio:
     hostname: pymap.lan
@@ -29,11 +29,12 @@ services:
         - CELERY_BROKER_URL
         - CELERY_RESULT_BACKEND
         - STATIC_ROOT
+        - SECRET_KEY
     ports:
       - "80:80"
     volumes:
       - ./src:/app
-      - aio_postgres_data:/var/lib/postgresql/data
+      - aio_pgdata:/var/lib/postgresql/data
 
   celery-worker:
     build:
@@ -60,8 +61,7 @@ services:
         - CELERY_BROKER_URL
         - CELERY_RESULT_BACKEND
         - STATIC_ROOT
-    stdin_open: true
-    tty: true
+        - SECRET_KEY
     ports:
       - "8000:8000"
     depends_on:
@@ -94,6 +94,12 @@ services:
       - "8080:8080"
     depends_on:
       - email-server
+    
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
 
 
 networks:
@@ -102,5 +108,5 @@ networks:
 
 volumes:
   shared_logs:
-  postgres_data:
-  aio_postgres_data:
+  pgdata:
+  aio_pgdata:
