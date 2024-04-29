@@ -110,7 +110,11 @@ WORKDIR /home/pymap
 RUN echo "localhost:5432:$POSTGRES_DB:$POSTGRES_USER:$POSTGRES_PASSWORD" > .pgpass
 RUN chmod 600 .pgpass
 # Create .pg_service.conf
-RUN echo "[pymap]\nhost=localhost\nuser=$POSTGRES_USER\ndbname=$POSTGRES_DB\nport=5432" > .pg_service.conf
+# Didn't figure out why, but using printf to write to file seems to create issues establishing a connection on the django app
+#RUN printf "[pymap]\nhost=localhost\nuser=$POSTGRES_USER\ndbname=$POSTGRES_DB\nport=5432\n" > .pg_service.conf
+RUN echo "[pymap]\nhost=localhost\nuser=$POSTGRES_USER\ndbname=$POSTGRES_DB\nport=5432\n" > .pg_service.conf
+# Add the secret key to the environment
+RUN echo "export SECRET_KEY=$SECRET_KEY" >> /home/pymap/.bashrc
 WORKDIR /home/pymap/app
 
 # Install poetry
