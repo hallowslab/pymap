@@ -3,8 +3,8 @@ FROM python:3.11
 WORKDIR /app
 
 # Poetry install
-RUN apt-get update && apt-get install --no-recommends pipx \
-    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+RUN apt-get update && apt-get install --no-install-recommends -y pipx  \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Poetry install

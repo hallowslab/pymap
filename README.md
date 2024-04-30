@@ -7,7 +7,10 @@
 * [Imapsync](https://github.com/imapsync/imapsync)
 * PostgreSQL
 * [Redis-server](https://redis.com/)
-* [Docker-Engine](https://docs.docker.com/engine/) **Optional*
+* [Docker Engine](https://docs.docker.com/engine/) **Optional*
+* [Docker Compose](https://docs.docker.com/engine/) **Optional*
+* [Podman](https://podman.io/) **Optional/docker alternative*
+* [podman-compose](https://github.com/containers/podman-compose) **Optional/docker compose alternative*
 
 ## App
 * [Python](https://www.python.org/) >= 3.10
@@ -18,22 +21,19 @@
   * SQLite -> Should only be used for development it might be capable of handling a few users but since tasks run asynchronously we don't want to try to write to the database while it's locked in another thread, there are no failsafes for that at the moment.
   * PostGreSQL -> Recommended for performance and to avoid locking issues
 
-# Initial setup
+# Getting started
 
-## Barebones
+## Barebones (more control and easier to interact with)
 ### See [requirements](#requirements)
 **NOTE: poetry commands should be run in `pymap/src` folder**
 
 This setup focus on running the app natively on a linux environment, the app should be run by a regular non root user to avoid exposing unecessary parts of the system
-- First export the following variables in your current shell or shell config file
-  * DJANGO_ENV=production # This defines if the app is running in production or development mode, development mode is unsafe to run in an environment exposed to the web
-  * DJANGO_SETTINGS_MODULE=pymap.settings # Defines the app settings modules to be used, should not be changed, the configs are set in the json file
-  * CELERY_BROKER_URL=redis://localhost:6379/0 # The URL of the redis instance that will be used for the background tasks handling <b>*can be set in config</b>
-  * CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task <b>*can be set in config</b>
-  * STATIC_ROOT=/var/www/static # The path to collect the static files from the app (javascript, css and html), needs to be writable by the app user
-- Create the LOG_DIRECTORY that's defined in your config file (additional information in [Addtional Info - Config File](#config-file)), set the ownership to the user that runs the app
+- Clone the project
+`git clone https://github.com/hallowslab/Pymap.git`
+- Export the required environment variables in your current shell or shell config file, more info in [Additional Info - Environment Variables](#environment-variables)
+- Create a config file in `pymap/src/config.json`, You can copy it from the existing templates config*-template.json and modify the settings accordingly, more info in [Addtional Info - Config File](#config-file)
+- Create the LOG_DIRECTORY that's defined in your config file or the environment variable and set the ownership to the user that runs the app
 - Create the STATIC_ROOT if necessary and make sure nginx processes can read it, if you defined the static root to /var/html/static, then ensure the user has write access otherwise just define the variable to some other directory, copy the files over and verify permissions.
-- Clone the repo
 - Install the python requirements
   * `poetry install`
 - On the first time setup it's necessary to create database structure and tables
@@ -41,17 +41,86 @@ This setup focus on running the app natively on a linux environment, the app sho
 - Add user with admin rights (Ignore this step if you have imported a database)
   * `poetry run python manage.py createsuperuser --username ADMIN`
 
-# Getting started
+## Docker (Easier to deploy and scale)
 
+*Altough not tested this should work with podman and podman-compose*
 
+- Clone the project
+`git clone https://github.com/hallowslab/Pymap.git`
+- Create a .env file in the project's root directory where the file .env.template is located, you can duplicate it and modify accordingly
+- Create a config file in `pymap/src/config.json`, You can copy it from the existing templates config*-template.json and modify the settings accordingly, more info in [Addtional Info - Config File](#config-file)
+- From the project's root where the file docker-compose.yml is located, run the command `docker compose build pymap` to build the container and `docker compose up pymap -d` to start it in the background
 
 # Additional Info
 
+## Environment Variables:
+The environment variable that can be defined will take precedence when loading the settings for the application, so if you defined LOGDIR in both config.json and .env file the one defined in .env will be used
+
+* DJANGO_ENV=production # This defines if the app is running in production or development mode, development mode is unsafe to run in an environment exposed to the web
+* DJANGO_SETTINGS_MODULE=pymap.settings # Defines the app settings modules to be used, should not be changed, the configs are set in the json file
+* STATIC_ROOT=/var/www/static # The path to collect the static files from the app (javascript, css and html), needs to be writable by the app user
+* CELERY_BROKER_URL=redis://localhost:6379/0 # The URL of the redis instance that will be used for the background tasks handling <b>*can be set in config/optional</b>
+* CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task <b>*can be set in config/optional</b>
+* LOGDIR=/var/log/pymap # Directory for the application's log files <b>*can be set in config/optional</b>
+
 ## Config File
+
+There are 2 configuration files, for development config.dev.json, and for production config.json. You should always use the config.json unless you are developing or running the application in debug mode.
+
+There are only 3 directives that you should be aware of:
+1. LOGDIR - Specifies the application log directory, can also be set in an environment variable like described previously
+2. HOSTS - A list "[]" of lists [[...],[...]] in which the inner most elements are 2 strings (pieces of text), the first string is a regular expression of what **to match** and the second one is the piece of text to be appended to the matched string, they match the source and destination inputs on the application. So taking as example the strings in the config below "^(VPS|SV)$",".example.com" if a user inserts either VPS or SV in the source and/or destination, it considers it as VPS.example.com or SV.example.com
+3. Databases - You should only change the service to the name defined in your [postgresql service file](https://www.postgresql.org/docs/9.1/libpq-pgservice.html) and the [passfile](https://www.postgresql.org/docs/current/libpq-pgpass.html) to the name of the one you create
+
+- You can also modify the "level": "DEBUG" defined inside the multiple levels of logging, "console" level changes what's printed to the terminal/command line, "file" level changes what's written on the log file defined in "filename": "/var/log/pymap/pymap.log", and root changes the whole application's log level
+```
+{
+  "LOGDIR": "/var/log/pymap",
+  "HOSTS": [
+    ["^(VPS|SV)$",".example.com"]
+  ],
+  "DATABASES": {
+    "default": {
+      "ENGINE": "django.db.backends.postgresql",
+      "OPTIONS": {
+        "service": "pymap",
+        "passfile": ".pgpass"
+      }
+    }
+  },
+  "LOGGING": {
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+      "custom_formatter": {
+        "format": "%(asctime)s - %(name)s >>> %(levelname)s: %(message)s",
+        "datefmt": "%d/%m/%Y %I:%M:%S %p"
+      }
+    },
+    "handlers": {
+      "console": {
+        "class": "logging.StreamHandler",
+        "level": "DEBUG",
+        "formatter": "custom_formatter"
+      },
+      "file": {
+        "class": "logging.FileHandler",
+        "filename": "/var/log/pymap/pymap.log",
+        "level": "DEBUG",
+        "formatter": "custom_formatter"
+      }
+    },
+    "root": {
+      "handlers": ["console", "file"],
+      "level": "DEBUG"
+    }
+  }
+}
+```
 
 # Advanced Usage
 
-If you need to interact with the application for adding users or running in debug mode, you will need to access the environment so that it recognizes the proper python interpreter and adittional packages, for this you can run the following command `poetry shell`
+If you need to interact with the application for adding users or running the interactive shell, you will need to access the environment so that it recognizes the proper python interpreter and adittional packages, to access the environment you can run the command `poetry shell` in the application's main directory where you can also find a file with the name pyproject.toml (Poetry recognizes the applications environment trough this file)
 
 # Dockers (docker or podman with compose)
 ### AIO
@@ -115,7 +184,7 @@ pool support: all, terminate only supported by prefork and eventlet
 * If running the CLI remove the pipe to /dev/null
 * Configure logging for both Django and Celery (WIP)
 * MEMOIZE and cache some common operations
-* Encrypt celery task results
+* Encrypt celery task results (or just stop using them for now)
 
 
 ### Bugs/Issues

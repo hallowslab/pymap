@@ -35,6 +35,7 @@ ARG UID=1000 \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
     STATIC_ROOT \
+    LOGDIR \
     SECRET_KEY
 
 # python:
@@ -62,7 +63,7 @@ COPY --from=debian-builder /usr/bin/imapsync /usr/bin/imapsync
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y pipx \
+RUN apt-get update && apt-get install --no-install-recommends -y pipx \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
@@ -79,7 +80,7 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY ./src /app/
 
 # Create the log directory
-#RUN mkdir -p /var/log/pymap
+RUN mkdir -p $LOGDIR
 
 # Install dependecies trough poetry
 RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \

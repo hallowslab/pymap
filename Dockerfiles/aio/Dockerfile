@@ -35,6 +35,7 @@ ARG UID=1000 \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
     STATIC_ROOT \
+    LOGDIR \
     SECRET_KEY \
     POSTGRES_DB \
     POSTGRES_USER \
@@ -76,6 +77,7 @@ RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
 # Helps track down issues in command execution
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
+COPY --from=debian-builder /usr/bin/imapsync /usr/bin/imapsync
 
 # supervisor program users 
 RUN adduser --system --home /var/lib/redis --no-create-home --shell /bin/false --group redis \
@@ -93,14 +95,16 @@ RUN chmod -R a+rx /opt/pypoetry
 RUN mkdir -p $STATIC_ROOT
 RUN chown -R pymap:www-data $STATIC_ROOT
 
+### BROKEN, database seems to startup can't run commands
 # Switch to the postgres user to execute psql commands
-USER postgres
+#USER postgres
 
 # Start the PostgreSQL service and create a database and user
-RUN /etc/init.d/postgresql start && \
-    psql --command "CREATE DATABASE $POSTGRES_DB;" > /var/log/postgresql/postgresql_setup.log 2>&1 && \
-    psql --command "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD' SUPERUSER CREATEDB CREATEROLE LOGIN;" >> /var/log/postgresql/postgresql_setup.log 2>&1 && \
-    psql --command "GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;" >> /var/log/postgresql/postgresql_setup.log 2>&1
+#RUN /etc/init.d/postgresql start && \
+#    psql --command "CREATE DATABASE $POSTGRES_DB;" > /var/log/postgresql/postgresql_setup.log 2>&1 && \
+#    psql --command "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD' SUPERUSER CREATEDB CREATEROLE LOGIN;" >> /var/log/postgresql/postgresql_setup.log 2>&1 && \
+#    psql --command "GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;" >> /var/log/postgresql/postgresql_setup.log 2>&1
+###
 
 # Switch user
 USER pymap
@@ -146,8 +150,11 @@ RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main
 # copy the app
 COPY ./src /home/pymap/app/
 
+# Create the log directory
+RUN mkdir -p $LOGDIR
+
 # Collect static assets
-RUN poetry run python manage.py collectstatic
+#RUN poetry run python manage.py collectstatic
 
 # migrate (required for aio in first time setup)
 # use --run-syncdb if this step becomes slow due to the amount of changes
