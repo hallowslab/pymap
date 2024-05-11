@@ -35,7 +35,7 @@ ARG UID=1000 \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
     STATIC_ROOT \
-    LOGDIR \
+    PYMAP_LOGDIR \
     SECRET_KEY \
     POSTGRES_DB \
     POSTGRES_USER \
@@ -62,6 +62,7 @@ ENV PYTHONFAULTHANDLER=1 \
     CELERY_BROKER_URL=${CELERY_BROKER_URL} \
     CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND} \
     STATIC_ROOT=${STATIC_ROOT} \
+    PYMAP_LOGDIR=${PYMAP_LOGDIR} \
     SECRET_KEY=${SECRET_KEY} \
     POSTGRES_DB=${POSTGRES_DB} \
     POSTGRES_USER=${POSTGRES_USER} \
@@ -151,7 +152,7 @@ RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main
 COPY ./src /home/pymap/app/
 
 # Create the log directory
-RUN mkdir -p $LOGDIR
+RUN mkdir -p $PYMAP_LOGDIR
 
 # Collect static assets
 #RUN poetry run python manage.py collectstatic
@@ -166,9 +167,9 @@ COPY Dockerfiles/aio/django_init.sh django_init.sh
 USER root
 
 # supervisor config
-COPY Dockerfiles/aio/supervisord.conf /etc/supervisor/supervisord.conf
+COPY templates/aio/supervisord.conf /etc/supervisor/supervisord.conf
 # nginx config
-COPY Dockerfiles/aio/nginx.conf /etc/nginx/nginx.conf
+COPY templates/aio/nginx.conf /etc/nginx/nginx.conf
 
 # Handle tasks with supervisor
 CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]

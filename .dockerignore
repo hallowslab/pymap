@@ -15,6 +15,7 @@ include/
 *.tmp
 *.pid
 *.rdb
+*.sqlite3
 
 # Versioning and metadata
 .git
@@ -22,10 +23,13 @@ include/
 .dockerignore
 
 # Ignore development and editor-specific files
-*.mypy_cache/
-*.pytest_cache/
+.mypy_cache/
+.pytest_cache/
 *.pyc
 *.pyo
 *.swp
 .DS_Store
 *.deb
+
+# Others
+pymap_logs/

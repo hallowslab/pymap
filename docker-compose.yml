@@ -15,14 +15,61 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       POSTGRES_HOST: ${POSTGRES_HOST:-127.0.0.1}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      CELERY_POSTGRES_DB: ${POSTGRES_DB:-pymap_tasks}
+      CELERY_POSTGRES_USER: ${POSTGRES_USER:-celery}
+      CELERY_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      CELERY_POSTGRES_HOST: ${POSTGRES_HOST:-127.0.0.1}
+      CELERY_POSTGRES_PORT: ${POSTGRES_PORT:-5432}
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  pymap-aio:
-    hostname: pymap.lan
+  pymap-server:
+    build: 
+      context: .
+      dockerfile: Dockerfiles/nginx/Dockerfile
+      args:
+        - STATIC_ROOT
+        - GROUPNAME
+        - GID
+    ports:
+      - "8080:80"
+    depends_on:
+      pymap:
+        condition: service_healthy
+    volumes:
+    - static_root:$STATIC_ROOT
+
+  celery-worker:
     build:
       context: .
-      dockerfile: Dockerfiles/aio/Dockerfile
+      dockerfile: Dockerfiles/celery/Dockerfile
+      args:
+        - CELERY_POSTGRES_DB
+        - CELERY_POSTGRES_USER
+        - CELERY_POSTGRES_PASSWORD
+        - CELERY_POSTGRES_HOST
+        - CELERY_POSTGRES_PORT
+        - DJANGO_ENV
+        - DJANGO_SETTINGS_MODULE
+        - CELERY_BROKER_URL
+        - CELERY_RESULT_BACKEND
+        - PYMAP_LOGDIR
+        - SECRET_KEY
+        - GROUPNAME
+        - GID
+    depends_on:
+      redis:
+        condition: service_started
+    volumes:
+      - shared_logs:/var/log/pymap
+    user: "1001:$GID"  # UID:GID for user
+    group_add:
+      - $GROUPNAME
+
+  pymap:
+    build:
+      context: .
+      dockerfile: Dockerfiles/django/Dockerfile
       args:
         - POSTGRES_DB
         - POSTGRES_USER
@@ -34,84 +81,29 @@ services:
         - CELERY_BROKER_URL
         - CELERY_RESULT_BACKEND
         - STATIC_ROOT
-        - LOGDIR
+        - PYMAP_LOGDIR
         - SECRET_KEY
+        - GROUPNAME
+        - GID
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail 127.0.0.1:8000/ || exit 1"]
+      interval: 1m
+      timeout: 30s
+      retries: 10
+      start_period: 10s
     ports:
-      - "80:80"
-    volumes:
-      - ./src:/app
-      - aio_pgdata:/var/lib/postgresql/data
-
-  celery-worker:
-    build:
-      context: .
-      dockerfile: Dockerfiles/celery/Dockerfile
-      args:
-        - DJANGO_ENV
-        - DJANGO_SETTINGS_MODULE
-        - CELERY_BROKER_URL
-        - CELERY_RESULT_BACKEND
+      - "8000"
     depends_on:
-      - redis
-    volumes:
-      - shared_logs:/var/log/pymap
-
-  pymap:
-    build:
-      context: .
-      dockerfile: Dockerfiles/django/Dockerfile
-      args:
-        - DJANGO_ENV
-        - DJANGO_SETTINGS_MODULE
-        - CELERY_BROKER_URL
-        - CELERY_RESULT_BACKEND
-        - STATIC_ROOT
-        - LOGDIR
-        - SECRET_KEY
-    ports:
-      - "8000:8000"
-    depends_on:
-      - redis
-      - celery-worker
       - postgres
+      - celery-worker
     volumes:
-      - shared_logs:/var/log/pymap
-
-  email-server:
-    build:
-      context: Dockerfiles/email-server
-      dockerfile: Dockerfile
-    networks:
-      - mail
-    ports:
-      - "2500:2500"
-      - "1430:1430"
-      - "4650:4650"
-      - "9930:9930"
-
-  rainloop:
-    build:
-      context: Dockerfiles/rainloop
-      dockerfile: Dockerfile
-    networks:
-      - mail
-    ports:
-      - "8080:8080"
-    depends_on:
-      - email-server
-    
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
-
-
-networks:
-  mail:
-    driver: bridge
+      - shared_logs:$PYMAP_LOGDIR
+      - static_root:$STATIC_ROOT
+    user: "1001:$GID"  # UID:GID for user
+    group_add:
+      - $GROUPNAME
 
 volumes:
   shared_logs:
   pgdata:
-  aio_pgdata:
+  static_root:
