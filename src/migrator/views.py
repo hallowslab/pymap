@@ -128,7 +128,9 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             dry_run: bool = form.cleaned_data["dry_run"]
             config = settings.PYMAP_SETTINGS
             user = request.user
-            logger.info(f"USER: {user.username} requested a sync for {source} -> {destination}")
+            logger.info(
+                f"USER: {user.username} requested a sync for {source} -> {destination}"
+            )
             logger.debug(
                 "\nSource: %s\nDestination: %s\nAdditional arguments: %s\nDry run: %s",
                 source,
@@ -146,6 +148,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
                 extra_args=additional_arguments,
                 config=config,
                 dry_run=dry_run,
+                pymap_logdir=settings.PYMAP_LOGDIR,
             )
             content = gen.process_strings(input_text)
 
@@ -155,10 +158,12 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             # )
 
             task = call_system.delay(content)
-            logger.info(f"Starting background task with ID: {task.id} from User: {user.username}")
+            logger.info(
+                f"Starting background task with ID: {task.id} from User: {user.username}"
+            )
 
             # Don't forget to save the task id and respective inputs to the database
-            root_log_directory = config.get("LOGDIR")
+            root_log_directory = settings.PYMAP_LOGDIR
             log_directory = f"{root_log_directory}/{task.id}"
             domains = ", ".join(gen.domains)
             ctask = CeleryTask(
@@ -183,7 +188,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
 @login_required
 def download_log(request: HttpRequest, task_id: str, log_file: str) -> HttpResponse:
     logger.debug(f"Got request for a download for: {task_id}/{log_file}")
-    log_directory: Optional[str] = settings.PYMAP_SETTINGS.get("LOGDIR")
+    log_directory: Optional[str] = settings.PYMAP_LOGDIR
     if log_directory:
         log_path = join(log_directory, task_id, log_file)
         if exists(log_path):
@@ -275,7 +280,7 @@ class CeleryTaskDetails(APIView):
         self, request: APIRequest, task_id: str, format: Optional[str] = None
     ) -> JsonResponse:
         config = settings.PYMAP_SETTINGS
-        log_directory: Optional[str] = config.get("LOGDIR")
+        log_directory: Optional[str] = settings.PYMAP_LOGDIR
         all_logs = []
 
         try:
@@ -326,13 +331,15 @@ class CeleryTaskDetails(APIView):
                 status=500,
             )
         except FileNotFoundError:
-            logger.error(f"DJANGO:The log directory: {log_directory} does not exist or was not obtained")
+            logger.error(
+                f"DJANGO:The log directory: {log_directory} does not exist or was not obtained"
+            )
             return JsonResponse(
                 {
                     "error": "DJANGO:The directory does not exist on the system",
                     "data": log_directory,
                 },
-                status=404
+                status=404,
             )
         except Exception as e:
             logger.critical("Unhandled exception: %s", str(e), exc_info=True)
@@ -357,7 +364,7 @@ class CeleryTaskLogDetails(APIView):
     ) -> JsonResponse:
         logger.debug(f"Got request for task {task_id} logs")
         config = settings.PYMAP_SETTINGS
-        log_directory = config.get("LOGDIR")
+        log_directory = settings.PYMAP_LOGDIR
         tail_timeout: int = int(request.GET.get("ttimeout", 5))
         tail_count: int = int(request.GET.get("tcount", 100))
         logger.debug(f"Full request GET parameters: {request.GET}")
@@ -368,7 +375,9 @@ class CeleryTaskLogDetails(APIView):
                 return JsonResponse(
                     {"error": f"DJANGO:File {f_path} was not found"}, status=404
                 )
-            logger.debug(f"Tail timeout is: {tail_timeout}\nTail count is: {tail_count}")
+            logger.debug(
+                f"Tail timeout is: {tail_timeout}\nTail count is: {tail_count}"
+            )
 
             p1 = Popen(
                 ["tail", "-n", str(tail_count), f_path],
@@ -486,7 +495,9 @@ class CancelTask(APIView):
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
-        logger.error(f"Invalid request for user {request.user} reason was :{serializer.errors}")
+        logger.error(
+            f"Invalid request for user {request.user} reason was :{serializer.errors}"
+        )
         return JsonResponse({"errors": serializer.errors}, status=400)
 
 

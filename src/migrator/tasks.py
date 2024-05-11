@@ -21,7 +21,7 @@ RProc = Dict[str, Any]
 
 @shared_task(bind=True)
 def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
-    root_directory: str = settings.PYMAP_SETTINGS.get("LOGDIR", "/var/log/pymap")
+    root_directory: str = settings.PYMAP_LOGDIR
     total_cmds: int = len(cmd_list)
     max_procs: int = 4
     finished_procs: Dict[str, (str | int)] = {}

@@ -17,7 +17,7 @@ from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
-DJANGO_ENV: str = os.getenv("DJANGO_ENV", "production")
+DJANGO_ENV: str = os.environ.get("DJANGO_ENV", "production")
 
 
 # Quick-start development settings - unsuitable for production
@@ -40,6 +40,8 @@ if DEBUG:
 ALLOWED_HOSTS: List[str] = [
     # ...
     "127.0.0.1",
+    "pymap",
+    "pymap-server"
     # ...
 ]
 
@@ -156,7 +158,6 @@ LOGIN_REDIRECT_URL = "sync/"
 
 # Celery configuration
 CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 CELERY_TIMEZONE = "Europe/Lisbon"
 CELERY_TASK_TRACK_STARTED = True
@@ -181,16 +182,29 @@ LOGGING = {
     },
 }
 
+# Application's log directory
+
+PYMAP_LOGDIR = None
+
 # Custom settings
 PYMAP_SETTINGS: Dict[str, str] = {}
 
 
 def load_settings_file() -> None:
-    # Load custom settings from JSON file
-    config_file = "config.dev.json" if DJANGO_ENV == "development" else "config.json"
+    """
+    Load custom settings from a JSON file.
+
+    Raises:
+        FileNotFoundError: If the configuration file is not found.
+        json.JSONDecodeError: If the configuration file is not valid JSON.
+    """
+    global PYMAP_SETTINGS
+    config_file = "config.json" if DJANGO_ENV == "production" else "config.dev.json"
     custom_settings = {}
     with open(os.path.join(BASE_DIR, config_file)) as f:
         custom_settings = json.load(f)
+
+    print(f"Loaded custom settings from {os.path.join(BASE_DIR, config_file)}")
 
     log_config = custom_settings.get("LOGGING", {})
 
@@ -212,6 +226,24 @@ def load_settings_file() -> None:
     )
 
 
+# TODO: Add a better way to check complexity of SECRET_KEY
+def load_key_file() -> None:
+    """
+    Load the SECRET_KEY from a .secret file.
+
+    Raises:
+        ValueError: If the loaded SECRET_KEY is too short.
+    """
+    global SECRET_KEY
+    if os.path.isfile(".secret"):
+        with open(".secret", "r", encoding="utf-8") as fh:
+            read_key: str = fh.read().strip()
+            if len(read_key) > 10:
+                SECRET_KEY = read_key
+            else:
+                raise ValueError("The loaded SECRET_KEY is too short.")
+
+
 def load_settings_env() -> None:
     """
     Load custom environment variables into global variables.
@@ -224,38 +256,63 @@ def load_settings_env() -> None:
     Returns:
         None
     """
-    SETTINGS = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND", "STATIC_ROOT"]
+    SETTINGS = [
+        "CELERY_BROKER_URL",
+        "CELERY_RESULT_BACKEND",
+        "STATIC_ROOT",
+        "PYMAP_LOGDIR"
+    ]
     custom_settings = {v: os.getenv(v) for v in SETTINGS if os.getenv(v)}
 
     if len(custom_settings.keys()) > 0:
         for key, value in custom_settings.items():
-            globals()[key] = value
+            if key and value:
+                print(f"LOADED {key}={value[:2]}...")
+                globals()[key] = value
 
 
 def check_log_directory() -> None:
-    # Check logdir is loaded in settings, default in case it's missing
-    environ_default = (
-        "./pymap_logs" if DJANGO_ENV == "development" else "/var/log/pymap"
-    )
-    LOG_DIR = PYMAP_SETTINGS.get("LOGDIR", environ_default)
-    if not os.path.exists(LOG_DIR):
-        raise FileNotFoundError(f"The log directory {LOG_DIR} does not exist.")
-    if not os.access(LOG_DIR, os.W_OK) or not os.access(LOG_DIR, os.R_OK):
-        raise PermissionError(f"The log directory {LOG_DIR} is not readable/writable.")
-    
-def verify_secret_key()->None:
-    SECRET_KEY = os.getenv("SECRET_KEY", None)
+    """
+    Check if the log directory exists and is readable/writable.
+
+    Raises:
+        FileNotFoundError: If the log directory does not exist.
+        PermissionError: If the log directory is not readable or writable.
+    """
+    global PYMAP_LOGDIR
+    _default = "/var/log/pymap" if DJANGO_ENV == "production" else "pymap_logs"
+    _env = os.environ.get("PYMAP_LOGDIR", None)
+    PYMAP_LOGDIR = _env if _env else PYMAP_SETTINGS.get("LOGDIR", _default)
+    if not os.path.exists(PYMAP_LOGDIR):
+        raise FileNotFoundError(f"The log directory {PYMAP_LOGDIR} does not exist.")
+    if not os.access(PYMAP_LOGDIR, os.W_OK) or not os.access(PYMAP_LOGDIR, os.R_OK):
+        raise PermissionError(
+            f"The log directory {PYMAP_LOGDIR} is not readable/writable."
+        )
+
+
+def verify_secret_key() -> None:
+    """
+    Verify the SECRET_KEY is provided and set to an appropriate value.
+
+    Raises:
+        ValueError: If SECRET_KEY is missing in production environment.
+    """
+    global SECRET_KEY
     if SECRET_KEY is None and DJANGO_ENV == "production":
         raise ValueError(
-            "You need to set the environment variable for the secret key, make it a random string around 50 characters"
+            "You need to provide SECRET_KEY from either the config.json file or a .secret file in the app directory"
         )
     elif SECRET_KEY is None and DJANGO_ENV != "production":
         SECRET_KEY = get_random_secret_key()
         print("Generated new secret key %s", SECRET_KEY)
 
 
-# Load custom settings and env variables
+# Load custom settings, secret file, and env variables
 load_settings_file()
+load_key_file()
 load_settings_env()
 # Call the check_log_directory function during startup
 check_log_directory()
+# Check the SECRET_KEY during startup
+verify_secret_key()
