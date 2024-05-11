@@ -19,4 +19,10 @@ poetry run python manage.py collectstatic --no-input
 
 # Start the application
 echo "Starting app..." >> django_init.txt
-poetry run python -m gunicorn pymap.asgi:application -b 0.0.0.0:8000 -k uvicorn.workers.UvicornWorker
+if [ "$DJANGO_ENV" == "production" ]; then
+    echo "Starting production server"
+    poetry run python -m gunicorn pymap.asgi:application -b 0.0.0.0:8000 -k uvicorn.workers.UvicornWorker
+else
+    echo "Starting development server"
+    poetry run python manage.py runserver
+fi

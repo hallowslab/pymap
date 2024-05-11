@@ -8,7 +8,7 @@ RUN apt-get update && \
     libio-socket-ssl-perl libio-tee-perl libhtml-parser-perl libjson-webtoken-perl libmail-imapclient-perl libtest-requires-perl \
     libparse-recdescent-perl libproc-processtable-perl libmodule-scandeps-perl libreadonly-perl libregexp-common-perl libtest-mock-guard-perl \
     libsys-meminfo-perl libterm-readkey-perl libtest-mockobject-perl libtest-pod-perl libunicode-string-perl liburi-perl libwww-perl \
-    libtest-nowarnings-perl libtest-deep-perl libtest-warn-perl libnet-server-perl libpackage-stash-perl libpackage-stash-xs-perl
+    libtest-nowarnings-perl libtest-deep-perl libtest-warn-perl libnet-server-perl libpackage-stash-perl libpackage-stash-xs-perl libdigest-hmac-perl
 
 # Clean apt
 RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
@@ -27,7 +27,12 @@ RUN git clone https://github.com/imapsync/imapsync.git . && make install
 
 FROM python:3.11
 
-ARG DJANGO_ENV \
+ARG POSTGRES_DB \
+    POSTGRES_USER \
+    POSTGRES_PASSWORD \
+    POSTGRES_HOST \
+    POSTGRES_PORT \
+    DJANGO_ENV \
     DJANGO_SETTINGS_MODULE \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
@@ -45,7 +50,12 @@ ENV DJANGO_ENV=${DJANGO_ENV} \
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
 # pipx install
-RUN apt-get update && apt-get install --no-install-recommends -y pipx  \
+RUN apt-get update && apt-get install --no-install-recommends -y pipx \
+    # imapsync dependencies
+    libdigest-hmac-perl libencode-imaputf7-perl libfile-copy-recursive-perl libio-socket-inet6-perl libwww-perl \
+    libio-socket-ssl-perl libio-tee-perl libmail-imapclient-perl libterm-readkey-perl libunicode-string-perl \
+    libreadonly-perl libsys-meminfo-perl libregexp-common-perl libfile-tail-perl libtest-mockobject-perl \
+    libjson-webtoken-perl liburi-perl libhtml-parser-perl libauthen-ntlm-perl libdata-uniqid-perl libcgi-pm-perl \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
     
@@ -75,6 +85,19 @@ RUN pipx install poetry \
 # Set PATH to include pipx binary directory
 # ensurepath does not refresh the environment during the build it seems
 ENV PATH="/home/celery/.local/bin:$PATH"
+
+# Create .pg_service.conf
+RUN cat > ~/.pg_service.conf <<EOF
+[pymap]
+host=$POSTGRES_HOST
+user=$POSTGRES_USER
+dbname=$POSTGRES_DB
+port=$POSTGRES_PORT
+EOF
+
+# Create .pgpass file in the app directory so that it can be loaded by the app
+RUN echo "$POSTGRES_HOST:$POSTGRES_PORT:$POSTGRES_DB:$POSTGRES_USER:$POSTGRES_PASSWORD" > ./.pgpass
+RUN chmod 600 ./.pgpass
 
 # Create .secret file for SECRET_KEY
 RUN echo "$SECRET_KEY" > ./.secret

@@ -44,11 +44,11 @@ services:
       context: .
       dockerfile: Dockerfiles/celery/Dockerfile
       args:
-        - CELERY_POSTGRES_DB
-        - CELERY_POSTGRES_USER
-        - CELERY_POSTGRES_PASSWORD
-        - CELERY_POSTGRES_HOST
-        - CELERY_POSTGRES_PORT
+        - POSTGRES_DB
+        - POSTGRES_USER
+        - POSTGRES_PASSWORD
+        - POSTGRES_HOST
+        - POSTGRES_PORT
         - DJANGO_ENV
         - DJANGO_SETTINGS_MODULE
         - CELERY_BROKER_URL
@@ -62,7 +62,7 @@ services:
         condition: service_started
     volumes:
       - shared_logs:/var/log/pymap
-    user: "1001:$GID"  # UID:GID for user
+    #user: "1001:$GID"  # UID:GID for user
     group_add:
       - $GROUPNAME
 
