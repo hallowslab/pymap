@@ -35,7 +35,10 @@ class ScriptGenerator:
         self.file_count: int = 0
         self.domains: List[str] = []
         # STATIC VARIABLES
-        self.LOGDIR = self.config.get("LOGDIR", "/var/log/pymap")
+        _logdir: Optional[str] = kwargs.get("pymap_logdir", None)
+        self.LOGDIR: str = (
+            _logdir if _logdir else self.config.get("LOGDIR", "/var/log/pymap")
+        )
         self.FORMAT_STRING: str = (
             "imapsync --host1 {} --user1 {} --password1 '{}' --host2 {}  --user2 {} --password2 '{}' --log --logdir="
             + self.LOGDIR
