@@ -49,7 +49,12 @@ This setup focus on running the app natively on a linux environment, the app sho
 `git clone https://github.com/hallowslab/Pymap.git`
 - Create a .env file in the project's root directory where the file .env.template is located, you can duplicate it and modify accordingly
 - Create a config file in `pymap/src/config.json`, You can copy it from the existing templates config*-template.json and modify the settings accordingly, more info in [Addtional Info - Config File](#config-file)
-- From the project's root where the file docker-compose.yml is located, run the command `docker compose build pymap` to build the container and `docker compose up pymap -d` to start it in the background
+- From the project's root where the file docker-compose.yml is located, run the command `docker compose --env-file .env build pymap` to build the container and then `docker compose up pymap -d` to start it in the background, or in a single command `docker compose --env-file .env up pymap -d`
+
+To remove containers/volumes and images:
+
+* `docker rm -vf $(docker images -aq)` - Removes all containers and volumes
+* `docker rmi -f $(docker images -aq)` - Removes all images (*Remove containers beforehand*)
 
 # Additional Info
 
@@ -61,21 +66,22 @@ The environment variable that can be defined will take precedence when loading t
 * STATIC_ROOT=/var/www/static # The path to collect the static files from the app (javascript, css and html), needs to be writable by the app user
 * CELERY_BROKER_URL=redis://localhost:6379/0 # The URL of the redis instance that will be used for the background tasks handling <b>*can be set in config/optional</b>
 * CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task <b>*can be set in config/optional</b>
-* LOGDIR=/var/log/pymap # Directory for the application's log files <b>*can be set in config/optional</b>
+* PYMAP_LOGDIR=/var/log/pymap # Directory for the application's log files <b>*can be set in config/optional</b>
 
 ## Config File
 
 There are 2 configuration files, for development config.dev.json, and for production config.json. You should always use the config.json unless you are developing or running the application in debug mode.
 
-There are only 3 directives that you should be aware of:
-1. LOGDIR - Specifies the application log directory, can also be set in an environment variable like described previously
+There are only 4 directives that you should be aware of (one being optional):
+1. PYMAP_LOGDIR - Specifies the application log directory, can also be set in an environment variable like described previously
 2. HOSTS - A list "[]" of lists [[...],[...]] in which the inner most elements are 2 strings (pieces of text), the first string is a regular expression of what **to match** and the second one is the piece of text to be appended to the matched string, they match the source and destination inputs on the application. So taking as example the strings in the config below "^(VPS|SV)$",".example.com" if a user inserts either VPS or SV in the source and/or destination, it considers it as VPS.example.com or SV.example.com
 3. Databases - You should only change the service to the name defined in your [postgresql service file](https://www.postgresql.org/docs/9.1/libpq-pgservice.html) and the [passfile](https://www.postgresql.org/docs/current/libpq-pgpass.html) to the name of the one you create
+4. SECRET_KEY - Missing from the default configuration file, it's best to be created on the app's directory (src/.secret) read more in [Additional Info - .secret file](#secret-file)
 
 - You can also modify the "level": "DEBUG" defined inside the multiple levels of logging, "console" level changes what's printed to the terminal/command line, "file" level changes what's written on the log file defined in "filename": "/var/log/pymap/pymap.log", and root changes the whole application's log level
 ```
 {
-  "LOGDIR": "/var/log/pymap",
+  "PYMAP_LOGDIR": "/var/log/pymap",
   "HOSTS": [
     ["^(VPS|SV)$",".example.com"]
   ],
@@ -118,9 +124,17 @@ There are only 3 directives that you should be aware of:
 }
 ```
 
+## .secret file
+
+This file is only used to store the SECRET_KEY, the file should contain in a single line with no spaces a random generated piece of text around 50 characters long, I would reccomend using a password generator to create a complex enough secret. There are builtin tools to generate random cryptographically secure keys you can read more in [Advanced Usage - Generating Secrets](#generating-secrets)
+
 # Advanced Usage
 
 If you need to interact with the application for adding users or running the interactive shell, you will need to access the environment so that it recognizes the proper python interpreter and adittional packages, to access the environment you can run the command `poetry shell` in the application's main directory where you can also find a file with the name pyproject.toml (Poetry recognizes the applications environment trough this file)
+
+## Generating Secrets
+
+
 
 # Dockers (docker or podman with compose)
 ### AIO
@@ -179,12 +193,13 @@ pool support: all, terminate only supported by prefork and eventlet
 
 #### TODO:
 * Make a logo
-* Add queue/requeue functionality, queue should also support starting a task after another is marked as finished
 * Add failsafe to pass --gmail or --office when it detects one of their hosts and the parameter missing
 * If running the CLI remove the pipe to /dev/null
 * Configure logging for both Django and Celery (WIP)
 * MEMOIZE and cache some common operations
-* Encrypt celery task results (or just stop using them for now)
+* Add status to tasks page
+* Add queue/requeue functionality, queue should also support starting a task after another is marked as finished
+  * Encrypt celery task results (or just stop using them for now) *Required*
 
 
 ### Bugs/Issues

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pymap"
-version = "2.0.0-alpha"
+version = "2.0.0-beta"
 description = ""
 authors = ["hallowslab <hallow.tech.lab@gmail.com>"]
 
