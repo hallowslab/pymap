@@ -1,8 +1,17 @@
 {
-  "LOGDIR": "/var/log/pymap",
+  "PYMAP_LOGDIR": "/var/log/pymap",
   "HOSTS": [
     ["^(VPS|SV|SERVER)([0-9][0-9]|[0-4][0-9]{2})$",".example.com"]
   ],
+  "DATABASES": {
+    "default": {
+      "ENGINE": "django.db.backends.postgresql",
+      "OPTIONS": {
+        "service": "pymap",
+        "passfile": ".pgpass"
+      }
+    }
+  },
   "LOGGING": {
     "version": 1,
     "disable_existing_loggers": false,
@@ -28,15 +37,6 @@
     "root": {
       "handlers": ["console", "file"],
       "level": "DEBUG"
-    }
-  },
-  "DATABASES": {
-    "default": {
-      "ENGINE": "django.db.backends.postgresql",
-      "OPTIONS": {
-        "service": "pymap",
-        "passfile": ".pgpass"
-      }
     }
   }
 }
