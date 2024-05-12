@@ -100,9 +100,9 @@ class Command(BaseCommand):
         wait_time = float(options["wait_time"])
         # Check the arguments, (defaults to superuser, password may need to be updated/provided)
         username = "pymin" if options["user"] == "" else options["user"]
-        password = "Pymin" if options["password"] == "" else options["password"]
+        password = "CHANGEME!" if options["password"] == "" else options["password"]
         # Create a Django test client
-        client = Client(HTTP_HOST="localhost")
+        client = Client(HTTP_HOST="127.0.0.1")
 
         # Login to the application
         client.login(username=username, password=password)
