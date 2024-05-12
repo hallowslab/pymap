@@ -32,12 +32,12 @@ services:
         - GROUPNAME
         - GID
     ports:
-      - "8080:80"
+      - "5000:80"
     depends_on:
       pymap:
         condition: service_healthy
     volumes:
-    - static_root:$STATIC_ROOT
+      - static_root:$STATIC_ROOT
 
   celery-worker:
     build:
@@ -62,7 +62,7 @@ services:
         condition: service_started
     volumes:
       - shared_logs:/var/log/pymap
-    #user: "1001:$GID"  # UID:GID for user
+    user: "1001:$GID"  # UID:GID for user
     group_add:
       - $GROUPNAME
 

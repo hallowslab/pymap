@@ -109,6 +109,7 @@ COPY ./src/ ./
 # Install dependecies trough poetry
 RUN poetry install --without=dev
 
-CMD ["sh", "-c", "sleep 10 && poetry run celery -A pymap.celery worker -l INFO"]
+# celery -A pymap.celery worker -E --pool=gevent --statedb=celery/working.state"
+CMD ["sh", "-c", "sleep 5 && $(poetry env info --path)/bin/celery -A pymap.celery worker -l INFO --concurrency=500 --pool=gevent"]
 # For debbuging
 #CMD ["tail", "-f", "/dev/null"]

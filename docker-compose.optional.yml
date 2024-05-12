@@ -1,0 +1,40 @@
+services:
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin@pymap.lan}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-PGAdmin}
+    ports:
+      - 9001:80
+  
+  rinsight:
+    image: redisinsight:latest
+    restart: always
+    ports:
+      - 5540:5540
+  
+  celery-flower:
+    build:
+      context: .
+      dockerfile: Dockerfiles/celery/Dockerfile
+      args:
+        - POSTGRES_DB
+        - POSTGRES_USER
+        - POSTGRES_PASSWORD
+        - POSTGRES_HOST
+        - POSTGRES_PORT
+        - DJANGO_ENV
+        - DJANGO_SETTINGS_MODULE
+        - CELERY_BROKER_URL
+        - CELERY_RESULT_BACKEND
+        - PYMAP_LOGDIR
+        - SECRET_KEY
+        - GROUPNAME
+        - GID
+    entrypoint: /bin/bash -c "poetry run celery -A pymap.celery flower --basic-auth='admin:admin,dev:localhost' --address='0.0.0.0'"
+    user: "1001:$GID"  # UID:GID for user
+    ports:
+      - 5555:5555
+    group_add:
+      - $GROUPNAME
