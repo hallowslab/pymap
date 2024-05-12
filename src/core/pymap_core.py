@@ -45,7 +45,7 @@ class ScriptGenerator:
             + " --logfile={} --addheader"
         )
 
-    def match_domain(self, domain: str) -> Union[str, None]:
+    def match_domain(self, domain: str) -> Optional[str]:
         """
         Uses the regex DOMAIN_IDENTIFIER and tries to match it to the string
         returns the match or None
@@ -145,7 +145,7 @@ class ScriptGenerator:
                         new_line = f"{new_line} {self.extra_args}"
                     yield new_line
 
-    def process_line(self, line: str) -> Union[str, None]:
+    def process_line(self, line: str) -> Optional[str]:
         """
         Processes individual Lines returns None or a formatted string
         """
