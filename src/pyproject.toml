@@ -36,7 +36,7 @@ serverDev = "DJANGO_ENV='development' poetry run python manage.py runserver"
 workerDev = "DJANGO_ENV='development' task worker"
 monitorDev = "DJANGO_ENV='development' task monitor"
 server = "python -m gunicorn pymap.asgi:application -k uvicorn.workers.UvicornWorker"
-worker = "celery -A pymap.celery worker -E --pool=eventlet --statedb=celery/working.state"
+worker = "celery -A pymap.celery worker -E --pool=gevent"
 monitor = "celery -A pymap.celery flower --basic-auth='admin:admin,dev:localhost' --address='localhost'"
 ### Database tasks
 upgradeDev = "DJANGO_ENV='development' task upgrade"
