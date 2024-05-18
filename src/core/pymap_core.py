@@ -1,6 +1,6 @@
 import re
 import os
-from typing import Any, Generator, Iterable, List, Optional, Union
+from typing import Any, Generator, Iterable, List, Optional
 import logging
 
 logger = logging.getLogger("pymap_core")

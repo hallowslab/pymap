@@ -8,7 +8,7 @@ from .models import CeleryTask
 
 
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ["task_id","source","destination","owner", "start_time"]
+    list_display = ["task_id", "source", "destination", "owner", "start_time"]
     ordering = ["-start_time"]
     actions = ["archive_selected"]
 
@@ -25,5 +25,6 @@ class TaskAdmin(admin.ModelAdmin):
             % updated,
             messages.SUCCESS,
         )
+
 
 admin.site.register(CeleryTask, TaskAdmin)
