@@ -8,7 +8,7 @@
 * PostgreSQL
 * [Redis-server](https://redis.com/)
 * [Docker Engine](https://docs.docker.com/engine/) **Optional*
-* [Docker Compose](https://docs.docker.com/engine/) **Optional*
+* [Docker Compose](https://docs.docker.com/compose/) **Optional*
 * [Podman](https://podman.io/) **Optional/docker alternative*
 * [podman-compose](https://github.com/containers/podman-compose) **Optional/docker compose alternative*
 
@@ -49,7 +49,7 @@ This setup focus on running the app natively on a linux environment, the app sho
 `git clone https://github.com/hallowslab/Pymap.git`
 - Create a .env file in the project's root directory where the file .env.template is located, you can duplicate it and modify accordingly
 - Create a config file in `pymap/src/config.json`, You can copy it from the existing templates config*-template.json and modify the settings accordingly, more info in [Addtional Info - Config File](#config-file)
-- From the project's root where the file docker-compose.yml is located, run the command `docker compose --env-file .env build pymap` to build the container and then `docker compose up pymap -d` to start it in the background, or in a single command `docker compose --env-file .env up pymap -d`
+- From the project's root where the file docker-compose.yml is located, run the command `docker compose --env-file .env build` to build the containers and then `docker compose up -d` to start them in the background, or in a single command `docker compose --env-file .env up --build -d`
 
 To remove containers/volumes and images:
 
@@ -134,7 +134,10 @@ If you need to interact with the application for adding users or running the int
 
 ## Generating Secrets
 
+Run the following command in the src directory:
+  * `poetry run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
 
+This will output a random string of characters, copy the output (be carefull to not copy any spaces or new lines at the end or beggining or end of the key) and paste it in a file in src/.secret (You will need to create the file)
 
 # Dockers (docker or podman with compose)
 ### AIO
@@ -195,9 +198,7 @@ pool support: all, terminate only supported by prefork and eventlet
 * Make a logo
 * Add failsafe to pass --gmail or --office when it detects one of their hosts and the parameter missing
 * If running the CLI remove the pipe to /dev/null
-* Configure logging for both Django and Celery (WIP)
 * MEMOIZE and cache some common operations
-* Add status to tasks page
 * Add queue/requeue functionality, queue should also support starting a task after another is marked as finished
   * Encrypt celery task results (or just stop using them for now) *Required*
 
