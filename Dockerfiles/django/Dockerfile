@@ -1,9 +1,13 @@
 FROM python:3.11
 
-# Needed for fixing permissions of files created by Docker:
-ARG UID=1000 \
-    GID=1000 \
-    DJANGO_ENV \
+# Helps track down issues in command execution
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
+
+RUN apt-get update && apt-get install --no-install-recommends -y pipx \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+ARG DJANGO_ENV \
     DJANGO_SETTINGS_MODULE \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
@@ -41,13 +45,6 @@ ENV PYTHONFAULTHANDLER=1 \
     CELERY_BROKER_URL=${CELERY_BROKER_URL} \
     CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND} \
     STATIC_ROOT=${STATIC_ROOT}
-
-# Helps track down issues in command execution
-SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
-
-RUN apt-get update && apt-get install --no-install-recommends -y pipx \
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Create user and group
 RUN addgroup --gid $GID $GROUPNAME && \

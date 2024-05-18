@@ -27,6 +27,21 @@ RUN git clone https://github.com/imapsync/imapsync.git . && make install
 
 FROM python:3.11
 
+# Helps track down issues in command execution
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
+
+# pipx install
+RUN apt-get update && apt-get install --no-install-recommends -y pipx \
+    # imapsync dependencies
+    libdigest-hmac-perl libencode-imaputf7-perl libfile-copy-recursive-perl libio-socket-inet6-perl libwww-perl \
+    libio-socket-ssl-perl libio-tee-perl libmail-imapclient-perl libterm-readkey-perl libunicode-string-perl \
+    libreadonly-perl libsys-meminfo-perl libregexp-common-perl libfile-tail-perl libtest-mockobject-perl \
+    libjson-webtoken-perl liburi-perl libhtml-parser-perl libauthen-ntlm-perl libdata-uniqid-perl libcgi-pm-perl \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+    
+COPY --from=debian-builder /usr/bin/imapsync /usr/bin/imapsync
+
 ARG POSTGRES_DB \
     POSTGRES_USER \
     POSTGRES_PASSWORD \
@@ -46,20 +61,6 @@ ENV DJANGO_ENV=${DJANGO_ENV} \
     CELERY_BROKER_URL=${CELERY_BROKER_URL} \
     CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
 
-# Helps track down issues in command execution
-SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
-
-# pipx install
-RUN apt-get update && apt-get install --no-install-recommends -y pipx \
-    # imapsync dependencies
-    libdigest-hmac-perl libencode-imaputf7-perl libfile-copy-recursive-perl libio-socket-inet6-perl libwww-perl \
-    libio-socket-ssl-perl libio-tee-perl libmail-imapclient-perl libterm-readkey-perl libunicode-string-perl \
-    libreadonly-perl libsys-meminfo-perl libregexp-common-perl libfile-tail-perl libtest-mockobject-perl \
-    libjson-webtoken-perl liburi-perl libhtml-parser-perl libauthen-ntlm-perl libdata-uniqid-perl libcgi-pm-perl \
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-    
-COPY --from=debian-builder /usr/bin/imapsync /usr/bin/imapsync
 
 # Create user and group
 RUN addgroup --gid $GID $GROUPNAME && \
@@ -107,7 +108,8 @@ RUN chmod 600 ./.secret
 COPY ./src/ ./
 
 # Install dependecies trough poetry
-RUN poetry install --without=dev
+RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \
+    --no-interaction --no-ansi --sync
 
 # celery -A pymap.celery worker -E --pool=gevent --statedb=celery/working.state"
 CMD ["sh", "-c", "sleep 5 && $(poetry env info --path)/bin/celery -A pymap.celery worker -l INFO --concurrency=500 --pool=gevent"]

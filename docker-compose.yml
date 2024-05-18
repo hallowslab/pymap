@@ -40,6 +40,7 @@ services:
       - static_root:$STATIC_ROOT
 
   celery-worker:
+    &celery_worker
     build:
       context: .
       dockerfile: Dockerfiles/celery/Dockerfile
@@ -61,7 +62,18 @@ services:
       redis:
         condition: service_started
     volumes:
-      - shared_logs:/var/log/pymap
+      - shared_logs:$PYMAP_LOGDIR
+    user: "1001:$GID"  # UID:GID for user
+    group_add:
+      - $GROUPNAME
+
+  celery-beat:
+    <<: *celery_worker
+    entrypoint: /bin/bash -c "poetry run celery -A pymap.celery beat -l INFO -f $PYMAP_LOGDIR/celery-beat.log"
+    depends_on:
+      - celery-worker
+    volumes:
+      - shared_logs:$PYMAP_LOGDIR
     user: "1001:$GID"  # UID:GID for user
     group_add:
       - $GROUPNAME
