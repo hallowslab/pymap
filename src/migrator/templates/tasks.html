@@ -13,6 +13,7 @@
             <tr>
                 <th></th>
                 <th>ID</th>
+                <th>Running</th>
                 <th>Source</th>
                 <th>Destination</th>
                 <th>Nº Accounts</th>
@@ -30,11 +31,12 @@
 </div>
 
 <script>
+    // Defined above all scopes so it can be accessed in other functions
     var tasksTable;
     // Placeholder functions for button click handlers
     function handleArchive(e,dt,node,config) {
         //e.disabled = true
-        var selection = listSelected(dt);
+        let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
             console.debug("Requesting archival of", selection);
             postRequest('archive', selection)
@@ -52,7 +54,7 @@
     }
     
     function handleCancel(e,dt,node,config) {
-        var selection = listSelected(dt);
+        let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
             console.log("Trying to stop the following task(s)", selection)
             postRequest('cancel', selection)
@@ -69,7 +71,7 @@
     }
     
     function handleDelete(e,dt,node,config) {
-        var selection = listSelected(dt);
+        let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
             console.log("Requesting deletion of", selection)
             postRequest('delete', selection)
@@ -142,21 +144,43 @@
                         {
                             text: 'Archive',
                             action: handleArchive,
-                            className: 'btn-success'
+                            className: 'btn-success disabled'
                         },
                         {
                             text: 'Cancel',
                             action: handleCancel,
-                            className: 'btn-warning'
+                            className: 'btn-warning disabled'
                         },
                         {
                             text: 'Delete',
                             action: handleDelete,
-                            className: 'btn-danger'
+                            className: 'btn-danger disabled'
                         },
                         {
                             extend: 'copy',
-                            text: 'Copy to clipboard',
+                            text: 'Copy ID(s)',
+                            customize: (copy) => {
+                                // Get ID header text
+                                let header = $('#tasksTable thead tr th:nth-child(2)').text()
+                                console.debug(`Selected header text: ${header}`)
+
+                                 // Get selected rows data
+                                var selectedData = tasksTable.rows({ selected: true }).data().toArray();
+                                console.debug(`Selected rows data: ${selectedData}`)
+
+                                // Extract data from the second column of the selected rows
+                                var columnData = selectedData.map(function (row) {
+                                    return row["task_id"]; // Assuming the second column contains the desired data
+                                }).join('\n');
+                                    
+                                console.debug(`Column data: ${columnData}`)
+                                // Combine header and column data
+                                var customData = header + '\n' + columnData;
+                                
+                                console.debug(`Output: ${customData}`)
+                                // Return the custom data
+                                return customData;
+                            },
                             className: 'btn-info'
                         },
                     ],
@@ -182,6 +206,7 @@
                 columns: [
                 {data: null, width:'50px', orderable: false},
                 {data: 'task_id', width: '300px', "searchable": true},
+                {data: 'finished', width: '100px', "searchable": true},
                 {data: 'source', width: '150px', "searchable": true},
                 {data: 'destination', width: '150px', "searchable": true},
                 {data: 'n_accounts', width: '50px', "searchable": true},
