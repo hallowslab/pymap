@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_celery_beat",
 ] + (["debug_toolbar"] if DEBUG else [])
 
 MIDDLEWARE = [
@@ -74,6 +75,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "migrator.middleware.require_auth.staff_only",
 ] + (["debug_toolbar.middleware.DebugToolbarMiddleware"] if DEBUG else [])
 
 ROOT_URLCONF = "pymap.urls"
@@ -158,7 +160,7 @@ LOGIN_REDIRECT_URL = "sync/"
 
 # Celery configuration
 CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
 CELERY_TIMEZONE = "Europe/Lisbon"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_ACCEPT_CONTENT = ["json"]
@@ -198,7 +200,7 @@ def load_settings_file() -> None:
         FileNotFoundError: If the configuration file is not found.
         json.JSONDecodeError: If the configuration file is not valid JSON.
     """
-    global PYMAP_SETTINGS
+    global PYMAP_SETTINGS, LOGGING
     config_file = "config.json" if DJANGO_ENV == "production" else "config.dev.json"
     custom_settings = {}
     with open(os.path.join(BASE_DIR, config_file)) as f:
@@ -259,8 +261,9 @@ def load_settings_env() -> None:
     SETTINGS = [
         "CELERY_BROKER_URL",
         "CELERY_RESULT_BACKEND",
+        "CELERY_CACHE_BACKEND",
         "STATIC_ROOT",
-        "PYMAP_LOGDIR"
+        "PYMAP_LOGDIR",
     ]
     custom_settings = {v: os.getenv(v) for v in SETTINGS if os.getenv(v)}
 
@@ -305,7 +308,7 @@ def verify_secret_key() -> None:
         )
     elif SECRET_KEY is None and DJANGO_ENV != "production":
         SECRET_KEY = get_random_secret_key()
-        print("Generated new secret key %s", SECRET_KEY)
+        print(f"Generated new secret key {SECRET_KEY}")
 
 
 # Load custom settings, secret file, and env variables
