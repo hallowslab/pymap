@@ -19,6 +19,7 @@ django-celery-results = "^2.5.1"
 gevent = "^24.2.1"
 pybloom-live = "^4.0.0"
 greenlet = "^3.0.3"
+django-celery-beat = "^2.6.0"
 
 [tool.poetry.group.dev.dependencies]
 taskipy = "^1.8.0"
