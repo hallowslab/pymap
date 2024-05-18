@@ -1,6 +1,7 @@
 # Create your views here.
 import logging
 import json
+import re
 from subprocess import PIPE, Popen, TimeoutExpired
 from typing import List, Optional
 from os import listdir
@@ -123,7 +124,12 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             # Call Celery task here with the input data
             source: str = form.cleaned_data["source"]
             destination: str = form.cleaned_data["destination"]
-            input_text: List[str] = form.cleaned_data["input_text"].strip().split("\n")
+            # There area carriage returns being appended to the string probably due to the way
+            # form parses and cleans data, make sure to remove them!!
+            logger.debug("Input before split %s",form.cleaned_data["input_text"])
+            clean_input = re.sub(r"\r\n", "\n", form.cleaned_data["input_text"].strip())
+            input_text: List[str] = clean_input.split("\n")
+            logger.debug("Input after split %s",input_text)
             additional_arguments: str = form.cleaned_data["additional_arguments"]
             dry_run: bool = form.cleaned_data["dry_run"]
             config = settings.PYMAP_SETTINGS
@@ -157,7 +163,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             #     "Received the following output from generator:\n %s", content
             # )
 
-            task = call_system.delay(content)
+            task = call_system.apply_async((content,), countdown=15)
             logger.info(
                 f"Starting background task with ID: {task.id} from User: {user.username}"
             )
@@ -177,7 +183,8 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             )
             ctask.save()
 
-            target_url = reverse("migrator:tasks")
+            target_url = reverse("migrator:tasks-details", args=(task.id,))
+            logger.debug("Target redirect: %s", target_url)
             return redirect(target_url, permanent=False)
     else:
         form = SyncForm()
@@ -219,7 +226,7 @@ class CeleryTaskList(ListCreateAPIView):
         start = int(request.GET.get("start", 0))
         length = int(request.GET.get("length", 10))
         search_value = request.GET.get("search[value]", "")
-        logger.debug("GET", request.GET)
+        logger.debug("GET:", request.GET)
 
         # Parsing the order parameter
         order_str = request.GET.get("order", "")
