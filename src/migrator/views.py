@@ -1,6 +1,5 @@
 # Create your views here.
 import logging
-import json
 import re
 from subprocess import PIPE, Popen, TimeoutExpired
 from typing import List, Optional
@@ -126,10 +125,10 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             destination: str = form.cleaned_data["destination"]
             # There area carriage returns being appended to the string probably due to the way
             # form parses and cleans data, make sure to remove them!!
-            logger.debug("Input before split %s",form.cleaned_data["input_text"])
+            logger.debug("Input before split %s", form.cleaned_data["input_text"])
             clean_input = re.sub(r"\r\n", "\n", form.cleaned_data["input_text"].strip())
             input_text: List[str] = clean_input.split("\n")
-            logger.debug("Input after split %s",input_text)
+            logger.debug("Input after split %s", input_text)
             additional_arguments: str = form.cleaned_data["additional_arguments"]
             dry_run: bool = form.cleaned_data["dry_run"]
             config = settings.PYMAP_SETTINGS
@@ -226,38 +225,40 @@ class CeleryTaskList(ListCreateAPIView):
         start = int(request.GET.get("start", 0))
         length = int(request.GET.get("length", 10))
         search_value = request.GET.get("search[value]", "")
-        logger.debug("GET:", request.GET)
-
-        # Parsing the order parameter
-        order_str = request.GET.get("order", "")
-        logger.debug("ORDER_STR: %s", order_str)
-        order = json.loads(order_str) if order_str else []
-
-        # Parsing the columns parameter
-        columns_str = request.GET.get("columns", "")
-        logger.debug("COLUMNS_STR: %s", columns_str)
-        columns = json.loads(columns_str) if columns_str else []
-
-        # Now you can access information in the order and columns arrays
-        # for column in columns:
-        #     # Access individual column properties
-        #     logger.debug(column)
-
-        # # Access information in the order array
-        # for order_item in order:
-        #     logger.debug(order_item)
+        logger.debug("Draw: %s", draw)
+        logger.debug("Start: %s", start)
+        logger.debug("Length: %s", length)
+        logger.debug("Search Value: %s", search_value)
 
         # Filtering based on search value
         queryset = self.filter_queryset(self.get_queryset())
         if search_value != "":
-            queryset = queryset.filter(source__icontains=search_value)
-            # queryset.order_by(search_value)
+            queryset = queryset.filter(task_id__icontains=search_value)
 
         # Total records without filtering
         total_records = self.get_queryset().count()
-
+        logger.debug("Total records without filtering: %s", total_records)
         # Total records after filtering
         total_filtered_records = queryset.count()
+        logger.debug("Total records after filtering: %s", total_filtered_records)
+
+        # Ordering based on DataTables parameters
+        order_column_index = int(request.GET.get("order[0][column]", 0))
+        order_direction = request.GET.get("order[0][dir]", "asc")
+        # We modify the ordering direction according to what django expects
+        order_direction = "" if order_direction == "asc" else "-"
+        order_column_name = request.GET.get(f"columns[{order_column_index}][data]")
+        logger.debug("Order index: %s", order_column_index)
+        logger.debug("Order direction: %s", order_direction)
+        logger.debug("Order name: %s", order_column_name)
+
+        # Create an ordering string 
+        order_by_str = f"{order_direction}{order_column_name}"
+        logger.debug("Ordering string: %s", order_by_str)
+
+        # Check if order column is valid and exists in serializer fields
+        if order_column_name in CeleryTaskSerializer.Meta.fields:
+            queryset = queryset.order_by(order_by_str)
 
         # Paginate the queryset
         queryset = queryset[start : start + length]

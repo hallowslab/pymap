@@ -12,9 +12,22 @@ class UserSerializer(serializers.ModelSerializer[User]):
 class CeleryTaskSerializer(serializers.ModelSerializer[CeleryTask]):
     owner = UserSerializer()  # UserSerializer required for the owner field
 
+    # Don't use __all__ so that we are able to check order by against Meta.fields
     class Meta:
         model = CeleryTask
-        fields = "__all__"
+        fields = [
+            "task_id",
+            "source",
+            "destination",
+            "log_path",
+            "n_accounts",
+            "domains",
+            "archived",
+            "finished",
+            "start_time",
+            "run_time",
+            "owner",
+        ]
 
 
 class TaskIdListSerializer(serializers.Serializer):
