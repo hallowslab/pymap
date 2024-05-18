@@ -7,6 +7,9 @@ from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from celery.result import AsyncResult
+
+from pymap import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +55,18 @@ def delete_related_files(
     sender: CeleryTask, instance: CeleryTask, **kwargs: Any
 ) -> None:
     log_path = instance.log_path
+    # TODO: If using django-db for celery result backend 
+    # we should also delete any task associated data
+    # TODO: If using redis as result backend, delete data from redis
+
     if os.path.exists(log_path):
         logger.info("Deleting task directory: %s", log_path)
         shutil.rmtree(log_path)
     else:
         logger.warning("The task directory does not exist: %s", log_path)
+    try:
+        res = AsyncResult(instance.task_id,app=celery_app)
+        logger.debug("Found task: %s",res)
+        res.forget()
+    except ValueError:
+        logger.error("Failed to clear results for Task ID:%s", task_id)
