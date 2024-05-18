@@ -11,6 +11,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <title>{% block title %}Pymap{% endblock %}</title>
     {% block script %}{% endblock %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if the privilege warning cookie is set
+            if (document.cookie.split(';').some((item) => item.trim().startsWith('privilege_warning='))) {
+                // Show the alert
+                alert('You do not have enough privileges to access the admin dashboard.');
+                
+                // Clear the cookie
+                document.cookie = "privilege_warning=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            }
+        });
+    </script>
 </head>
 <body>
     
