@@ -6,8 +6,23 @@
 
 {% block content %}
 
+<style>
+    .copy-btn {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+            display: inline;
+            padding: 5px 8px;
+            border-radius: 50px;
+            margin-left: 10px;
+        }
+        .copy-btn:hover {
+            background-color: lightblue;
+        }
+</style>
+
 <div class="container mt-3 pb-5">
-    <h2>{{ task_id }}</h2>
+    <h2 id="task-id" class="w-50 d-inline">{{ task_id }}</h2> <i id="copy-btn" class="copy-btn bi bi-clipboard"></i>
     <table id="taskDetails" class="table">
         <thead>
             <tr>
@@ -37,6 +52,20 @@
         }
     });
     
+    document.addEventListener('DOMContentLoaded', (event) => {
+            document.getElementById('copy-btn').addEventListener('click', function() {
+                var taskId = $('#task-id').text();
+
+                // Use the Clipboard API to copy text
+                window.navigator.clipboard.writeText(taskId).then(function() {
+                    // Optionally, show a message or provide feedback to the user
+                    alert('Copied task ID: ' + taskId);
+                }).catch(function(error) {
+                    console.error('Failed to copy text: ', error);
+                });
+            });
+        });
+
     $(document).ready(function () {
         // Function to initialize the DataTable with server-side processing
         const initializeDataTable = () => {
@@ -50,7 +79,7 @@
                 search: {
                     return: true
                 },
-                order: [[1, 'asc']],
+                order: [[3, 'asc']],
                 ajax: {
                     url: '/api/tasks/'+'{{ task_id }}',
                     type: 'GET',
