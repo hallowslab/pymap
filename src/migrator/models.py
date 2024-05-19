@@ -7,7 +7,11 @@ from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from django.core.exceptions import ImproperlyConfigured
 from celery.result import AsyncResult
+from django_celery_results.models import TaskResult
+
+from django.conf import settings
 
 from pymap import celery_app
 
@@ -55,18 +59,28 @@ def delete_related_files(
     sender: CeleryTask, instance: CeleryTask, **kwargs: Any
 ) -> None:
     log_path = instance.log_path
-    # TODO: If using django-db for celery result backend
-    # we should also delete any task associated data
     # TODO: If using redis as result backend, delete data from redis
 
     if os.path.exists(log_path):
+        # Remove the log path if it still exists
         logger.info("Deleting task directory: %s", log_path)
         shutil.rmtree(log_path)
     else:
+        # Log a warning if the path is missing
         logger.warning("The task directory does not exist: %s", log_path)
     try:
+        # Since we never called .get() or AsyncResult previously do it now and call forget after
         res = AsyncResult(instance.task_id, app=celery_app)
         logger.debug("Found task: %s", res)
         res.forget()
-    except ValueError:
-        logger.error("Failed to clear results for Task ID:%s", task_id)
+    except TimeoutError:
+        logger.error("Failed to clear results for Task ID:%s", task.task_id)
+
+    if settings.CELERY_RESULT_BACKEND == "django-db":
+        # When django-db is the result backend we need to get the result from the TaskResult model
+        # and call delete
+        try:
+            result = TaskResult.objects.filter(task_id=instance.task_id)
+            result.delete()
+        except Exception as e:
+            logger.critical("Unhandled exception %s", e, exc_info=True)
