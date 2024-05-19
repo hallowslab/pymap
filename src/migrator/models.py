@@ -74,7 +74,7 @@ def delete_related_files(
         logger.debug("Found task: %s", res)
         res.forget()
     except TimeoutError:
-        logger.error("Failed to clear results for Task ID:%s", task.task_id)
+        logger.error("Failed to clear results for Task ID:%s", instance.task_id)
 
     if settings.CELERY_RESULT_BACKEND == "django-db":
         # When django-db is the result backend we need to get the result from the TaskResult model

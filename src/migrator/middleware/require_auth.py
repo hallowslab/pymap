@@ -6,8 +6,8 @@ def staff_only(get_response):
     # One-time configuration and initialization.
 
     def middleware(request):
-        admin_login_url = reverse("admin:login")
-        admin_logout_url = reverse("admin:logout")
+        admin_login_url: str = reverse("admin:login")
+        admin_logout_url: str = reverse("admin:logout")
 
         # Check if the request is to the admin page (but not login or logout) and if the user is not a staff member
         if (

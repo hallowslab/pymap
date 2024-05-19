@@ -252,7 +252,7 @@ class CeleryTaskList(ListCreateAPIView):
         logger.debug("Order direction: %s", order_direction)
         logger.debug("Order name: %s", order_column_name)
 
-        # Create an ordering string 
+        # Create an ordering string
         order_by_str = f"{order_direction}{order_column_name}"
         logger.debug("Ordering string: %s", order_by_str)
 
