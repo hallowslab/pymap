@@ -24,19 +24,19 @@
     "handlers": {
       "console": {
         "class": "logging.StreamHandler",
-        "level": "DEBUG",
+        "level": "WARNING",
         "formatter": "custom_formatter"
       },
       "file": {
         "class": "logging.FileHandler",
         "filename": "/var/log/pymap/pymap.log",
-        "level": "DEBUG",
+        "level": "INFO",
         "formatter": "custom_formatter"
       }
     },
     "root": {
       "handlers": ["console", "file"],
-      "level": "DEBUG"
+      "level": "INFO"
     }
   }
 }
