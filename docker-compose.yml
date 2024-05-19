@@ -1,43 +1,121 @@
-version: '0.0.1'
 services:
-  kali:
-    entrypoint: ['bash']
-    tty: true
-    build: ./dockers/kali/Dockerfile
+  redis:
+    image: "docker.io/library/redis:latest"
     ports:
-     - "5902:5902"
-  mail1:
-    image: "roundcube/roundcubemail"
-    environment:
-      - ROUNDCUBEMAIL_DEFAULT_PORT=143
-      - ROUNDCUBEMAIL_DEFAULT_HOST=localhost
-      - ROUNDCUBEMAIL_SMTP_SERVER=localhost
-    ports:
-      - 80:8081
-      - 143:143
-  mail2:
-    image: "roundcube/roundcubemail"
-    environment:
-      - ROUNDCUBEMAIL_DEFAULT_PORT=144
-      - ROUNDCUBEMAIL_DEFAULT_HOST=localhost
-      - ROUNDCUBEMAIL_SMTP_SERVER=localhost
-    ports:
-      - 80:8082
-      - 144:144
-  ubuntu20:
-    entrypoint: ['bash']
-    tty: true
-    build:
-      context: ./
-      dockerfile: ./dockers/ubuntu20.04/Dockerfile
-    ports:
-      - "3000:3000"
-      - "5000:5000"
       - "6379:6379"
+    restart: always
+
+  postgres:
+    image: "docker.io/library/postgres:latest"
+    ports:
+      - "5432:5432"
     environment:
-      - FLASK_ENV="development"
-      - NVM_DIR="/home/pymap"
-  alpine:
-    entrypoint: ['bash']
-    tty: true
-    build: ./dockers/alpine/Dockerfile
+      POSTGRES_DB: ${POSTGRES_DB:-pymap}
+      POSTGRES_USER: ${POSTGRES_USER:-pymap}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_HOST: ${POSTGRES_HOST:-127.0.0.1}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      CELERY_POSTGRES_DB: ${POSTGRES_DB:-pymap_tasks}
+      CELERY_POSTGRES_USER: ${POSTGRES_USER:-celery}
+      CELERY_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      CELERY_POSTGRES_HOST: ${POSTGRES_HOST:-127.0.0.1}
+      CELERY_POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  pymap-server:
+    build: 
+      context: .
+      dockerfile: Dockerfiles/nginx/Dockerfile
+      args:
+        - STATIC_ROOT
+        - GROUPNAME
+        - GID
+    ports:
+      - "5000:80"
+    depends_on:
+      pymap:
+        condition: service_healthy
+    volumes:
+      - static_root:$STATIC_ROOT
+
+  celery-worker:
+    &celery_worker
+    build:
+      context: .
+      dockerfile: Dockerfiles/celery/Dockerfile
+      args:
+        - POSTGRES_DB
+        - POSTGRES_USER
+        - POSTGRES_PASSWORD
+        - POSTGRES_HOST
+        - POSTGRES_PORT
+        - DJANGO_ENV
+        - DJANGO_SETTINGS_MODULE
+        - CELERY_BROKER_URL
+        - CELERY_RESULT_BACKEND
+        - PYMAP_LOGDIR
+        - SECRET_KEY
+        - GROUPNAME
+        - GID
+    depends_on:
+      redis:
+        condition: service_started
+    volumes:
+      - shared_logs:$PYMAP_LOGDIR
+    user: "1001:$GID"  # UID:GID for user
+    group_add:
+      - $GROUPNAME
+
+  celery-beat:
+    <<: *celery_worker
+    entrypoint: /bin/bash -c "poetry run celery -A pymap.celery beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler -f $PYMAP_LOGDIR/celery-beat.log"
+    depends_on:
+      - celery-worker
+    volumes:
+      - shared_logs:$PYMAP_LOGDIR
+    user: "1001:$GID"  # UID:GID for user
+    group_add:
+      - $GROUPNAME
+
+  pymap:
+    build:
+      context: .
+      dockerfile: Dockerfiles/django/Dockerfile
+      args:
+        - POSTGRES_DB
+        - POSTGRES_USER
+        - POSTGRES_PASSWORD
+        - POSTGRES_HOST
+        - POSTGRES_PORT
+        - DJANGO_ENV
+        - DJANGO_SETTINGS_MODULE
+        - CELERY_BROKER_URL
+        - CELERY_RESULT_BACKEND
+        - STATIC_ROOT
+        - PYMAP_LOGDIR
+        - SECRET_KEY
+        - GROUPNAME
+        - GID
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail 127.0.0.1:8000/ || exit 1"]
+      interval: 1m
+      timeout: 30s
+      retries: 10
+      start_period: 10s
+    ports:
+      - "8000"
+    depends_on:
+      - postgres
+      - celery-worker
+    volumes:
+      - shared_logs:$PYMAP_LOGDIR
+      - static_root:$STATIC_ROOT
+    user: "1001:$GID"  # UID:GID for user
+    group_add:
+      - $GROUPNAME
+
+volumes:
+  shared_logs:
+  pgdata:
+  static_root:

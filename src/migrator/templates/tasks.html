@@ -1,0 +1,249 @@
+{% extends 'structure/base.html' %}
+
+{% block script %}
+    {% include 'structure/datatables.html' %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid mt-3 pb-5 w-75">
+    <h2>Latest tasks</h2>
+    <table id="tasksTable" class="table">
+        <thead>
+            <tr>
+                <th></th>
+                <th>ID</th>
+                <th>Running</th>
+                <th>Source</th>
+                <th>Destination</th>
+                <th>Nº Accounts</th>
+                <th>Domains</th>
+                <th>Archived</th>
+                <th>Start time</th>
+                <th>Run time</th>
+                <th>Owner</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dynamic data goes here -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Defined above all scopes so it can be accessed in other functions
+    var tasksTable;
+    // Placeholder functions for button click handlers
+    function handleArchive(e,dt,node,config) {
+        return
+        //e.disabled = true
+        let selection = listSelected(dt);
+        if (Object.keys(selection).length>0) {
+            console.debug("Requesting archival of", selection);
+            postRequest('archive', selection)
+            .then(result=>{
+                console.log('Accepted:', result.message);
+                console.log('The following tasks where changed:', result.tasks);
+            }).catch(error=>{
+                console.error('Error caught:', error.message);
+            })
+        } else {
+            alert("You need to select items in order to archive them");
+            console.debug("Selection is:", selection);
+        }
+        //e.disabled = false
+    }
+    
+    function handleCancel(e,dt,node,config) {
+        return
+        let selection = listSelected(dt);
+        if (Object.keys(selection).length>0) {
+            console.log("Trying to stop the following task(s)", selection)
+            postRequest('cancel', selection)
+            .then(result=>{
+                console.log('Accepted:', result.message);
+                console.log('The following tasks where changed:', result.tasks);
+            }).catch(error=>{
+                console.error('Error caught:', error.message);
+            })
+        } else {
+            alert("You need to select items in order to cancel them")
+            console.debug("Selection is:", selection)
+        }
+    }
+    
+    function handleDelete(e,dt,node,config) {
+        return
+        let selection = listSelected(dt);
+        if (Object.keys(selection).length>0) {
+            console.log("Requesting deletion of", selection)
+            postRequest('delete', selection)
+            .then(result=>{
+                console.log('Accepted:', result.message);
+                console.log('The following tasks where changed:', result.tasks);
+            }).catch(error=>{
+                console.error("Error caught:", error.message)
+            })
+        } else {
+            alert("You need to select items in order to delete them")
+            console.debug("Selection is:", selection)
+        }
+    }
+    
+    function listSelected(dt) {
+        const selectionArray = dt.rows( { selected: true } ).data().toArray();
+        return {"task_ids": selectionArray.map(item=>item["task_id"])}
+    }
+
+    const postRequest = (endpoint, idList) => {
+        const APIURL = `/api/tasks/${endpoint}/`;
+        const data = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(idList),
+        };
+
+        return fetch(APIURL, data)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                console.error(`Fetch error: ${error.message}`);
+                // Handle other errors as needed
+                throw error;
+            });
+    };
+    
+    // Datatable row onClick
+    $(document).on('click','#tasksTable tr',function(e){
+        // Avoid triggering when the checkbox element is clicked
+        if (!$(e.target).is('td:first-child')) {
+            var data = tasksTable.row(this).data();
+            if (data) {
+                var task_id = data['task_id'];
+                window.location.href = '/tasks/' + task_id;
+            }
+        }
+    });
+    
+    $(document).ready(function () {
+        // Function to initialize the DataTable with server-side processing
+        const initializeDataTable = () => {
+            tasksTable = $('#tasksTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: {
+                    dom: {
+                        button: {
+                            className: 'btn btn-rounded'
+                        }
+                    },
+                    buttons: [
+                        {
+                            text: 'Archive',
+                            action: handleArchive,
+                            className: 'btn-success disabled'
+                        },
+                        {
+                            text: 'Cancel',
+                            action: handleCancel,
+                            className: 'btn-warning disabled'
+                        },
+                        {
+                            text: 'Delete',
+                            action: handleDelete,
+                            className: 'btn-danger disabled'
+                        },
+                        {
+                            extend: 'copy',
+                            text: 'Copy ID(s)',
+                            customize: (copy) => {
+                                // Get ID header text
+                                let header = $('#tasksTable thead tr th:nth-child(2)').text()
+                                console.debug(`Selected header text: ${header}`)
+
+                                 // Get selected rows data
+                                var selectedData = tasksTable.rows({ selected: true }).data().toArray();
+                                console.debug(`Selected rows data: ${selectedData}`)
+
+                                // Extract data from the second column of the selected rows
+                                var columnData = selectedData.map(function (row) {
+                                    return row["task_id"]; // Assuming the second column contains the desired data
+                                }).join('\n');
+                                    
+                                console.debug(`Column data: ${columnData}`)
+                                // Combine header and column data
+                                var customData = header + '\n' + columnData;
+                                
+                                console.debug(`Output: ${customData}`)
+                                // Return the custom data
+                                return customData;
+                            },
+                            className: 'btn-info'
+                        },
+                    ],
+                },
+                
+                serverSide: true,
+                processing: true,
+                ajax: {
+                    url: '/api/tasks/list/',
+                    type: 'GET',
+                },
+                columnDefs: [
+                {
+                    orderable: false,
+                    className: 'select-checkbox',
+                    targets: 0,
+                    defaultContent: ""
+                },
+                ],
+                columns: [
+                {data: null, width:'50px', orderable: false},
+                {data: 'task_id', width: '300px', "searchable": true},
+                {data: 'finished', width: '100px', "searchable": true},
+                {data: 'source', width: '150px', "searchable": true},
+                {data: 'destination', width: '150px', "searchable": true},
+                {data: 'n_accounts', width: '50px', "searchable": true},
+                {data: 'domains', width: '100px', "searchable": true},
+                {data: 'archived', width: '100px', "searchable": true},
+                {data: 'start_time', width: '70px', "searchable": true},
+                {data: 'run_time', width: '70px', "searchable": true},
+                {data: 'owner.username', width: '100px', "searchable": true}
+                ],
+                select: {
+                    style: 'multi+shift',
+                    selector: 'td:first-child'
+                },
+                ordering: true,
+                order: [[1, 'desc']],
+                scrollX: true,
+                scrollY: true,
+                paging: true,
+                pageLength: 15,
+                searching: true,
+                responsive: true
+            });
+        };
+        
+        // Run the initializeDataTable function on document load
+        initializeDataTable();
+    });
+</script>
+<style>
+    table.dataTable>tbody>tr.selected>td.select-checkbox::after,
+    table.dataTable>tbody>tr.selected>th.select-checkbox::after {
+        content: "x"; /* Change the content to "✗" for X */
+        font-size: 17px;
+        margin-top: -11px;
+        margin-left: -6px;
+        text-align: center;
+        line-height: 1;
+    }
+</style>
+{% endblock %}

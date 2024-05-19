@@ -1,0 +1,24 @@
+{% extends 'structure/base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <h1>Stats</h1>
+        <div class="col-md-6">
+            <ul class="list-group">
+                <li class="list-group-item text-center fs-5">Tasks</li>
+                <li class="list-group-item">Total number of tasks: {{ total_tasks }}</li>
+                <li class="list-group-item">Number of accounts synced across all tasks: {{ total_n_accounts }}</li>
+                <li class="list-group-item">Sum of the run time of all tasks: {{ total_run_time }}</li>
+                <hr>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <ul class="list-group">
+                <li class="list-group-item text-center fs-5">Pymap</li>
+                <li class="list-group-item">Number of active users: {{ active_users_count }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
