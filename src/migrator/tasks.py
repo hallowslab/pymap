@@ -2,16 +2,20 @@
 import shlex
 import subprocess
 import time
+from datetime import datetime, timedelta
 from typing import List, Dict, Any
 from os import mkdir
 from os.path import isdir
 
 from celery import shared_task
+from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.utils import timezone
+from django_celery_results.models import TaskResult
 
 from migrator.models import CeleryTask
+from pymap import celery_app
 
 logger = get_task_logger("CeleryTask")
 
@@ -23,7 +27,7 @@ RProc = Dict[str, Any]
 def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
     root_directory: str = settings.PYMAP_LOGDIR
     total_cmds: int = len(cmd_list)
-    max_procs: int = 4
+    max_procs: int = 5
     finished_procs: Dict[str, (str | int)] = {}
     running_procs: RProc = {}
     task_id = self.request.id
@@ -119,3 +123,43 @@ def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
     ctask.save()
 
     return {"status": "Executed all commands", "return_codes": finished_procs}
+
+
+@shared_task  # We expect strings due to the django admin scheduler
+def purge_results(
+    days: int = int("1"), hours: int = int("0"), minutes: int = int("0")
+) -> None:
+    try:
+        days = int(days)
+        hours = int(hours)
+        minutes = int(minutes)
+    except ValueError:
+        logger.error(
+            "Invalid values passed to purge results: Days %s, Hours %s, Minutes %s",
+            days,
+            hours,
+            minutes,
+        )
+        days = 1
+        hours = 0
+        minutes = 0
+    # Calculate the cutoff date
+    td = timedelta(days=days, hours=hours, minutes=minutes)
+    cutoff_date = datetime.now() - td
+    logger.info("Starting purge of results older than: %s", td)
+
+    # Filter the queryset to get tasks older than the cutoff date
+    tasks = CeleryTask.objects.filter(start_time__lt=cutoff_date)
+    logger.info("We will try to purge %s results", len(tasks))
+
+    for task in tasks:
+        try:
+            result = AsyncResult(task.task_id, app=celery_app)
+            result.forget()
+        except TimeoutError:
+            logger.error("Failed to clear results for Task ID:%s", task.task_id)
+        try:
+            result = TaskResult.objects.filter(task_id=task.task_id)
+            result.delete()
+        except Exception as e:
+            logger.critical("Unhandled exception %s", e, exc_info=True)
