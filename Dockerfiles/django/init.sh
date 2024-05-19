@@ -14,7 +14,10 @@ fi
 echo "Running initadmin management command"
 poetry run python manage.py initadmin >> django_init.txt
 
-# Collect static assets
+# Import fixtures, and other data
+echo "Importing fixtures...."
+
+# Collect static assets 
 poetry run python manage.py collectstatic --no-input
 
 # Start the application
