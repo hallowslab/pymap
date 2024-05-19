@@ -461,7 +461,7 @@ class ArchiveTask(APIView):
             request.user,
             serializer.errors,
         )
-        return JsonResponse({"errors": serializer.errors}, status=400)
+        return JsonResponse({"error": serializer.errors}, status=400)
 
 
 class CancelTask(APIView):
@@ -506,7 +506,7 @@ class CancelTask(APIView):
         logger.error(
             f"Invalid request for user {request.user} reason was :{serializer.errors}"
         )
-        return JsonResponse({"errors": serializer.errors}, status=400)
+        return JsonResponse({"error": serializer.errors}, status=400)
 
 
 class DeleteTask(APIView):
@@ -525,6 +525,12 @@ class DeleteTask(APIView):
             received_task_ids = serializer.validated_data["task_ids"]
 
             user = request.user
+            # TODO: Add another group to allow others besides admins to delete tasks
+            if not user.is_superuser:
+                return JsonResponse(
+                    {"error": f"User {user.username} does not have enough permissions"},
+                    status=401,
+                )
             tasks = CeleryTask.objects.filter(task_id__in=received_task_ids)
             changes = {}
             logger.info(
@@ -532,19 +538,11 @@ class DeleteTask(APIView):
             )
             # Check ownership for each task ID
             for task in tasks:
-                # Perform actions based on ownership
-                # TODO: Add another group to allow others besides admins to delete tasks
-                if user.is_superuser:
-                    # Preserve the ID before deletion
-                    task_id = task.task_id
-                    logger.debug(f"User {user.username} deleted task with ID {task_id}")
-                    task.delete()
-                    changes[task_id] = True
-                else:
-                    logger.debug(
-                        f"User {user.username} does not own task with ID {task.task_id}"
-                    )
-                    changes[task.task_id] = False
+                # Preserve the ID before deletion
+                task_id = task.task_id
+                logger.debug(f"User {user.username} deleted task with ID {task_id}")
+                task.delete()
+                changes[task_id] = True
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
@@ -553,4 +551,4 @@ class DeleteTask(APIView):
             request.user,
             serializer.errors,
         )
-        return JsonResponse({"errors": serializer.errors}, status=400)
+        return JsonResponse({"error": serializer.errors}, status=400)
