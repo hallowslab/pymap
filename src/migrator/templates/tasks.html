@@ -35,6 +35,7 @@
     var tasksTable;
     // Placeholder functions for button click handlers
     function handleArchive(e,dt,node,config) {
+        return
         //e.disabled = true
         let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
@@ -54,6 +55,7 @@
     }
     
     function handleCancel(e,dt,node,config) {
+        return
         let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
             console.log("Trying to stop the following task(s)", selection)
@@ -71,6 +73,7 @@
     }
     
     function handleDelete(e,dt,node,config) {
+        return
         let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
             console.log("Requesting deletion of", selection)
