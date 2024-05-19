@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import json
 import os
+import errno
 from pathlib import Path
+import sys
 from typing import Dict, List
 from django.core.management.utils import get_random_secret_key
 
@@ -195,18 +197,22 @@ PYMAP_SETTINGS: Dict[str, str] = {}
 def load_settings_file() -> None:
     """
     Load custom settings from a JSON file.
-
-    Raises:
-        FileNotFoundError: If the configuration file is not found.
-        json.JSONDecodeError: If the configuration file is not valid JSON.
     """
     global PYMAP_SETTINGS, LOGGING
     config_file = "config.json" if DJANGO_ENV == "production" else "config.dev.json"
     custom_settings = {}
-    with open(os.path.join(BASE_DIR, config_file)) as f:
-        custom_settings = json.load(f)
+    try:
+        if not Path(config_file).exists():
+            raise FileNotFoundError(
+                errno.ENOENT, os.strerror(errno.ENOENT), config_file
+            )
+        with open(Path(BASE_DIR, config_file)) as f:
+            custom_settings = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        print(f"Failed to load config file from: {config_file}, reason: {e}")
+        sys.exit(1)
 
-    print(f"Loaded custom settings from {os.path.join(BASE_DIR, config_file)}")
+    print(f"Loaded custom settings from: {Path(BASE_DIR, config_file)}")
 
     log_config = custom_settings.get("LOGGING", {})
 
@@ -224,7 +230,11 @@ def load_settings_file() -> None:
     # I don't think anything besides the app should access the database settings
     # so they are excluded for now
     PYMAP_SETTINGS.update(
-        {k: v for k, v in custom_settings.items() if k != "DATABASES"}
+        {
+            k: v
+            for k, v in custom_settings.items()
+            if k not in ["DATABASES", "SECRET", "SECRET_KEY"]
+        }
     )
 
 
@@ -234,16 +244,23 @@ def load_key_file() -> None:
     Load the SECRET_KEY from a .secret file.
 
     Raises:
+        FileNotFoundError: If the file is missing.
         ValueError: If the loaded SECRET_KEY is too short.
+        OSError: When it fails to open the file
     """
     global SECRET_KEY
-    if os.path.isfile(".secret"):
+    try:
+        if not Path(".secret").is_file() and DJANGO_ENV == "production":
+            raise FileNotFoundError(f'File {Path("./", ".secret")} was not found')
         with open(".secret", "r", encoding="utf-8") as fh:
             read_key: str = fh.read().strip()
             if len(read_key) > 10:
                 SECRET_KEY = read_key
             else:
                 raise ValueError("The loaded SECRET_KEY is too short.")
+    except (OSError, FileNotFoundError, ValueError) as e:
+        print(f"Failed to load secret file: {e}")
+        sys.exit(1)
 
 
 def load_settings_env() -> None:
@@ -267,11 +284,12 @@ def load_settings_env() -> None:
     ]
     custom_settings = {v: os.getenv(v) for v in SETTINGS if os.getenv(v)}
 
-    if len(custom_settings.keys()) > 0:
-        for key, value in custom_settings.items():
-            if key and value:
-                print(f"LOADED {key}={value[:2]}...")
-                globals()[key] = value
+    if len(custom_settings.keys()) == 0:
+        return
+    for key, value in custom_settings.items():
+        if key and value:
+            print(f"LOADED {key}={value[:2]}...")
+            globals()[key] = value
 
 
 def check_log_directory() -> None:
@@ -286,12 +304,23 @@ def check_log_directory() -> None:
     _default = "/var/log/pymap" if DJANGO_ENV == "production" else "pymap_logs"
     _env = os.environ.get("PYMAP_LOGDIR", None)
     PYMAP_LOGDIR = _env if _env else PYMAP_SETTINGS.get("LOGDIR", _default)
-    if not os.path.exists(PYMAP_LOGDIR):
-        raise FileNotFoundError(f"The log directory {PYMAP_LOGDIR} does not exist.")
-    if not os.access(PYMAP_LOGDIR, os.W_OK) or not os.access(PYMAP_LOGDIR, os.R_OK):
-        raise PermissionError(
-            f"The log directory {PYMAP_LOGDIR} is not readable/writable."
-        )
+    # Just to ease usage in development
+    if DJANGO_ENV == "development":
+        Path(PYMAP_LOGDIR).mkdir(parents=True, exist_ok=True)
+    try:
+        if not Path(PYMAP_LOGDIR).exists():
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                f"The log directory {PYMAP_LOGDIR} does not exist.",
+            )
+        if not os.access(PYMAP_LOGDIR, os.W_OK) or not os.access(PYMAP_LOGDIR, os.R_OK):
+            raise PermissionError(
+                f"The log directory {PYMAP_LOGDIR} is not readable/writable."
+            )
+    except (FileNotFoundError, PermissionError) as e:
+        print(f"Failed to access log directory in: {PYMAP_LOGDIR}, reason: {e}")
+        sys.exit(1)
 
 
 def verify_secret_key() -> None:
@@ -303,9 +332,10 @@ def verify_secret_key() -> None:
     """
     global SECRET_KEY
     if SECRET_KEY is None and DJANGO_ENV == "production":
-        raise ValueError(
+        print(
             "You need to provide SECRET_KEY from either the config.json file or a .secret file in the app directory"
         )
+        sys.exit(1)
     elif SECRET_KEY is None and DJANGO_ENV != "production":
         SECRET_KEY = get_random_secret_key()
         print(f"Generated new secret key {SECRET_KEY}")
@@ -313,7 +343,9 @@ def verify_secret_key() -> None:
 
 # Load custom settings, secret file, and env variables
 load_settings_file()
-load_key_file()
+# We only try to load .secret during production to ease development
+if DJANGO_ENV == "production":
+    load_key_file()
 load_settings_env()
 # Call the check_log_directory function during startup
 check_log_directory()

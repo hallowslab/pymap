@@ -69,7 +69,7 @@ services:
 
   celery-beat:
     <<: *celery_worker
-    entrypoint: /bin/bash -c "poetry run celery -A pymap.celery beat -l INFO -f $PYMAP_LOGDIR/celery-beat.log"
+    entrypoint: /bin/bash -c "poetry run celery -A pymap.celery beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler -f $PYMAP_LOGDIR/celery-beat.log"
     depends_on:
       - celery-worker
     volumes:
