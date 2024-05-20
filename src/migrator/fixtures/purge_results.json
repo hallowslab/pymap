@@ -1,0 +1,29 @@
+[
+    {
+        "model": "django_celery_beat.PeriodicTask",
+        "pk": 2,
+        "fields": {
+            "name": "Purge old results",
+            "task": "migrator.tasks.purge_results",
+            "args": "[1,0,0]",
+            "kwargs": "{}",
+            "queue": null,
+            "exchange": null,
+            "routing_key": null,
+            "expires": null,
+            "enabled": true,
+            "last_run_at": null,
+            "total_run_count": 0,
+            "date_changed": "2024-01-01T00:00:00+00:00",
+            "description": "",
+            "crontab_id": null,
+            "interval_id": 1,
+            "solar_id": null,
+            "start_time": "2024-01-01T00:00:00+00:00",
+            "priority": null,
+            "headers": "{}",
+            "clocked_id": null,
+            "expire_seconds": null
+        }
+    }
+]

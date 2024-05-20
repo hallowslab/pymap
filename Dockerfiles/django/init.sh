@@ -16,6 +16,8 @@ poetry run python manage.py initadmin >> django_init.txt
 
 # Import fixtures, and other data
 echo "Importing fixtures...."
+poetry run python manage.py loaddata periodic.json
+poetry run python manage.py loaddata purge_results.json
 
 # Collect static assets 
 poetry run python manage.py collectstatic --no-input
