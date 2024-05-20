@@ -28,7 +28,7 @@ urlpatterns = [
         "login/",
         auth_views.LoginView.as_view(
             template_name="admin/login.html",
-            success_url="sync/",
+            success_url="/sync",
             redirect_authenticated_user=True,
         ),
         name="login",
@@ -36,7 +36,7 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path(
         "password-change/",
-        login_required(auth_views.PasswordChangeView.as_view(success_url="account/")),
+        login_required(auth_views.PasswordChangeView.as_view(success_url="/account")),
         name="password-change",
     ),
     path(
