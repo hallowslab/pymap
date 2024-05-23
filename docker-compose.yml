@@ -94,10 +94,10 @@ services:
         - GID
     healthcheck:
       test: ["CMD-SHELL", "curl --silent --fail 127.0.0.1:8000/ || exit 1"]
-      interval: 1m
+      interval: 15s
       timeout: 30s
-      retries: 10
-      start_period: 10s
+      retries: 5
+      start_period: 5s
     ports:
       - "8000"
     depends_on:

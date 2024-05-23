@@ -1,5 +1,8 @@
+import logging
 from django.http.response import HttpResponseRedirect
 from django.urls import reverse
+
+logger = logging.getLogger(__name__)
 
 
 def staff_only(get_response):
@@ -15,7 +18,8 @@ def staff_only(get_response):
             and request.path not in [admin_login_url, admin_logout_url]
             and not request.user.is_staff
         ):
-            # Redirect non-staff users to the index page
+            logger.debug("Intercepted path %s, setting cookie" % (request.path))
+            # Redirect non-staff users to the migrator:index page
             response = HttpResponseRedirect(reverse("migrator:index"))
             response.set_cookie(
                 "privilege_warning", "true", max_age=10

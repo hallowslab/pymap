@@ -19,7 +19,7 @@ urlpatterns = [
         name="tasks-log-details",
     ),
     path(
-        "tasks/<str:task_id>/<log:log_file>/download/",
+        "tasks/<str:task_id>/<log:filename>/download/",
         views.download_log,
         name="tasks-log-download",
     ),

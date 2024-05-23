@@ -4,13 +4,13 @@ import subprocess
 import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
-from os import mkdir
-from os.path import isdir
+from pathlib import Path
 
 from celery import shared_task
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils import timezone
 from django_celery_results.models import TaskResult
 
@@ -31,7 +31,7 @@ def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
     finished_procs: Dict[str, (str | int)] = {}
     running_procs: RProc = {}
     task_id = self.request.id
-    log_directory = f"{root_directory}/{task_id}"
+    log_directory = Path(root_directory, task_id)
 
     for i, cmd in enumerate(cmd_list):
         cmd_list[i] = cmd.replace(
@@ -39,14 +39,14 @@ def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
             f"--logdir={log_directory}",
         )
 
+    # Just to ensure if the task is the one creating the path
+    if not log_directory.exists():
+        log_directory.mkdir()
     # Moved the check to the task itself to verify for cases of overwritting contents,
-    # here none of the commands have been executed so even if they create the directory
-    # it should not exist yet
-    if not isdir(log_directory):
-        mkdir(log_directory)
-    else:
+    # this will be slow if the directory has a lot of contents
+    if len(sorted(log_directory.rglob("*.*"))) > 0:
         logger.warning(
-            "Directory: %s seems to already exist, we might be writting over files",
+            "Directory: %s seems to already exist and isn't completely empty, we might be overwritting files",
             log_directory,
         )
 
@@ -120,6 +120,8 @@ def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
 
     # Update the run_time field in the database
     ctask.run_time = run_time_seconds
+    # Make sure to mark the task as finished
+    ctask.finished = True
     ctask.save()
 
     return {"status": "Executed all commands", "return_codes": finished_procs}
@@ -160,6 +162,15 @@ def purge_results(
             logger.error("Failed to clear results for Task ID:%s", task.task_id)
         try:
             result = TaskResult.objects.filter(task_id=task.task_id)
-            result.delete()
+            if result.exists():
+                result.delete()
+            else:
+                logger.info(
+                    "We don't seem to have any results associated with: %s",
+                    task.task_id,
+                )
+        except ImproperlyConfigured:
+            # If TaskResult model is not available, log or handle the situation
+            logger.warning("Task results backend is not configured to use django-db.")
         except Exception as e:
             logger.critical("Unhandled exception %s", e, exc_info=True)

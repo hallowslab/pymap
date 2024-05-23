@@ -4,7 +4,8 @@ import re
 from subprocess import PIPE, Popen, TimeoutExpired
 from typing import List, Optional
 from os import listdir
-from os.path import isfile, join, exists
+from os.path import join
+from pathlib import Path
 from django.shortcuts import redirect, render
 from django.conf import settings
 from django.urls import reverse
@@ -12,7 +13,7 @@ from django.utils.functional import SimpleLazyObject
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, HttpRequest
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Sum
+from django.db.models import Sum, Q
 
 from rest_framework.views import APIView
 from rest_framework.request import Request as APIRequest
@@ -168,14 +169,16 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             )
 
             # Don't forget to save the task id and respective inputs to the database
-            root_log_directory = settings.PYMAP_LOGDIR
-            log_directory = f"{root_log_directory}/{task.id}"
+            root_log_directory: str = settings.PYMAP_LOGDIR
+            log_directory = Path(root_log_directory, task.id)
+            if not log_directory.exists():
+                log_directory.mkdir()
             domains = ", ".join(gen.domains)
             ctask = CeleryTask(
                 task_id=task.id,
                 source=source,
                 destination=destination,
-                log_path=log_directory,
+                log_path=str(log_directory),
                 n_accounts=len(content),
                 domains=domains,
                 owner=user,
@@ -192,15 +195,15 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
 
 
 @login_required
-def download_log(request: HttpRequest, task_id: str, log_file: str) -> HttpResponse:
-    logger.debug(f"Got request for a download for: {task_id}/{log_file}")
-    log_directory: Optional[str] = settings.PYMAP_LOGDIR
+def download_log(request: HttpRequest, task_id: str, filename: str) -> HttpResponse:
+    logger.debug(f"Got request for a download for: {task_id}/{filename}")
+    log_directory: str = settings.PYMAP_LOGDIR
     if log_directory:
-        log_path = join(log_directory, task_id, log_file)
-        if exists(log_path):
-            with open(log_path, "rb") as fh:
+        log_file = Path(log_directory, task_id, filename)
+        if log_file.exists():
+            with log_file.open() as fh:
                 response = HttpResponse(fh.read(), content_type="application/text")
-                response["Content-Disposition"] = f'attachment; filename="{log_file}"'
+                response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
     return HttpResponse("Log file not found.", status=404)
 
@@ -233,7 +236,9 @@ class CeleryTaskList(ListCreateAPIView):
         # Filtering based on search value
         queryset = self.filter_queryset(self.get_queryset())
         if search_value != "":
-            queryset = queryset.filter(task_id__icontains=search_value)
+            queryset = queryset.filter(
+                Q(task_id__icontains=search_value) | Q(domains__icontains=search_value)
+            )
 
         # Total records without filtering
         total_records = self.get_queryset().count()
@@ -306,7 +311,7 @@ class CeleryTaskDetails(APIView):
             all_logs = [
                 get_logs_status(logs_dir, f)
                 for f in listdir(logs_dir)
-                if isfile(join(logs_dir, f))
+                if Path(logs_dir, f).is_file()
             ]
 
             # Filtering based on search value
@@ -372,23 +377,23 @@ class CeleryTaskLogDetails(APIView):
     ) -> JsonResponse:
         logger.debug(f"Got request for task {task_id} logs")
         config = settings.PYMAP_SETTINGS
-        log_directory = settings.PYMAP_LOGDIR
+        log_directory: str = settings.PYMAP_LOGDIR
         tail_timeout: int = int(request.GET.get("ttimeout", 5))
         tail_count: int = int(request.GET.get("tcount", 100))
         logger.debug(f"Full request GET parameters: {request.GET}")
         # Tail the last X lines from the log file and return it
-        f_path = f"{log_directory}/{task_id}/{log_file}"
+        f_path = Path(log_directory, task_id, log_file)
         try:
-            if not isfile(f_path):
+            if not f_path.is_file():
                 return JsonResponse(
-                    {"error": f"DJANGO:File {f_path} was not found"}, status=404
+                    {"error": f"DJANGO:File {str(f_path)} was not found"}, status=404
                 )
             logger.debug(
                 f"Tail timeout is: {tail_timeout}\nTail count is: {tail_count}"
             )
 
             p1 = Popen(
-                ["tail", "-n", str(tail_count), f_path],
+                ["tail", "-n", str(tail_count), str(f_path)],
                 stdout=PIPE,
                 stderr=PIPE,
                 text=True,
@@ -423,11 +428,6 @@ class ArchiveTask(APIView):
         # Required User so we can validate the lookup on owned tasks
         # Incompatible type for lookup 'owner': AnonymousUser
         assert isinstance(request.user, SimpleLazyObject)
-        # .user .DATA .auth
-        # print(request.user)
-        # print(type(request.user))
-        # print(dir(request.user))
-        # print("DATA",request.data)
         serializer = TaskIdListSerializer(data=request.data)
         if serializer.is_valid():
             received_task_ids = serializer.validated_data["task_ids"]

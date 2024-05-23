@@ -188,7 +188,7 @@ LOGGING = {
 
 # Application's log directory
 
-PYMAP_LOGDIR = None
+PYMAP_LOGDIR = "pymap_logs"
 
 # Custom settings
 PYMAP_SETTINGS: Dict[str, str] = {}
@@ -198,7 +198,7 @@ def load_settings_file() -> None:
     """
     Load custom settings from a JSON file.
     """
-    global PYMAP_SETTINGS, LOGGING
+    global PYMAP_SETTINGS, LOGGING, ALLOWED_HOSTS
     config_file = "config.json" if DJANGO_ENV == "production" else "config.dev.json"
     custom_settings = {}
     try:
@@ -226,14 +226,19 @@ def load_settings_file() -> None:
     if isinstance(databases_config, dict) and len(databases_config) > 0:
         DATABASES.update(databases_config)
 
+    new_hosts = custom_settings.get("ALLOWED_HOSTS", [])
+
+    if isinstance(new_hosts, List) and len(new_hosts) > 0:
+        ALLOWED_HOSTS = new_hosts
+
     # Store custom settings under a specific key in PYMAP_SETTINGS
     # I don't think anything besides the app should access the database settings
-    # so they are excluded for now
+    # so they are excluded for now, we also exclude secret key and other useless data
     PYMAP_SETTINGS.update(
         {
             k: v
             for k, v in custom_settings.items()
-            if k not in ["DATABASES", "SECRET", "SECRET_KEY"]
+            if k not in ["DATABASES", "SECRET", "SECRET_KEY", "ALLOWED_HOSTS"]
         }
     )
 
@@ -303,7 +308,7 @@ def check_log_directory() -> None:
     global PYMAP_LOGDIR
     _default = "/var/log/pymap" if DJANGO_ENV == "production" else "pymap_logs"
     _env = os.environ.get("PYMAP_LOGDIR", None)
-    PYMAP_LOGDIR = _env if _env else PYMAP_SETTINGS.get("LOGDIR", _default)
+    PYMAP_LOGDIR = _env if _env else PYMAP_SETTINGS.get("PYMAP_LOGDIR", _default)
     # Just to ease usage in development
     if DJANGO_ENV == "development":
         Path(PYMAP_LOGDIR).mkdir(parents=True, exist_ok=True)

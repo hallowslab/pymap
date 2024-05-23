@@ -17,7 +17,7 @@
             "date_changed": "2024-01-01T00:00:00+00:00",
             "description": "",
             "crontab_id": null,
-            "interval_id": 1,
+            "interval_id": 4,
             "solar_id": null,
             "start_time": "2024-01-01T00:00:00+00:00",
             "priority": null,

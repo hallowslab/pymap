@@ -13,7 +13,7 @@
             <tr>
                 <th></th>
                 <th>ID</th>
-                <th>Running</th>
+                <th>Finished</th>
                 <th>Source</th>
                 <th>Destination</th>
                 <th>Nº Accounts</th>
@@ -136,7 +136,14 @@
         // Function to initialize the DataTable with server-side processing
         const initializeDataTable = () => {
             tasksTable = $('#tasksTable').DataTable({
-                dom: 'Bfrtip',
+                dom: '<"top"B><"second"lf><"clear">tipr',
+                serverSide: true,
+                ordering: true,
+                order: [[1, 'desc']],
+                scrollX: true,
+                scrollY: true,
+                pageLength: 15,
+                responsive: true,
                 buttons: {
                     dom: {
                         button: {
@@ -188,9 +195,6 @@
                         },
                     ],
                 },
-                
-                serverSide: true,
-                processing: true,
                 ajax: {
                     url: '/api/tasks/list/',
                     type: 'GET',
@@ -205,7 +209,7 @@
                 ],
                 columns: [
                 {data: null, width:'50px', orderable: false},
-                {data: 'task_id', width: '300px', "searchable": true},
+                {data: 'task_id', width: '100px', "searchable": true},
                 {data: 'finished', width: '100px', "searchable": true},
                 {data: 'source', width: '150px', "searchable": true},
                 {data: 'destination', width: '150px', "searchable": true},
@@ -219,15 +223,7 @@
                 select: {
                     style: 'multi+shift',
                     selector: 'td:first-child'
-                },
-                ordering: true,
-                order: [[1, 'desc']],
-                scrollX: true,
-                scrollY: true,
-                paging: true,
-                pageLength: 15,
-                searching: true,
-                responsive: true
+                }
             });
         };
         
@@ -244,6 +240,31 @@
         margin-left: -6px;
         text-align: center;
         line-height: 1;
+    }
+
+    .dataTables_wrapper .top {
+        display: flex;
+        justify-content: start;
+        margin-bottom: 1em;
+    }
+
+    .dataTables_wrapper .second {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1em;
+    }
+
+    .dt-buttons {
+        display: flex;
+        justify-content: center;
+    }
+
+    .dataTables_length {
+        float: left;
+    }
+
+    .dataTables_filter {
+        float: right;
     }
 </style>
 {% endblock %}

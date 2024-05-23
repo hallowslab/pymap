@@ -104,12 +104,16 @@ RUN chmod 600 ./.pgpass
 RUN echo "$SECRET_KEY" > ./.secret
 RUN chmod 600 ./.secret
 
-# copy the project
-COPY ./src/ ./
+# Copy the project files
+COPY ./src/pyproject.toml ./
+COPY ./src/poetry.lock ./
 
 # Install dependecies trough poetry
 RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \
     --no-interaction --no-ansi --sync
+
+# Copy the source code
+COPY ./src/ ./
 
 # celery -A pymap.celery worker -E --pool=gevent --statedb=celery/working.state"
 CMD ["sh", "-c", "sleep 5 && $(poetry env info --path)/bin/celery -A pymap.celery worker -l INFO --concurrency=500 --pool=gevent"]

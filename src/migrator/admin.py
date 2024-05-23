@@ -15,7 +15,7 @@ class TaskAdmin(admin.ModelAdmin):
     actions = ["archive_selected"]
 
     @admin.action(description="Archive selected tasks")
-    def archive_selected(self, request, queryset):
+    def archive_selected(self, request, queryset) -> None:
         for task in queryset:
             try:
                 result = TaskResult.objects.filter(task_id=task.task_id)
