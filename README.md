@@ -72,9 +72,10 @@ The environment variable that can be defined will take precedence when loading t
 
 There are 2 configuration files, for development config.dev.json, and for production config.json. You should always use the config.json unless you are developing or running the application in debug mode.
 
-There are only 4 directives that you should be aware of (one being optional):
+There are only a few directives that you should be aware of:
 1. PYMAP_LOGDIR - Specifies the application log directory, can also be set in an environment variable like described previously
-2. HOSTS - A list "[]" of lists [[...],[...]] in which the inner most elements are 2 strings (pieces of text), the first string is a regular expression of what **to match** and the second one is the piece of text to be appended to the matched string, they match the source and destination inputs on the application. So taking as example the strings in the config below "^(VPS|SV)$",".example.com" if a user inserts either VPS or SV in the source and/or destination, it considers it as VPS.example.com or SV.example.com
+5. ALLOWED_HOSTS - A list of strings `["127.0.0.1", "localhost"]` that specifies which hosts the app can be accessed from.
+2. HOSTS - A list `[]` of lists `[[...],[...]]` in which the inner most elements are 2 strings (pieces of text), the first string is a regular expression of what **to match** and the second one is the piece of text to be appended to the matched string, they match the source and destination inputs on the application. So taking as example the strings in the config below "^(VPS|SV)$",".example.com" if a user inserts either VPS or SV in the source and/or destination, it considers it as VPS.example.com or SV.example.com
 3. Databases - You should only change the service to the name defined in your [postgresql service file](https://www.postgresql.org/docs/9.1/libpq-pgservice.html) and the [passfile](https://www.postgresql.org/docs/current/libpq-pgpass.html) to the name of the one you create
 4. SECRET_KEY - Missing from the default configuration file, it's best to be created on the app's directory (src/.secret) read more in [Additional Info - .secret file](#secret-file)
 
@@ -82,6 +83,7 @@ There are only 4 directives that you should be aware of (one being optional):
 ```
 {
   "PYMAP_LOGDIR": "/var/log/pymap",
+  "ALLOWED_HOSTS": ["127.0.0.1", "localhost"],
   "HOSTS": [
     ["^(VPS|SV)$",".example.com"]
   ],
