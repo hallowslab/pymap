@@ -1,3 +1,4 @@
+from typing import Any
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError
 from django.contrib.auth.models import User
@@ -6,14 +7,11 @@ from django.contrib.auth.models import User
 class Command(BaseCommand):
     help = "Adds an administrator for the app in case no users exist"
 
-    def handle(self, *args, **options):
+    def handle(self, *args: object, **options: Any) -> None:
         if User.objects.count() > 0:
-            self.stdout.write(
-                self.style.ERROR(
-                    "Cannot instantiate admin when there are already users present in the database"
-                )
+            raise CommandError(
+                "Cannot instantiate admin when there are already users present in the database"
             )
-            return
         username = "pymin"
         email = "pymap@localhost"
         password = "CHANGEME!"

@@ -26,7 +26,7 @@ class Command(BaseCommand):
             "--wait-time",
             type=int,
             default=5,
-            choices=range(5, 10),
+            choices=range(5, 11),
             help="Time to wait between the requests",
         )
         parser.add_argument(
