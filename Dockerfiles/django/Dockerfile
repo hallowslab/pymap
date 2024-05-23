@@ -85,8 +85,9 @@ RUN chmod 600 ./.pgpass
 RUN echo "$SECRET_KEY" > ./.secret
 RUN chmod 600 ./.secret
 
-# copy the app
-COPY ./src ./
+# Copy the project files
+COPY ./src/pyproject.toml ./
+COPY ./src/poetry.lock ./
 
 COPY Dockerfiles/django/init.sh ./init.sh
 
@@ -94,8 +95,8 @@ COPY Dockerfiles/django/init.sh ./init.sh
 RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \
     --no-interaction --no-ansi --sync
 
-# Collect static assets
-#RUN poetry run python manage.py collectstatic
+# copy the app
+COPY ./src ./
 
 ENTRYPOINT [ "/home/pymap/app/init.sh" ]
 # For debbuging
