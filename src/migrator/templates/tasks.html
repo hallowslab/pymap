@@ -136,7 +136,7 @@
         // Function to initialize the DataTable with server-side processing
         const initializeDataTable = () => {
             tasksTable = $('#tasksTable').DataTable({
-                dom: 'Blftipr',
+                dom: '<"top"B><"second"lf><"clear">tipr',
                 serverSide: true,
                 ordering: true,
                 order: [[1, 'desc']],
@@ -240,6 +240,31 @@
         margin-left: -6px;
         text-align: center;
         line-height: 1;
+    }
+
+    .dataTables_wrapper .top {
+        display: flex;
+        justify-content: start;
+        margin-bottom: 1em;
+    }
+
+    .dataTables_wrapper .second {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1em;
+    }
+
+    .dt-buttons {
+        display: flex;
+        justify-content: center;
+    }
+
+    .dataTables_length {
+        float: left;
+    }
+
+    .dataTables_filter {
+        float: right;
     }
 </style>
 {% endblock %}
