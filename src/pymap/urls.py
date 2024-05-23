@@ -33,7 +33,7 @@ urlpatterns = [
         ),
         name="login",
     ),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("logout/", auth_views.LogoutView.as_view(next_page="/"), name="logout"),
     path(
         "password-change/",
         login_required(auth_views.PasswordChangeView.as_view(success_url="/account")),
