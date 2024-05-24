@@ -75,7 +75,7 @@
         const tailTimeoutInput = document.getElementById('tail-timeout')
         var tailCount = 100;
         var tailTimeout = 5;
-        const APIURL = `/api/tasks/{{task_id}}/{{log_file}}?tcount=${tailCount}&ttimeout=${tailTimeout}`;
+        const APIURL = `/api/tasks/{{task_id}}/{{filename}}?tcount=${tailCount}&ttimeout=${tailTimeout}`;
 
         try {
             const response = await fetch(APIURL);
