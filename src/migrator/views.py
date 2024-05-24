@@ -97,12 +97,12 @@ def task_details(request: HttpRequest, task_id: str) -> HttpResponse:
 
 
 @login_required
-def log_details(request: HttpRequest, task_id: str, log_file: str) -> HttpResponse:
+def log_details(request: HttpRequest, task_id: str, filename: str) -> HttpResponse:
     """
-    Renders individual log details template from task_id and log_file
+    Renders individual log details template from task_id and filename
     """
     return render(
-        request, "log_details.html", {"task_id": task_id, "log_file": log_file}
+        request, "log_details.html", {"task_id": task_id, "filename": filename}
     )
 
 

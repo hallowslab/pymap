@@ -14,7 +14,7 @@ urlpatterns = [
     path("tasks/", views.tasks, name="tasks"),
     path("tasks/<str:task_id>/", views.task_details, name="tasks-details"),
     path(
-        "tasks/<str:task_id>/<log:log_file>/",
+        "tasks/<str:task_id>/<log:filename>/",
         views.log_details,
         name="tasks-log-details",
     ),
