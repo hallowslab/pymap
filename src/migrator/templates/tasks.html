@@ -1,7 +1,7 @@
 {% extends 'structure/base.html' %}
 
 {% block script %}
-    {% include 'structure/datatables.html' %}
+{% include 'structure/datatables.html' %}
 {% endblock %}
 
 {% block content %}
@@ -38,7 +38,7 @@
     function handleArchive(e,dt,node,config) {
         //e.disabled = true
         let selection = listSelected(dt);
-        if (Object.keys(selection).length>0) {
+        if (Object.keys(selection["task_ids"]).length>0) {
             console.debug("Requesting archival of", selection);
             postRequest('archive', selection)
             .then(result=>{
@@ -56,7 +56,7 @@
     
     function handleCancel(e,dt,node,config) {
         let selection = listSelected(dt);
-        if (Object.keys(selection).length>0) {
+        if (Object.keys(selection["task_ids"]).length>0) {
             console.log("Trying to stop the following task(s)", selection)
             postRequest('cancel', selection)
             .then(result=>{
@@ -73,7 +73,7 @@
     
     function handleDelete(e,dt,node,config) {
         let selection = listSelected(dt);
-        if (Object.keys(selection).length>0) {
+        if (Object.keys(selection["task_ids"]).length>0) {
             console.log("Requesting deletion of", selection)
             postRequest('delete', selection)
             .then(result=>{
@@ -87,11 +87,11 @@
             console.debug("Selection is:", selection)
         }
     }
-
+    
     function handleShowOwnedOnly(e, dt, node, config) {
         // Toggle the show_owned_only parameter
         showOwnedOnly = !showOwnedOnly;
-
+        
         // Redraw the table with the new parameters
         dt.ajax.reload();
     }
@@ -100,7 +100,7 @@
         const selectionArray = dt.rows( { selected: true } ).data().toArray();
         return {"task_ids": selectionArray.map(item=>item["task_id"])}
     }
-
+    
     const postRequest = (endpoint, idList) => {
         const APIURL = `/api/tasks/${endpoint}/`;
         const data = {
@@ -111,19 +111,19 @@
             },
             body: JSON.stringify(idList),
         };
-
+        
         return fetch(APIURL, data)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .catch(error => {
-                console.error(`Fetch error: ${error.message}`);
-                // Handle other errors as needed
-                throw error;
-            });
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .catch(error => {
+            console.error(`Fetch error: ${error.message}`);
+            // Handle other errors as needed
+            throw error;
+        });
     };
     
     // Datatable row onClick
@@ -138,7 +138,7 @@
         }
     });
     
-    $(document).ready(function () {
+    $(document).ready(() => {
         // Function to initialize the DataTable with server-side processing
         const initializeDataTable = () => {
             tasksTable = $('#tasksTable').DataTable({
@@ -157,53 +157,53 @@
                         }
                     },
                     buttons: [
-                        {
-                            text: 'My tasks',
-                            action: handleShowOwnedOnly,
-                            className: 'btn-info'
+                    {
+                        text: 'My tasks',
+                        action: handleShowOwnedOnly,
+                        className: 'btn-info'
+                    },
+                    {
+                        text: 'Archive',
+                        action: handleArchive,
+                        className: 'btn-success'
+                    },
+                    {
+                        text: 'Cancel',
+                        action: handleCancel,
+                        className: 'btn-warning'
+                    },
+                    {
+                        text: 'Delete',
+                        action: handleDelete,
+                        className: 'btn-danger {% if not user.is_staff %} disabled {% endif %}'
+                    },
+                    {
+                        extend: 'copy',
+                        text: 'Copy ID(s)',
+                        customize: (copy) => {
+                            // Get ID header text
+                            let header = $('#tasksTable thead tr th:nth-child(2)').text()
+                            console.debug(`Selected header text: ${header}`)
+                            
+                            // Get selected rows data
+                            var selectedData = tasksTable.rows({ selected: true }).data().toArray();
+                            console.debug(`Selected rows data: ${selectedData}`)
+                            
+                            // Extract data from the second column of the selected rows
+                            var columnData = selectedData.map(function (row) {
+                                return row["task_id"]; // Assuming the second column contains the desired data
+                            }).join('\n');
+                            
+                            console.debug(`Column data: ${columnData}`)
+                            // Combine header and column data
+                            var customData = header + '\n' + columnData;
+                            
+                            console.debug(`Output: ${customData}`)
+                            // Return the custom data
+                            return customData;
                         },
-                        {
-                            text: 'Archive',
-                            action: handleArchive,
-                            className: 'btn-success'
-                        },
-                        {
-                            text: 'Cancel',
-                            action: handleCancel,
-                            className: 'btn-warning'
-                        },
-                        {
-                            text: 'Delete',
-                            action: handleDelete,
-                            className: 'btn-danger {% if not user.is_staff %} disabled {% endif %}'
-                        },
-                        {
-                            extend: 'copy',
-                            text: 'Copy ID(s)',
-                            customize: (copy) => {
-                                // Get ID header text
-                                let header = $('#tasksTable thead tr th:nth-child(2)').text()
-                                console.debug(`Selected header text: ${header}`)
-
-                                 // Get selected rows data
-                                var selectedData = tasksTable.rows({ selected: true }).data().toArray();
-                                console.debug(`Selected rows data: ${selectedData}`)
-
-                                // Extract data from the second column of the selected rows
-                                var columnData = selectedData.map(function (row) {
-                                    return row["task_id"]; // Assuming the second column contains the desired data
-                                }).join('\n');
-                                    
-                                console.debug(`Column data: ${columnData}`)
-                                // Combine header and column data
-                                var customData = header + '\n' + columnData;
-                                
-                                console.debug(`Output: ${customData}`)
-                                // Return the custom data
-                                return customData;
-                            },
-                            className: 'btn-info'
-                        },
+                        className: 'btn-info'
+                    },
                     ],
                 },
                 ajax: {
@@ -258,28 +258,28 @@
         text-align: center;
         line-height: 1;
     }
-
+    
     .dataTables_wrapper .top {
         display: flex;
         justify-content: start;
         margin-bottom: 1em;
     }
-
+    
     .dataTables_wrapper .second {
         display: flex;
         justify-content: space-between;
         margin-bottom: 1em;
     }
-
+    
     .dt-buttons {
         display: flex;
         justify-content: center;
     }
-
+    
     .dataTables_length {
         float: left;
     }
-
+    
     .dataTables_filter {
         float: right;
     }
