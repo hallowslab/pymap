@@ -1,24 +1,24 @@
 {% extends 'structure/base.html' %}
 
 {% block script %}
-    {% include 'structure/datatables.html' %}
+{% include 'structure/datatables.html' %}
 {% endblock %}
 
 {% block content %}
 
 <style>
     .copy-btn {
-            cursor: pointer;
-            color: blue;
-            text-decoration: underline;
-            display: inline;
-            padding: 5px 8px;
-            border-radius: 50px;
-            margin-left: 10px;
-        }
-        .copy-btn:hover {
-            background-color: lightblue;
-        }
+        cursor: pointer;
+        color: blue;
+        text-decoration: underline;
+        display: inline;
+        padding: 5px 8px;
+        border-radius: 50px;
+        margin-left: 10px;
+    }
+    .copy-btn:hover {
+        background-color: lightblue;
+    }
 </style>
 
 <div class="container mt-3 pb-5">
@@ -55,19 +55,19 @@
     });
     
     document.addEventListener('DOMContentLoaded', (event) => {
-            document.getElementById('copy-btn').addEventListener('click', function() {
-                var taskId = $('#task-id').text();
-
-                // Use the Clipboard API to copy text
-                window.navigator.clipboard.writeText(taskId).then(function() {
-                    // Optionally, show a message or provide feedback to the user
-                    alert('Copied task ID: ' + taskId);
-                }).catch(function(error) {
-                    console.error('Failed to copy text: ', error);
-                });
+        document.getElementById('copy-btn').addEventListener('click', function() {
+            var taskId = $('#task-id').text();
+            
+            // Use the Clipboard API to copy text
+            window.navigator.clipboard.writeText(taskId).then(function() {
+                // Optionally, show a message or provide feedback to the user
+                alert('Copied task ID: ' + taskId);
+            }).catch(function(error) {
+                console.error('Failed to copy text: ', error);
             });
         });
-
+    });
+    
     $(document).ready(function () {
         // Function to initialize the DataTable with server-side processing
         const initializeDataTable = () => {
