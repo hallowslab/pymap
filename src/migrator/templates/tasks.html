@@ -33,9 +33,9 @@
 <script>
     // Defined above all scopes so it can be accessed in other functions
     var tasksTable;
+    let showOwnedOnly = false;
     // Placeholder functions for button click handlers
     function handleArchive(e,dt,node,config) {
-        return
         //e.disabled = true
         let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
@@ -55,7 +55,6 @@
     }
     
     function handleCancel(e,dt,node,config) {
-        return
         let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
             console.log("Trying to stop the following task(s)", selection)
@@ -73,7 +72,6 @@
     }
     
     function handleDelete(e,dt,node,config) {
-        return
         let selection = listSelected(dt);
         if (Object.keys(selection).length>0) {
             console.log("Requesting deletion of", selection)
@@ -88,6 +86,14 @@
             alert("You need to select items in order to delete them")
             console.debug("Selection is:", selection)
         }
+    }
+
+    function handleShowOwnedOnly(e, dt, node, config) {
+        // Toggle the show_owned_only parameter
+        showOwnedOnly = !showOwnedOnly;
+
+        // Redraw the table with the new parameters
+        dt.ajax.reload();
     }
     
     function listSelected(dt) {
@@ -152,19 +158,24 @@
                     },
                     buttons: [
                         {
+                            text: 'My tasks',
+                            action: handleShowOwnedOnly,
+                            className: 'btn-info'
+                        },
+                        {
                             text: 'Archive',
                             action: handleArchive,
-                            className: 'btn-success disabled'
+                            className: 'btn-success'
                         },
                         {
                             text: 'Cancel',
                             action: handleCancel,
-                            className: 'btn-warning disabled'
+                            className: 'btn-warning'
                         },
                         {
                             text: 'Delete',
                             action: handleDelete,
-                            className: 'btn-danger disabled'
+                            className: 'btn-danger {% if not user.is_staff %} disabled {% endif %}'
                         },
                         {
                             extend: 'copy',
@@ -198,6 +209,12 @@
                 ajax: {
                     url: '/api/tasks/list/',
                     type: 'GET',
+                    data: function (d) {
+                        // Merge additional parameters into the AJAX data
+                        return $.extend({}, d, {
+                            show_owned_only: showOwnedOnly  // Pass the parameter value
+                        });
+                    }
                 },
                 columnDefs: [
                 {
