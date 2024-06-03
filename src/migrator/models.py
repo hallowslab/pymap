@@ -80,7 +80,7 @@ def delete_related_files(
         # When django-db is the result backend we need to get the result from the TaskResult model
         # and call delete
         try:
-            result = TaskResult.objects.filter(task_id=instance.task_id)
+            result = TaskResult.objects.get(task_id=instance.task_id)
             result.delete()
         except Exception as e:
             logger.critical("Unhandled exception %s", e, exc_info=True)
