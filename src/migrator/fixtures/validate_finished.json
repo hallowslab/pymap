@@ -1,11 +1,11 @@
 [
     {
         "model": "django_celery_beat.PeriodicTask",
-        "pk": 2,
+        "pk": 3,
         "fields": {
-            "name": "Purge old results",
-            "task": "migrator.tasks.purge_results",
-            "args": "[1,0,0]",
+            "name": "Validate Finished Tasks",
+            "task": "migrator.tasks.validate_finished",
+            "args": "[]",
             "kwargs": "{}",
             "queue": null,
             "exchange": null,
@@ -15,9 +15,9 @@
             "last_run_at": null,
             "total_run_count": 0,
             "date_changed": "2024-01-01T00:00:00+00:00",
-            "description": "Task to be run periodically so that old results get purged from the database",
+            "description": "Task that checks for non running tasks for which the field finished is still set to False",
             "crontab_id": null,
-            "interval_id": 4,
+            "interval_id": 5,
             "solar_id": null,
             "start_time": "2024-01-01T00:00:00+00:00",
             "priority": null,
