@@ -51,6 +51,9 @@ This setup focus on running the app natively on a linux environment, the app sho
 - Create a config file in `pymap/src/config.json`, You can copy it from the existing templates config*-template.json and modify the settings accordingly, more info in [Addtional Info - Config File](#config-file)
 - From the project's root where the file docker-compose.yml is located, run the command `docker compose --env-file .env build` to build the containers and then `docker compose up -d` to start them in the background, or in a single command `docker compose --env-file .env up --build -d`
 
+- To start the included flower monitor for celery include `--profile flower`
+  `docker compose --profile flower --env-file .env up --build -d`
+
 To remove containers/volumes and images:
 
 * `docker rm -vf $(docker images -aq)` - Removes all containers and volumes
@@ -61,12 +64,24 @@ To remove containers/volumes and images:
 ## Environment Variables:
 The environment variable that can be defined will take precedence when loading the settings for the application, so if you defined LOGDIR in both config.json and .env file the one defined in .env will be used
 
+* POSTGRES_USER=USER # The user that is created in the postgres image and defined pgsecret and pgconf files, for barebones you need to create the specific files and define the postgres variables there
+* POSTGRES_PASSWORD=PASS # Password for the user mentioned above
+* POSTGRES_DB=pymap # Database for the migrator app
+* POSTGRES_HOST=postgres # postgres instance hostname as defined in compose.yml
+* POSTGRES_PORT=5432 # The port for the postgres instance
 * DJANGO_ENV=production # This defines if the app is running in production or development mode, development mode is unsafe to run in an environment exposed to the web
 * DJANGO_SETTINGS_MODULE=pymap.settings # Defines the app settings modules to be used, should not be changed, the configs are set in the json file
 * STATIC_ROOT=/var/www/static # The path to collect the static files from the app (javascript, css and html), needs to be writable by the app user
 * CELERY_BROKER_URL=redis://localhost:6379/0 # The URL of the redis instance that will be used for the background tasks handling <b>*can be set in config/optional</b>
 * CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task <b>*can be set in config/optional</b>
 * PYMAP_LOGDIR=/var/log/pymap # Directory for the application's log files <b>*can be set in config/optional</b>
+* SECRET_KEY="" # This should not be stored as an environment variable and instead be defined in a .secret file in the /src directory
+* GROUPNAME=pymap # Groupname for the shared directories in the containers
+* GID=1001 # Group id for the shared directories in the containers
+
+* WORKER_REPLICAS=2 # Optional (defaults to 1), how many instances of celery-worker should be deployed
+* FLOWER_ADMIN="USER" # Optional (only used in flower profile), Admin user for flower management interface.
+* FLOWER_PASSWORD="PASS" # Optional (only used in flower profile), Admin password for flower management interface.
 
 ## Config File
 

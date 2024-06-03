@@ -7,9 +7,10 @@ from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ObjectDoesNotExist
 from celery.result import AsyncResult
 from django_celery_results.models import TaskResult
+
 
 from django.conf import settings
 
@@ -34,11 +35,11 @@ class CeleryTask(models.Model):
 
     id = models.AutoField(primary_key=True)
     task_id = models.CharField(max_length=255)  # Adjust the max_length as needed
-    source = models.CharField(max_length=100)
-    destination = models.CharField(max_length=100)
+    source = models.CharField(max_length=255)
+    destination = models.CharField(max_length=255)
     log_path = models.CharField(max_length=255)  # Adjust the max_length as needed
     n_accounts = models.IntegerField()
-    domains = models.CharField(max_length=100, null=True, blank=True)
+    domains = models.TextField(null=True, blank=True)
     archived = models.BooleanField(default=False)
     finished = models.BooleanField(default=False)
     start_time = models.DateTimeField(auto_now_add=True, blank=True)
@@ -80,7 +81,11 @@ def delete_related_files(
         # When django-db is the result backend we need to get the result from the TaskResult model
         # and call delete
         try:
-            result = TaskResult.objects.filter(task_id=instance.task_id)
+            result = TaskResult.objects.get(task_id=instance.task_id)
             result.delete()
+        except ObjectDoesNotExist:
+            logger.info(
+                "There are no stored result for the task ID: %s", instance.task_id
+            )
         except Exception as e:
             logger.critical("Unhandled exception %s", e, exc_info=True)

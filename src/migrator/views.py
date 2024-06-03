@@ -85,7 +85,7 @@ def tasks(request: HttpRequest) -> HttpResponse:
     """
     Renders task list template
     """
-    return render(request, "tasks.html", {})
+    return render(request, "tasks.html")
 
 
 @login_required
@@ -233,12 +233,21 @@ class CeleryTaskList(ListCreateAPIView):
         logger.debug("Length: %s", length)
         logger.debug("Search Value: %s", search_value)
 
-        # Filtering based on search value
+        # Handle our custom parameters
+        show_owned_only = request.GET.get("show_owned_only", False)
+
+        # Get queryset
         queryset = self.filter_queryset(self.get_queryset())
+        # Filter by user tasks if enabled
+        if show_owned_only == "true":
+            queryset = queryset.filter(owner=request.user)
+        # Filtering based on search value
         if search_value != "":
             queryset = queryset.filter(
                 Q(task_id__icontains=search_value) | Q(domains__icontains=search_value)
             )
+        else:
+            queryset = queryset.filter(archived=False)
 
         # Total records without filtering
         total_records = self.get_queryset().count()
@@ -253,9 +262,6 @@ class CeleryTaskList(ListCreateAPIView):
         # We modify the ordering direction according to what django expects
         order_direction = "" if order_direction == "asc" else "-"
         order_column_name = request.GET.get(f"columns[{order_column_index}][data]")
-        logger.debug("Order index: %s", order_column_index)
-        logger.debug("Order direction: %s", order_direction)
-        logger.debug("Order name: %s", order_column_name)
 
         # Create an ordering string
         order_by_str = f"{order_direction}{order_column_name}"
@@ -292,7 +298,6 @@ class CeleryTaskDetails(APIView):
     def get(
         self, request: APIRequest, task_id: str, format: Optional[str] = None
     ) -> JsonResponse:
-        config = settings.PYMAP_SETTINGS
         log_directory: Optional[str] = settings.PYMAP_LOGDIR
         all_logs = []
 
@@ -376,7 +381,6 @@ class CeleryTaskLogDetails(APIView):
         format: Optional[str] = None,
     ) -> JsonResponse:
         logger.debug(f"Got request for task {task_id} logs")
-        config = settings.PYMAP_SETTINGS
         log_directory: str = settings.PYMAP_LOGDIR
         tail_timeout: int = int(request.GET.get("ttimeout", 5))
         tail_count: int = int(request.GET.get("tcount", 100))
@@ -441,18 +445,18 @@ class ArchiveTask(APIView):
             # Check ownership for each task ID
             for task in tasks:
                 # Perform actions based on ownership
-                if user.is_superuser or task.owner.id == user.id:
+                if user.is_staff or task.owner == user:
+                    task.archived = True
+                    task.save()
                     logger.debug(
                         f"User {user.username} archived task with ID {task.task_id}"
                     )
-                    task.archived = True
-                    task.save()
-                    changes[task.task_id] = True
+                    changes[task.task_id] = "OK"
                 else:
                     logger.debug(
                         f"User {user.username} does not own task with ID {task.task_id}"
                     )
-                    changes[task.task_id] = False
+                    changes[task.task_id] = f"User {user.username} does not own task"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
@@ -480,7 +484,6 @@ class CancelTask(APIView):
             received_task_ids = serializer.validated_data["task_ids"]
 
             user = request.user
-            owner = User.objects.get(id=str(user.id))
             tasks = CeleryTask.objects.filter(task_id__in=received_task_ids)
             changes = {}
             logger.info(
@@ -489,17 +492,19 @@ class CancelTask(APIView):
             # Check ownership for each task ID
             for task in tasks:
                 # Perform actions based on ownership
-                if user.is_superuser or owner.id == user.id:
+                if user.is_staff or user == task.owner:
+                    celery_app.control.revoke(task.task_id, terminate=True)
                     logger.debug(
                         f"User {user.username} cancelled task with ID {task.task_id}"
                     )
-                    celery_app.control.revoke(task.task_id, terminate=True)
-                    changes[task.task_id] = True
+                    changes[task.task_id] = "OK"
                 else:
                     logger.debug(
                         f"User {user.username} does not own task with ID {task.task_id}"
                     )
-                    changes[task.task_id] = False
+                    changes[
+                        task.task_id
+                    ] = f"ERROR: User {user.username} does not own task"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
@@ -526,7 +531,7 @@ class DeleteTask(APIView):
 
             user = request.user
             # TODO: Add another group to allow others besides admins to delete tasks
-            if not user.is_superuser:
+            if not user.is_staff:
                 return JsonResponse(
                     {"error": f"User {user.username} does not have enough permissions"},
                     status=401,
@@ -536,13 +541,13 @@ class DeleteTask(APIView):
             logger.info(
                 f"User {user} requested deletion of the following tasks: {tasks}"
             )
-            # Check ownership for each task ID
             for task in tasks:
                 # Preserve the ID before deletion
                 task_id = task.task_id
-                logger.debug(f"User {user.username} deleted task with ID {task_id}")
+                msg = f"User {user.username} deleted task with ID {task_id}"
+                logger.debug(msg)
                 task.delete()
-                changes[task_id] = True
+                changes[task_id] = "OK"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
