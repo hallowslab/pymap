@@ -21,7 +21,9 @@ class Command(BaseCommand):
     ]
 
     def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument("-c","--count", type=int, default=5, help="Number of operations")
+        parser.add_argument(
+            "-c", "--count", type=int, default=5, help="Number of operations"
+        )
         parser.add_argument(
             "-u",
             "--user",

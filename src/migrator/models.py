@@ -84,6 +84,8 @@ def delete_related_files(
             result = TaskResult.objects.get(task_id=instance.task_id)
             result.delete()
         except ObjectDoesNotExist:
-            logger.info("There are no stored result for the task ID: %s", instance.task_id)
+            logger.info(
+                "There are no stored result for the task ID: %s", instance.task_id
+            )
         except Exception as e:
             logger.critical("Unhandled exception %s", e, exc_info=True)

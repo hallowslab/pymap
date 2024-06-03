@@ -448,10 +448,14 @@ class ArchiveTask(APIView):
                 if user.is_staff or task.owner == user:
                     task.archived = True
                     task.save()
-                    logger.debug(f"User {user.username} archived task with ID {task.task_id}")
+                    logger.debug(
+                        f"User {user.username} archived task with ID {task.task_id}"
+                    )
                     changes[task.task_id] = "OK"
                 else:
-                    logger.debug(f"User {user.username} does not own task with ID {task.task_id}")
+                    logger.debug(
+                        f"User {user.username} does not own task with ID {task.task_id}"
+                    )
                     changes[task.task_id] = f"User {user.username} does not own task"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
@@ -490,11 +494,17 @@ class CancelTask(APIView):
                 # Perform actions based on ownership
                 if user.is_staff or user == task.owner:
                     celery_app.control.revoke(task.task_id, terminate=True)
-                    logger.debug(f"User {user.username} cancelled task with ID {task.task_id}")
+                    logger.debug(
+                        f"User {user.username} cancelled task with ID {task.task_id}"
+                    )
                     changes[task.task_id] = "OK"
                 else:
-                    logger.debug(f"User {user.username} does not own task with ID {task.task_id}")
-                    changes[task.task_id] = f"ERROR: User {user.username} does not own task"
+                    logger.debug(
+                        f"User {user.username} does not own task with ID {task.task_id}"
+                    )
+                    changes[
+                        task.task_id
+                    ] = f"ERROR: User {user.username} does not own task"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
