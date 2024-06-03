@@ -65,8 +65,17 @@ def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
 
     for index, cmd in enumerate(cmd_list):
         logger.info("Task %s Scheduling %s", task_id, index)
+        # Some complex passwords or our regex/custom logic might fail to create a viable
+        # "command" string, in this case let shlex fail to avoid shell escapes
+        try:
+            split_cmd = shlex.split(cmd)
+        except ValueError:
+            logger.critical("Failed to parse and split the string received")
+            logger.debug("Received the following command string: %s", cmd, exc_info=True)
+            # Continue to the next iteration of the loop
+            continue
         n_cmd = subprocess.Popen(
-            shlex.split(cmd),
+            split_cmd,
             stdin=None,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -127,7 +136,8 @@ def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
     return {"status": "Executed all commands", "return_codes": finished_procs}
 
 
-@shared_task  # We expect strings due to the django admin scheduler
+# I'm not sure how the django admin scheduler passes the arguments, assuming as string
+@shared_task
 def purge_results(
     days: int = int("1"), hours: int = int("0"), minutes: int = int("0")
 ) -> None:
@@ -174,3 +184,19 @@ def purge_results(
             logger.warning("Task results backend is not configured to use django-db.")
         except Exception as e:
             logger.critical("Unhandled exception %s", e, exc_info=True)
+
+
+# Some tasks where not being set as finished, can also be run periodically
+# for tasks that may have crashed
+@shared_task
+def validate_finished()->None:
+    logger.info("Checking for non running unfinished tasks")
+    unfinished = CeleryTask.objects.filter(finished=False)
+    for task in unfinished:
+        # Check status to ensure task is not running:
+        # https://docs.celeryq.dev/en/latest/reference/celery.result.html#celery.result.AsyncResult.status
+        result=AsyncResult(task.task_id, app=celery_app)
+        if result.status in ["FAILURE", "SUCCESS"]:
+            logger.info("Setting task %s as finished", task.task_id)
+            task.finished = True
+            task.save()
