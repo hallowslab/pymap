@@ -246,6 +246,8 @@ class CeleryTaskList(ListCreateAPIView):
             queryset = queryset.filter(
                 Q(task_id__icontains=search_value) | Q(domains__icontains=search_value)
             )
+        else:
+            queryset = queryset.filter(archived=False)
 
         # Total records without filtering
         total_records = self.get_queryset().count()
@@ -443,18 +445,18 @@ class ArchiveTask(APIView):
             # Check ownership for each task ID
             for task in tasks:
                 # Perform actions based on ownership
-                if user.is_superuser or task.owner.id == user.id:
-                    logger.debug(
-                        f"User {user.username} archived task with ID {task.task_id}"
-                    )
+                if user.is_staff or task.owner == user:
+                    msg = f"User {user.username} archived task with ID {task.task_id}"
+                    logger.debug(msg)
                     task.archived = True
                     task.save()
-                    changes[task.task_id] = True
+                    changes[task.task_id] = msg
                 else:
-                    logger.debug(
+                    msg = (
                         f"User {user.username} does not own task with ID {task.task_id}"
                     )
-                    changes[task.task_id] = False
+                    logger.debug(msg)
+                    changes[task.task_id] = msg
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
@@ -482,7 +484,6 @@ class CancelTask(APIView):
             received_task_ids = serializer.validated_data["task_ids"]
 
             user = request.user
-            owner = User.objects.get(id=str(user.id))
             tasks = CeleryTask.objects.filter(task_id__in=received_task_ids)
             changes = {}
             logger.info(
@@ -491,17 +492,17 @@ class CancelTask(APIView):
             # Check ownership for each task ID
             for task in tasks:
                 # Perform actions based on ownership
-                if user.is_superuser or owner.id == user.id:
-                    logger.debug(
-                        f"User {user.username} cancelled task with ID {task.task_id}"
-                    )
+                if user.is_staff or user == task.owner:
+                    msg = f"User {user.username} cancelled task with ID {task.task_id}"
+                    logger.debug(msg)
                     celery_app.control.revoke(task.task_id, terminate=True)
-                    changes[task.task_id] = True
+                    changes[task.task_id] = msg
                 else:
-                    logger.debug(
+                    msg = (
                         f"User {user.username} does not own task with ID {task.task_id}"
                     )
-                    changes[task.task_id] = False
+                    logger.debug(msg)
+                    changes[task.task_id] = msg
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
@@ -528,7 +529,7 @@ class DeleteTask(APIView):
 
             user = request.user
             # TODO: Add another group to allow others besides admins to delete tasks
-            if not user.is_superuser:
+            if not user.is_staff:
                 return JsonResponse(
                     {"error": f"User {user.username} does not have enough permissions"},
                     status=401,
@@ -538,13 +539,13 @@ class DeleteTask(APIView):
             logger.info(
                 f"User {user} requested deletion of the following tasks: {tasks}"
             )
-            # Check ownership for each task ID
             for task in tasks:
                 # Preserve the ID before deletion
                 task_id = task.task_id
-                logger.debug(f"User {user.username} deleted task with ID {task_id}")
+                msg = f"User {user.username} deleted task with ID {task_id}"
+                logger.debug(msg)
                 task.delete()
-                changes[task_id] = True
+                changes[task_id] = msg
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
