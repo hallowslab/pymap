@@ -77,7 +77,7 @@ def call_system(self, cmd_list: List[str]) -> Dict[str, (str | FProc)]:
             # Continue to the next iteration of the loop
             continue
         n_cmd = subprocess.Popen(
-            split_cmd,
+            shlex.split(cmd),
             stdin=None,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -198,6 +198,22 @@ def validate_finished() -> None:
         # Check status to ensure task is not running:
         # https://docs.celeryq.dev/en/latest/reference/celery.result.html#celery.result.AsyncResult.status
         result = AsyncResult(task.task_id, app=celery_app)
+        if result.status in ["FAILURE", "SUCCESS"]:
+            logger.info("Setting task %s as finished", task.task_id)
+            task.finished = True
+            task.save()
+
+
+# Some tasks where not being set as finished, can also be run periodically
+# for tasks that may have crashed
+@shared_task
+def validate_finished()->None:
+    logger.info("Checking for non running unfinished tasks")
+    unfinished = CeleryTask.objects.filter(finished=False)
+    for task in unfinished:
+        # Check status to ensure task is not running:
+        # https://docs.celeryq.dev/en/latest/reference/celery.result.html#celery.result.AsyncResult.status
+        result=AsyncResult(task.task_id, app=celery_app)
         if result.status in ["FAILURE", "SUCCESS"]:
             logger.info("Setting task %s as finished", task.task_id)
             task.finished = True
