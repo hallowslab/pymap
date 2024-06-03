@@ -85,7 +85,7 @@ def tasks(request: HttpRequest) -> HttpResponse:
     """
     Renders task list template
     """
-    return render(request, "tasks.html", {})
+    return render(request, "tasks.html")
 
 
 @login_required
