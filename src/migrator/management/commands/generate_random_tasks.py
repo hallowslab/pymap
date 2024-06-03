@@ -21,22 +21,31 @@ class Command(BaseCommand):
     ]
 
     def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument("--count", type=int, default=5, help="Number of operations")
+        parser.add_argument("-c","--count", type=int, default=5, help="Number of operations")
         parser.add_argument(
-            "--wait-time",
-            type=int,
-            default=5,
-            choices=range(5, 11),
-            help="Time to wait between the requests",
-        )
-        parser.add_argument(
+            "-u",
             "--user",
             type=str,
             default="",
             help="The user that will make the post requests (will be assigned as task.owner)",
         )
         parser.add_argument(
-            "--password", type=str, default="", help="The password for the user"
+            "-p", "--password", type=str, default="", help="The password for the user"
+        )
+        parser.add_argument(
+            "-wt",
+            "--wait-time",
+            type=int,
+            default=5,
+            choices=range(1, 11),
+            help="Time to wait between the requests",
+        )
+        parser.add_argument(
+            "-oc",
+            "--override-checks",
+            action="store_true",
+            default=False,
+            required=False,
         )
         return super().add_arguments(parser)
 
@@ -90,12 +99,15 @@ class Command(BaseCommand):
             return False
 
     def handle(self, *args: object, **options: Any) -> None:
-        if not self.redis_is_running():
-            self.stdout.write(self.style.ERROR(f"Error: Redis is not running"))
-            return
-        if not self.celery_worker_is_running():
-            self.stdout.write(self.style.ERROR(f"Error: Celery worker is not running"))
-            return
+        if not options["override_checks"]:
+            if not self.redis_is_running():
+                self.stdout.write(self.style.ERROR(f"Error: Redis is not running"))
+                return
+            if not self.celery_worker_is_running():
+                self.stdout.write(
+                    self.style.ERROR(f"Error: Celery worker is not running")
+                )
+                return
         count = options["count"]
         wait_time = float(options["wait_time"])
         # Check the arguments, (defaults to superuser, password may need to be updated/provided)
