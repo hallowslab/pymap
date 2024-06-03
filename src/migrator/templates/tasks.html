@@ -6,7 +6,8 @@
 
 {% block content %}
 
-<div class="container-fluid mt-3 pb-5 w-75">
+{% include 'structure/task_changed_modal.html' %}
+<div class="container-fluid mt-3 pb-5" style="width: 80%;">
     <h2>Latest tasks</h2>
     <table id="tasksTable" class="table">
         <thead>
@@ -34,7 +35,6 @@
     // Defined above all scopes so it can be accessed in other functions
     var tasksTable;
     let showOwnedOnly = false;
-    // Placeholder functions for button click handlers
     function handleArchive(e,dt,node,config) {
         //e.disabled = true
         let selection = listSelected(dt);
@@ -44,6 +44,8 @@
             .then(result=>{
                 console.log('Accepted:', result.message);
                 console.log('The following tasks where changed:', result.tasks);
+                dt.ajax.reload();
+                showModal(result.tasks);
             }).catch(error=>{
                 console.error('Error caught:', error.message);
             })
@@ -62,6 +64,8 @@
             .then(result=>{
                 console.log('Accepted:', result.message);
                 console.log('The following tasks where changed:', result.tasks);
+                dt.ajax.reload();
+                showModal(result.tasks);
             }).catch(error=>{
                 console.error('Error caught:', error.message);
             })
@@ -79,6 +83,8 @@
             .then(result=>{
                 console.log('Accepted:', result.message);
                 console.log('The following tasks where changed:', result.tasks);
+                dt.ajax.reload();
+                showModal(result.tasks);
             }).catch(error=>{
                 console.error("Error caught:", error.message)
             })
@@ -96,9 +102,26 @@
         dt.ajax.reload();
     }
     
-    function listSelected(dt) {
+    const listSelected = (dt) => {
         const selectionArray = dt.rows( { selected: true } ).data().toArray();
         return {"task_ids": selectionArray.map(item=>item["task_id"])}
+    }
+
+    const showModal = (content) => {
+        let taskChangedModal = document.getElementById("taskChangedModal");
+        let modalBody = taskChangedModal.querySelector(".modal-body");
+        modalBody.innerHTML = '';
+
+        for (const [key, value] of Object.entries(content)) {
+            modalBody.innerHTML += `<p><strong>${key}:</strong> ${value}</p>`;
+        }
+
+        var modal = new bootstrap.Modal(taskChangedModal);
+        if (modal) {
+            modal.show();
+        } else {
+            console.error("No modal active")
+        }
     }
     
     const postRequest = (endpoint, idList) => {
