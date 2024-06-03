@@ -53,6 +53,9 @@ services:
         - SECRET_KEY
         - GROUPNAME
         - GID
+    deploy:
+      mode: replicated
+      replicas: ${WORKER_REPLICAS:-1}
     depends_on:
       redis:
         condition: service_started
@@ -64,12 +67,27 @@ services:
 
   celery-beat:
     <<: *celery_worker
+    deploy:
+      mode: global
     entrypoint: /bin/bash -c "sleep 10 && poetry run celery -A pymap.celery beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler -f $PYMAP_LOGDIR/celery-beat.log"
     depends_on:
       - celery-worker
     volumes:
       - shared_logs:$PYMAP_LOGDIR
     user: "1001:$GID"  # UID:GID for user
+    group_add:
+      - $GROUPNAME
+
+  celery-flower:
+    <<: *celery_worker
+    deploy:
+      mode: global
+    profiles:
+      - flower
+    entrypoint: /bin/bash -c "poetry run celery -A pymap.celery flower --basic-auth='$FLOWER_ADMIN:$FLOWER_PASSWORD' --address='0.0.0.0'"
+    user: "1001:$GID"  # UID:GID for user
+    ports:
+      - 5555:5555
     group_add:
       - $GROUPNAME
 
