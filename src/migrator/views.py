@@ -446,17 +446,13 @@ class ArchiveTask(APIView):
             for task in tasks:
                 # Perform actions based on ownership
                 if user.is_staff or task.owner == user:
-                    msg = f"User {user.username} archived task with ID {task.task_id}"
-                    logger.debug(msg)
                     task.archived = True
                     task.save()
-                    changes[task.task_id] = msg
+                    logger.debug(f"User {user.username} archived task with ID {task.task_id}")
+                    changes[task.task_id] = "OK"
                 else:
-                    msg = (
-                        f"User {user.username} does not own task with ID {task.task_id}"
-                    )
-                    logger.debug(msg)
-                    changes[task.task_id] = msg
+                    logger.debug(f"User {user.username} does not own task with ID {task.task_id}")
+                    changes[task.task_id] = f"User {user.username} does not own task"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
@@ -493,16 +489,12 @@ class CancelTask(APIView):
             for task in tasks:
                 # Perform actions based on ownership
                 if user.is_staff or user == task.owner:
-                    msg = f"User {user.username} cancelled task with ID {task.task_id}"
-                    logger.debug(msg)
                     celery_app.control.revoke(task.task_id, terminate=True)
-                    changes[task.task_id] = msg
+                    logger.debug(f"User {user.username} cancelled task with ID {task.task_id}")
+                    changes[task.task_id] = "OK"
                 else:
-                    msg = (
-                        f"User {user.username} does not own task with ID {task.task_id}"
-                    )
-                    logger.debug(msg)
-                    changes[task.task_id] = msg
+                    logger.debug(f"User {user.username} does not own task with ID {task.task_id}")
+                    changes[task.task_id] = f"ERROR: User {user.username} does not own task"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
@@ -545,7 +537,7 @@ class DeleteTask(APIView):
                 msg = f"User {user.username} deleted task with ID {task_id}"
                 logger.debug(msg)
                 task.delete()
-                changes[task_id] = msg
+                changes[task_id] = "OK"
             return JsonResponse(
                 {"message": "Request accepted", "tasks": changes}, status=200
             )
