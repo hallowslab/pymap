@@ -233,8 +233,15 @@ class CeleryTaskList(ListCreateAPIView):
         logger.debug("Length: %s", length)
         logger.debug("Search Value: %s", search_value)
 
-        # Filtering based on search value
+        # Handle our custom parameters
+        show_owned_only = request.GET.get("show_owned_only", False)
+
+        # Get queryset
         queryset = self.filter_queryset(self.get_queryset())
+        # Filter by user tasks if enabled
+        if show_owned_only == "true":
+            queryset = queryset.filter(owner=request.user)
+        # Filtering based on search value
         if search_value != "":
             queryset = queryset.filter(
                 Q(task_id__icontains=search_value) | Q(domains__icontains=search_value)
@@ -253,9 +260,6 @@ class CeleryTaskList(ListCreateAPIView):
         # We modify the ordering direction according to what django expects
         order_direction = "" if order_direction == "asc" else "-"
         order_column_name = request.GET.get(f"columns[{order_column_index}][data]")
-        logger.debug("Order index: %s", order_column_index)
-        logger.debug("Order direction: %s", order_direction)
-        logger.debug("Order name: %s", order_column_name)
 
         # Create an ordering string
         order_by_str = f"{order_direction}{order_column_name}"
@@ -292,7 +296,6 @@ class CeleryTaskDetails(APIView):
     def get(
         self, request: APIRequest, task_id: str, format: Optional[str] = None
     ) -> JsonResponse:
-        config = settings.PYMAP_SETTINGS
         log_directory: Optional[str] = settings.PYMAP_LOGDIR
         all_logs = []
 
@@ -376,7 +379,6 @@ class CeleryTaskLogDetails(APIView):
         format: Optional[str] = None,
     ) -> JsonResponse:
         logger.debug(f"Got request for task {task_id} logs")
-        config = settings.PYMAP_SETTINGS
         log_directory: str = settings.PYMAP_LOGDIR
         tail_timeout: int = int(request.GET.get("ttimeout", 5))
         tail_count: int = int(request.GET.get("tcount", 100))
