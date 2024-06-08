@@ -38,8 +38,8 @@ class Command(BaseCommand):
             "--wait-time",
             type=int,
             default=5,
-            choices=range(1, 11),
-            help="Time to wait between the requests",
+            choices=range(1, 61),
+            help="Time(seconds) to wait between the requests",
         )
         parser.add_argument(
             "-oc",
