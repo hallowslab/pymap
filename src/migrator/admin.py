@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.contrib.admin import ModelAdmin
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
 from django.utils.translation import ngettext
 from celery.result import AsyncResult
@@ -11,7 +12,7 @@ from pymap import celery_app
 # Register your models here.
 
 
-class TaskAdmin(admin.ModelAdmin):
+class TaskAdmin(ModelAdmin):
     list_display = ["task_id", "source", "destination", "owner", "start_time"]
     ordering = ["-start_time"]
     actions = ["archive_selected"]
