@@ -13,11 +13,10 @@ from scripts.utils import generate_line_creds
 class Command(BaseCommand):
     help = "Populates the database by simulating sync requests"
     DOMAINS: List[str] = [
-        "example.com",
+        "example.lan",
         "example.tld",
-        "pymap.com",
-        "pymap.io",
         "pymap.lan",
+        "pymap.tld",
     ]
 
     def add_arguments(self, parser: CommandParser) -> None:
