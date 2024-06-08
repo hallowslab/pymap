@@ -25,7 +25,11 @@ class TaskAdmin(ModelAdmin):
                 result.get(timeout=5.0)
                 result.forget()
             except TimeoutError:
-                self.message_user.error(request, f"Failed to clear results for Task ID: {task.task_id}", messages.WARNING)
+                self.message_user(
+                    request,
+                    f"Failed to clear results for Task ID: {task.task_id}",
+                    messages.WARNING,
+                )
             try:
                 result = TaskResult.objects.get(task_id=task.task_id)
                 result.delete()
