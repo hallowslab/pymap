@@ -145,7 +145,7 @@ def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
 # I'm not sure how the django admin scheduler passes the arguments, assuming as string
 @shared_task
 def purge_results(
-    days: int = int("1"), hours: int = int("0"), minutes: int = int("0")
+    days: int = int("1"), hours: int = int("0"), minutes: int = int("0"), finished_field: str = "true"
 ) -> None:
     try:
         days = int(days)
@@ -162,6 +162,15 @@ def purge_results(
         hours = 0
         minutes = 0
     # Calculate the cutoff date
+    finished = False if finished_field == "false" else True 
+    logger.debug(f"""
+                 Values received from administration:
+                    Days: {days},
+                    Hours: {hours},
+                    Minutes: {minutes},
+                    finished_field<type>: {finished_field}<{type(finished_field)}]>,
+                    finished: {finished},
+                 """)
     td = timedelta(days=days, hours=hours, minutes=minutes)
     cutoff_date = datetime.now() - td
     logger.info("Starting purge of results older than: %s", td)
@@ -169,7 +178,7 @@ def purge_results(
     # Filter the queryset to get tasks older than the cutoff date
     # Avoid Purging results from running tasks, don't purge results from tasks that have already been purged
     tasks = CeleryTask.objects.filter(
-        start_time__lt=cutoff_date, finished=True, results_purged=False
+        start_time__lt=cutoff_date, finished=finished, results_purged=False
     )
     logger.info("We will try to purge %s results", len(tasks))
 
@@ -275,9 +284,7 @@ def validate_finished() -> None:
         # Status can be PENDING for unkown/deleted tasks
         elif async_result.status == "PENDING":
             try:
-                exists = _task_exists(task.task_id)
-                logger.debug("Task does not seem to exist in our queues")
-                return True
+                return _task_exists(task.task_id)
             except AttributeError:
                 logger.error(
                     "We are trying to access task ID in queues, but the response structure seems to have changed"
