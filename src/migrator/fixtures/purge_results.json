@@ -6,7 +6,7 @@
             "name": "Purge old results",
             "task": "migrator.tasks.purge_results",
             "args": "[1,0,0]",
-            "kwargs": "{}",
+            "kwargs": "{\"finished_field\": \"true\"}",
             "queue": null,
             "exchange": null,
             "routing_key": null,
