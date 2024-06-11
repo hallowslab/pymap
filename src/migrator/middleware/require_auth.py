@@ -1,5 +1,6 @@
 import logging
-from django.http.response import HttpResponseRedirect
+from django.http.response import HttpResponseRedirect, HttpResponse
+from django.http.request import HttpRequest
 from django.urls import reverse
 
 logger = logging.getLogger(__name__)
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 def staff_only(get_response):
     # One-time configuration and initialization.
 
-    def middleware(request):
+    def middleware(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
         admin_login_url: str = reverse("admin:login")
         admin_logout_url: str = reverse("admin:logout")
 

@@ -145,12 +145,14 @@ def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
 # I'm not sure how the django admin scheduler passes the arguments, assuming as string
 @shared_task
 def purge_results(
-    days: int = int("1"), hours: int = int("0"), minutes: int = int("0"), finished_field: str = "true"
+    days: int = int("1"),
+    hours: int = int("0"),
+    minutes: int = int("0"),
+    finished_field: str = "true",
 ) -> None:
+    td = timedelta(days=1, hours=0, minutes=0)
     try:
-        days = int(days)
-        hours = int(hours)
-        minutes = int(minutes)
+        td = timedelta(days=days, hours=hours, minutes=minutes)
     except ValueError:
         logger.error(
             "Invalid values passed to purge results: Days %s, Hours %s, Minutes %s",
@@ -158,20 +160,18 @@ def purge_results(
             hours,
             minutes,
         )
-        days = 1
-        hours = 0
-        minutes = 0
     # Calculate the cutoff date
-    finished = False if finished_field == "false" else True 
-    logger.debug(f"""
+    finished = False if finished_field == "false" else True
+    logger.debug(
+        f"""
                  Values received from administration:
                     Days: {days},
                     Hours: {hours},
                     Minutes: {minutes},
                     finished_field<type>: {finished_field}<{type(finished_field)}]>,
                     finished: {finished},
-                 """)
-    td = timedelta(days=days, hours=hours, minutes=minutes)
+                 """
+    )
     cutoff_date = datetime.now() - td
     logger.info("Starting purge of results older than: %s", td)
 
@@ -304,3 +304,29 @@ def validate_finished() -> None:
             logger.info("Setting task %s as finished", task.task_id)
             task.finished = True
             task.save()
+
+
+# This will be used to automate the archival of tasks by a certain date,
+# It should not be pre-configured and the admin must create a periodic task
+@shared_task
+def archive_older_than(
+    weeks: int = int("4"),
+    days: int = int("0"),
+    hours: int = int("0"),
+    minutes: int = int("0"),
+) -> None:
+    td = timedelta(weeks=4, days=0, hours=0, minutes=0)
+    try:
+        td = timedelta(weeks=weeks, days=days, hours=hours, minutes=minutes)
+    except ValueError:
+        logger.error(
+            "Invalid values passed to archive older tasks: Days %s, Hours %s, Minutes %s",
+            days,
+            hours,
+            minutes,
+        )
+        # Here we actually don't continue we might not want to archive by the default values
+        return
+    cutoff_date = datetime.now() - td
+    tasks = CeleryTask.objects.filter(start_time__lt=cutoff_date, finished=True)
+    tasks.update(archived=True)

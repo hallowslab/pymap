@@ -27,6 +27,8 @@
 
 <script>
     let intervalId = null; // Variable to store the interval ID
+    let tCount = 100;
+    let tTimeout = 5;
     
     const refreshListener = async (e)=>{
         if (intervalId === null) {
@@ -34,15 +36,15 @@
             await fetchData();
             intervalId = setInterval(fetchData, 5000);
             e.innerText = "Stop"
-            e.classList.add('btn-success')
-            e.classList.remove('btn-warning')
+            e.classList.remove('btn-success')
+            e.classList.add('btn-warning')
         } else {
             // Stop execution if already running
             clearInterval(intervalId);
             intervalId = null;
-            e.innerText = "Start"
-            e.classList.remove('btn-success')
-            e.classList.add('btn-warning')
+            e.innerText = "Follow"
+            e.classList.add('btn-success')
+            e.classList.remove('btn-warning')
         }
     }
     
@@ -50,9 +52,7 @@
         const textArea = document.getElementById('log-content');
         const tailCountInput = document.getElementById('tail-count')
         const tailTimeoutInput = document.getElementById('tail-timeout')
-        var tailCount = 100;
-        var tailTimeout = 5;
-        const APIURL = `/api/tasks/{{task_id}}/{{filename}}?tcount=${tailCount}&ttimeout=${tailTimeout}`;
+        const APIURL = `/api/tasks/{{task_id}}/{{filename}}?tcount=${tCount}&ttimeout=${tTimeout}`;
         
         try {
             const response = await fetch(APIURL);
