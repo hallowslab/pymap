@@ -52,15 +52,3 @@ class SyncForm(forms.Form):
         required=False,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input mx-2 mt-2"}),
     )
-    schedule = forms.BooleanField(
-        label="schedule",
-        required=False,
-        widget=forms.CheckboxInput(attrs={"class": "form-check-input mx-2 mt-2"}),
-    )
-    schedule_date = forms.DateTimeField(
-        label="schedule_date",
-        required=False,
-        widget=forms.DateTimeInput(
-            attrs={"type": "datetime-local", "class": "form-control"}
-        ),
-    )
