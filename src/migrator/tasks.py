@@ -9,6 +9,7 @@ from pathlib import Path
 from celery import shared_task
 from celery.app.control import Inspect
 from celery.result import AsyncResult
+from celery.exceptions import TimeoutError
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
@@ -70,7 +71,7 @@ def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
         # Some complex passwords or our regex/custom logic might fail to create a viable
         # "command" string, in this case let shlex fail to avoid shell escapes
         try:
-            split_cmd = shlex.split(cmd)
+            shlex.split(cmd)
         except ValueError:
             logger.critical("Failed to parse and split the string received")
             logger.debug(
@@ -117,6 +118,17 @@ def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
         )
         time.sleep(4)
 
+    self.update_state(
+            state="SUCCESS",
+            meta={
+                "processing": 0,
+                "pending": 0,
+                "total": total_cmds,
+                "return_codes": finished_procs,
+                "status": "SUCCESS",
+            },
+        )
+
     logger.info("Finished Task: %s , calculating run time...", task_id)
     ctask = CeleryTask.objects.get(task_id=task_id)
 
@@ -139,7 +151,7 @@ def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
     ctask.finished = True
     ctask.save()
 
-    return {"status": "Executed all commands", "return_codes": finished_procs}
+    return {"status": "SUCCESS", "return_codes": finished_procs}
 
 
 # I'm not sure how the django admin scheduler passes the arguments, assuming as string
@@ -189,9 +201,10 @@ def purge_results(
             result.get(timeout=5.0)
             result.forget()
         except TimeoutError:
-            logger.error("Failed to clear results for Task ID:%s", task.task_id)
+            logger.error("Failed to clear results for Task ID<%s>", task.task_id)
         try:
             result = TaskResult.objects.get(task_id=task.task_id)
+            logger.debug("Purging result for Task ID<%s> from database", task.task_id)
             result.delete()
         except ObjectDoesNotExist:
             logger.info(
@@ -271,9 +284,9 @@ def validate_finished() -> None:
                 logger.debug(
                     "Found result in database: %s, STATUS:%s",
                     task_result,
-                    task_result.result,
+                    task_result.status,
                 )
-                if task_result.result in FINISHED_STATES:
+                if task_result.status in FINISHED_STATES:
                     return True
             except ObjectDoesNotExist:
                 logger.info(
