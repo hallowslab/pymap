@@ -56,6 +56,7 @@ services:
     deploy:
       mode: replicated
       replicas: ${WORKER_REPLICAS:-1}
+    entrypoint: /bin/sh -c "sleep 5 && poetry run celery -A pymap.celery worker -l ${WORKER_LOG_LEVEL:-INFO} --concurrency=500 --pool=gevent"
     depends_on:
       redis:
         condition: service_started
@@ -69,7 +70,7 @@ services:
     <<: *celery_worker
     deploy:
       mode: global
-    entrypoint: /bin/bash -c "sleep 10 && poetry run celery -A pymap.celery beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler -f $PYMAP_LOGDIR/celery-beat.log"
+    entrypoint: /bin/sh -c "sleep 10 && poetry run celery -A pymap.celery beat -l ${BEAT_LOG_LEVEL:-INFO} --scheduler django_celery_beat.schedulers:DatabaseScheduler -f $PYMAP_LOGDIR/celery-beat.log"
     depends_on:
       - celery-worker
     volumes:
@@ -84,7 +85,7 @@ services:
       mode: global
     profiles:
       - flower
-    entrypoint: /bin/bash -c "poetry run celery -A pymap.celery flower --basic-auth='$FLOWER_ADMIN:$FLOWER_PASSWORD' --address='0.0.0.0'"
+    entrypoint: /bin/sh -c "poetry run celery -A pymap.celery flower --basic-auth='$FLOWER_ADMIN:$FLOWER_PASSWORD' --address='0.0.0.0'"
     user: "1001:$GID"  # UID:GID for user
     ports:
       - 5555:5555

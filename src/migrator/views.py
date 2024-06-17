@@ -132,17 +132,19 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             logger.debug("Input after split %s", input_text)
             additional_arguments: str = form.cleaned_data["additional_arguments"]
             dry_run: bool = form.cleaned_data["dry_run"]
+            schedule_date = form.cleaned_data["schedule_date"]
             config = settings.PYMAP_SETTINGS
             user = request.user
             logger.info(
                 f"USER: {user.username} requested a sync for {source} -> {destination}"
             )
             logger.debug(
-                "\nSource: %s\nDestination: %s\nAdditional arguments: %s\nDry run: %s",
-                source,
-                destination,
-                additional_arguments,
-                dry_run,
+                f"""Source: {source}
+                Destination: {destination}
+                Additional arguments: {additional_arguments}
+                Dry run: {dry_run}
+                Schedule date: {schedule_date}
+                """
             )
             # TODO: Strip out passwords before logging commands
             # logger.debug(
@@ -163,7 +165,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             #     "Received the following output from generator:\n %s", content
             # )
 
-            task = call_system.apply_async((content,), countdown=15)
+            task = call_system.apply_async((content,), countdown=5)
             logger.info(
                 f"Starting background task with ID: {task.id} from User: {user.username}"
             )

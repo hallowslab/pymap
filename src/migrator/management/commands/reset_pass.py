@@ -1,4 +1,5 @@
 from typing import Any, List
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand, CommandParser
 from django.contrib.auth.models import User, AbstractBaseUser
 from django.utils.crypto import get_random_string
@@ -28,23 +29,23 @@ class Command(BaseCommand):
     def handle(self, *args: object, **options: Any) -> None:
         username = options["username"]
         length = options["length"]
-        user = User.objects.filter(username=username)
-        assert isinstance(user, AbstractBaseUser)
-        if not user.exists():
-            self.stderr.write(self.style.ERROR(f"User {username} does not exist"))
-            return
-        _new_password = get_random_string(length)
-        user.set_password(_new_password)
-        if not user.check_password(_new_password):
-            self.stderr.write(
-                self.style.ERROR(
-                    f"We were unable to set the password to {_new_password}"
+        try:
+            user = User.objects.get(username=username)
+            assert isinstance(user, AbstractBaseUser)
+            _new_password = get_random_string(length)
+            user.set_password(_new_password)
+            if not user.check_password(_new_password):
+                self.stderr.write(
+                    self.style.ERROR(
+                        f"We were unable to set the password to {_new_password}"
+                    )
+                )
+                return
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Password for user {username} has been updated to {_new_password}"
                 )
             )
-            return
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Password for user {username} has been updated to {_new_password}"
-            )
-        )
-        user.save()
+            user.save()
+        except ObjectDoesNotExist:
+            self.stderr.write(self.style.ERROR(f"User {username} does not exist"))

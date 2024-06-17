@@ -13,11 +13,10 @@ from scripts.utils import generate_line_creds
 class Command(BaseCommand):
     help = "Populates the database by simulating sync requests"
     DOMAINS: List[str] = [
-        "example.com",
+        "example.lan",
         "example.tld",
-        "pymap.com",
-        "pymap.io",
         "pymap.lan",
+        "pymap.tld",
     ]
 
     def add_arguments(self, parser: CommandParser) -> None:
@@ -39,8 +38,8 @@ class Command(BaseCommand):
             "--wait-time",
             type=int,
             default=5,
-            choices=range(1, 11),
-            help="Time to wait between the requests",
+            choices=range(1, 61),
+            help="Time(seconds) to wait between the requests",
         )
         parser.add_argument(
             "-oc",
