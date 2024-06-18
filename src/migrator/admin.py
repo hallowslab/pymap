@@ -1,21 +1,37 @@
+import logging
+from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect
+from django.urls import path
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
+from django.contrib.auth.models import User, Group
 from django.contrib import admin, messages
-from django.contrib.admin import ModelAdmin
+from django.contrib.admin import AdminSite, ModelAdmin
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
 from django.utils.translation import ngettext
 from celery.result import AsyncResult
 
-from django_celery_results.models import TaskResult
+from django_celery_results.models import TaskResult, GroupResult
+from django_celery_beat.models import (
+    SolarSchedule,
+    IntervalSchedule,
+    ClockedSchedule,
+    CrontabSchedule,
+    PeriodicTask,
+)
 
 from .models import CeleryTask
+from .tasks import purge_results, validate_finished
 from pymap import celery_app
+
+logger = logging.getLogger(__name__)
 
 # Register your models here.
 
 
 class TaskAdmin(ModelAdmin):
+    actions = ["purge_results", "validate_finished", "archive_selected"]
     list_display = ["task_id", "source", "destination", "owner", "start_time"]
     ordering = ["-start_time"]
-    actions = ["archive_selected"]
 
     @admin.action(description="Archive selected tasks")
     def archive_selected(self, request, queryset) -> None:
@@ -70,5 +86,57 @@ class TaskAdmin(ModelAdmin):
             messages.SUCCESS,
         )
 
+    @admin.action(description="Sets finished to true on tasks that may have crashed")
+    def admin_validate_finished(self, request, _) -> None:
+        validate_finished.delay()
+        self.message_user(
+            request, "Task validate_finished dispatched to worker", messages.SUCCESS
+        )
 
-admin.site.register(CeleryTask, TaskAdmin)
+    @admin.action(description="Purges Task results from database")
+    def admin_purge_results(self, request, _) -> None:
+        purge_results.delay(1, 0, 0, finished=True)
+        self.message_user(
+            request, "Task purge_results dispatched to worker", messages.SUCCESS
+        )
+
+
+class CustomAdminSite(AdminSite):
+    site_title: str = "Pymap site admin"
+    site_header: str = "Pymap administration"
+    index_title: str = "Pymap administration"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path("run-task/", self.admin_view(self.task_view), name="run-task"),
+        ]
+        logger.debug("Custom admin loaded URLS: %s", custom_urls+urls)
+        return custom_urls + urls
+
+    def task_view(
+        self, request
+    ) -> (TemplateResponse | HttpResponseRedirect | HttpResponsePermanentRedirect):
+        if request.method == "POST":
+            if "purge_results" in request.POST:
+                purge_results.delay()
+            elif "validate_finished" in request.POST:
+                validate_finished.delay()
+            return redirect("..")
+        context = dict(
+            self.each_context(request),
+        )
+        return TemplateResponse(request, "admin/run_task.html", context)
+
+
+custom_admin_site = CustomAdminSite(name="admin")
+# Custom task management model
+custom_admin_site.register(CeleryTask, TaskAdmin)
+# Django models
+custom_admin_site.register((User, Group))
+# Celery results
+custom_admin_site.register((TaskResult, GroupResult))
+# Periodic tasks
+custom_admin_site.register(
+    (SolarSchedule, IntervalSchedule, ClockedSchedule, CrontabSchedule, PeriodicTask)
+)

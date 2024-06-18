@@ -132,7 +132,6 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             logger.debug("Input after split %s", input_text)
             additional_arguments: str = form.cleaned_data["additional_arguments"]
             dry_run: bool = form.cleaned_data["dry_run"]
-            schedule_date = form.cleaned_data["schedule_date"]
             config = settings.PYMAP_SETTINGS
             user = request.user
             logger.info(
@@ -143,7 +142,6 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
                 Destination: {destination}
                 Additional arguments: {additional_arguments}
                 Dry run: {dry_run}
-                Schedule date: {schedule_date}
                 """
             )
             # TODO: Strip out passwords before logging commands

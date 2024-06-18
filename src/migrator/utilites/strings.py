@@ -9,9 +9,8 @@ DATE_REGEX = re.compile(
     r".*(?P<time>[1-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]\s[0-2][0-9]:[0-6][0-9]:[0-6][0-9]).*"
 )
 
-SPAM_ERROR = re.compile(
-    r"Err [0-9]{1,3}/[0-9]{1,3}.* Folder (INBOX|Inbox|inbox)\.(spam|Spam|SPAM).*"
-)
+# Here we use 1/1 to ensure that only spam failed to sync
+SPAM_ERROR = re.compile(r"Err 1/1.* Folder (INBOX|Inbox|inbox)\.(spam|Spam|SPAM).*")
 
 # DavMail settings, see http://davmail.sourceforge.net/ for documentation
 DAVMAIL_PROPERTIES: str = """

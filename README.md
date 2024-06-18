@@ -225,3 +225,5 @@ pool support: all, terminate only supported by prefork and eventlet
 - Celery on windows always pending ->
  * Issue on [github](https://github.com/celery/celery/issues/2146) / Thread on [SO](https://stackoverflow.com/a/27358974)
  * Command `celery -A server.tasks worker -E --loglevel debug --pool=solo`
+
+- When logging out trough the Administration the middleware intercepts the request

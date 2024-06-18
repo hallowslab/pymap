@@ -20,9 +20,12 @@ from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
+from migrator.admin import custom_admin_site
+
 urlpatterns = [
     path("admin/doc/", include("django.contrib.admindocs.urls")),
-    path("admin/", admin.site.urls),
+    # path("admin/", admin.site.urls),
+    path("admin/", custom_admin_site.urls),
     path("", include("migrator.urls", namespace="migrator")),
     path(
         "login/",
