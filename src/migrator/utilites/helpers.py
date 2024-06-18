@@ -14,6 +14,7 @@ from migrator.utilites.strings import (
 
 logger = logging.getLogger(__name__)
 
+
 def match_status(code: str) -> str:
     if code in IMAPSYNC_CODES.keys():
         return IMAPSYNC_CODES[code]
@@ -119,4 +120,3 @@ def get_logs_status(
         "end_time": end_time,
         "status": status_message,
     }
-

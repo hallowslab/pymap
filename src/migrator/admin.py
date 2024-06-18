@@ -10,7 +10,13 @@ from django.utils.translation import ngettext
 from celery.result import AsyncResult
 
 from django_celery_results.models import TaskResult, GroupResult
-from django_celery_beat.models import SolarSchedule, IntervalSchedule, ClockedSchedule, CrontabSchedule, PeriodicTask
+from django_celery_beat.models import (
+    SolarSchedule,
+    IntervalSchedule,
+    ClockedSchedule,
+    CrontabSchedule,
+    PeriodicTask,
+)
 
 from .models import CeleryTask
 from .tasks import purge_results, validate_finished
@@ -77,8 +83,6 @@ class TaskAdmin(ModelAdmin):
             messages.SUCCESS,
         )
 
-
-
     @admin.action(description="Sets finished to true on tasks that may have crashed")
     def admin_validate_finished(self, request, _) -> None:
         validate_finished.delay()
@@ -88,7 +92,7 @@ class TaskAdmin(ModelAdmin):
 
     @admin.action(description="Purges Task results from database")
     def admin_purge_results(self, request, _) -> None:
-        purge_results.delay(1,0,0,finished=True)
+        purge_results.delay(1, 0, 0, finished=True)
         self.message_user(
             request, "Task purge_results dispatched to worker", messages.SUCCESS
         )
@@ -120,12 +124,15 @@ class CustomAdminSite(AdminSite):
         )
         return TemplateResponse(request, "admin/run_task.html", context)
 
+
 custom_admin_site = CustomAdminSite(name="custom_admin")
 # Custom task management model
 custom_admin_site.register(CeleryTask, TaskAdmin)
 # Django models
-custom_admin_site.register((User,Group))
+custom_admin_site.register((User, Group))
 # Celery results
-custom_admin_site.register((TaskResult,GroupResult))
+custom_admin_site.register((TaskResult, GroupResult))
 # Periodic tasks
-custom_admin_site.register((SolarSchedule,IntervalSchedule,ClockedSchedule,CrontabSchedule,PeriodicTask))
+custom_admin_site.register(
+    (SolarSchedule, IntervalSchedule, ClockedSchedule, CrontabSchedule, PeriodicTask)
+)

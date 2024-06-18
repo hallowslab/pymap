@@ -10,9 +10,7 @@ DATE_REGEX = re.compile(
 )
 
 # Here we use 1/1 to ensure that only spam failed to sync
-SPAM_ERROR = re.compile(
-    r"Err 1/1.* Folder (INBOX|Inbox|inbox)\.(spam|Spam|SPAM).*"
-)
+SPAM_ERROR = re.compile(r"Err 1/1.* Folder (INBOX|Inbox|inbox)\.(spam|Spam|SPAM).*")
 
 # DavMail settings, see http://davmail.sourceforge.net/ for documentation
 DAVMAIL_PROPERTIES: str = """
