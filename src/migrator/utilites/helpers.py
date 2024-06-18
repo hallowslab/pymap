@@ -46,6 +46,8 @@ def check_failed_is_only_spam(content: str) -> bool:
 
 def sub_check_output(command: str, filename: str, timeout: int = 5) -> str:
     f_path = abspath(filename)
+    logger.debug("Command is: %s", command)
+    logger.debug("SHLEX interpreted as: %s", shlex.split(f"{command} {f_path}"))
     try:
         return subprocess.check_output(
             shlex.split(f"{command} {f_path}"),
@@ -63,7 +65,7 @@ def sub_check_output(command: str, filename: str, timeout: int = 5) -> str:
 
 def get_status(full_path: str, timeout: int) -> str:
     has_status: str = sub_check_output(
-        "grep -E Exiting with return value *",
+        "grep -E 'Exiting with return value *'",
         full_path,
         timeout=timeout,
     )
@@ -71,15 +73,15 @@ def get_status(full_path: str, timeout: int) -> str:
     status_message: str = match_status(status)
     if status != 0 and "Failed" in status_message:
         is_spam = check_failed_is_only_spam(status)
-        logger.debug("Has spam failed?: %b", is_spam)
-        status_message = "Transfer ok, spam not synced"
+        logger.debug("Has spam failed?: %s", is_spam)
+        status_message = "Transfer ok, spam not synced" if is_spam else status_message
     return status_message
 
 
 def get_start_time(full_path: str, timeout: int) -> str:
     # start_time = time.strptime(start_time, "%A  %B %Y-%m-%d")
     start_time: str = sub_check_output(
-        "grep -E Transfer started at *",
+        "grep -E 'Transfer started at *'",
         full_path,
         timeout=timeout,
     )
@@ -93,7 +95,7 @@ def get_start_time(full_path: str, timeout: int) -> str:
 
 def get_end_time(full_path: str, timeout: int) -> str:
     end_time: str = sub_check_output(
-        "grep -E Transfer ended on *",
+        "grep -E 'Transfer ended on *'",
         full_path,
         timeout=timeout,
     )
