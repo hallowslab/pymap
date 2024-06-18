@@ -1,3 +1,4 @@
+import logging
 from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect
 from django.urls import path
 from django.shortcuts import redirect
@@ -21,6 +22,8 @@ from django_celery_beat.models import (
 from .models import CeleryTask
 from .tasks import purge_results, validate_finished
 from pymap import celery_app
+
+logger = logging.getLogger(__name__)
 
 # Register your models here.
 
@@ -108,6 +111,7 @@ class CustomAdminSite(AdminSite):
         custom_urls = [
             path("run-task/", self.admin_view(self.task_view), name="run-task"),
         ]
+        logger.debug("Custom admin loaded URLS: %s", custom_urls+urls)
         return custom_urls + urls
 
     def task_view(
@@ -125,7 +129,7 @@ class CustomAdminSite(AdminSite):
         return TemplateResponse(request, "admin/run_task.html", context)
 
 
-custom_admin_site = CustomAdminSite(name="custom_admin")
+custom_admin_site = CustomAdminSite(name="admin")
 # Custom task management model
 custom_admin_site.register(CeleryTask, TaskAdmin)
 # Django models

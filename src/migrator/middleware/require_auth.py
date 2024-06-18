@@ -12,7 +12,7 @@ def staff_only(get_response):
     def middleware(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
         admin_login_url: str = reverse("admin:login")
         admin_logout_url: str = reverse("admin:logout")
-
+        logger.debug("Checking path %s", request.path)
         # Check if the request is to the admin page (but not login or logout) and if the user is not a staff member
         if (
             request.path.startswith(reverse("admin:index"))
