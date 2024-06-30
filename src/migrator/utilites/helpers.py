@@ -71,7 +71,7 @@ def get_status(full_path: str, timeout: int) -> str:
     )
     status = "Running" if len(has_status) == 0 else has_status.split(" ")[4]
     status_message: str = match_status(status)
-    if status != 0 and "Failed" in status_message:
+    if status != "0" and "Failed" in status_message:
         is_spam = check_failed_is_only_spam(status)
         logger.debug("Has spam failed?: %s", is_spam)
         status_message = "Transfer ok, spam not synced" if is_spam else status_message

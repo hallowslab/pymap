@@ -209,7 +209,7 @@ def download_log(request: HttpRequest, task_id: str, filename: str) -> HttpRespo
 
 
 ## CLASSES
-class CeleryTaskList(ListCreateAPIView):
+class CeleryTaskList(ListCreateAPIView[CeleryTask]):
     """
     API endpoint to fetch all tasks
     """
