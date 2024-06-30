@@ -78,7 +78,7 @@ class Command(BaseCommand):
             client = redis.StrictRedis(host="localhost", port=6379)
             client.ping()  # Test connection
             return True
-        except Exception as e:
+        except Exception:
             # Connection failed
             return False
 
@@ -102,11 +102,11 @@ class Command(BaseCommand):
     def handle(self, *args: object, **options: Any) -> None:
         if not options["override_checks"]:
             if not self.redis_is_running():
-                self.stdout.write(self.style.ERROR(f"Error: Redis is not running"))
+                self.stdout.write(self.style.ERROR("Error: Redis is not running"))
                 return
             if not self.celery_worker_is_running():
                 self.stdout.write(
-                    self.style.ERROR(f"Error: Celery worker is not running")
+                    self.style.ERROR("Error: Celery worker is not running")
                 )
                 return
         count = options["count"]

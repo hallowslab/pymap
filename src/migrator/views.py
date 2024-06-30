@@ -208,7 +208,7 @@ def download_log(request: HttpRequest, task_id: str, filename: str) -> HttpRespo
     return HttpResponse("Log file not found.", status=404)
 
 
-## CLASSES
+# CLASSES
 class CeleryTaskList(ListCreateAPIView):
     """
     API endpoint to fetch all tasks
@@ -409,7 +409,7 @@ class CeleryTaskLogDetails(APIView):
             logger.error(f"Failed to tail the file: {f_path}", exc_info=True)
             return JsonResponse(
                 {
-                    "error": f"DJANGO:Could not fetch data",
+                    "error": "DJANGO:Could not fetch data",
                     "data": f"Failed to tail the file -> {f_path} after {tail_timeout} seconds",
                 },
                 status=400,
