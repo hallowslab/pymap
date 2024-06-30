@@ -208,8 +208,8 @@ def download_log(request: HttpRequest, task_id: str, filename: str) -> HttpRespo
     return HttpResponse("Log file not found.", status=404)
 
 
-# CLASSES
-class CeleryTaskList(ListCreateAPIView):
+## CLASSES
+class CeleryTaskList(ListCreateAPIView[CeleryTask]):
     """
     API endpoint to fetch all tasks
     """

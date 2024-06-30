@@ -1,22 +1,31 @@
 import logging
-from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect
-from django.urls import path
+from typing import List, Union
+from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect, HttpRequest
+from django.urls import URLPattern, URLResolver, path
 from django.shortcuts import redirect
+from django.db.models import QuerySet
 from django.template.response import TemplateResponse
-from django.contrib.auth.models import User, Group
 from django.contrib import admin, messages
 from django.contrib.admin import AdminSite, ModelAdmin
+from django.contrib.auth.admin import UserAdmin, GroupAdmin
+from django.contrib.auth.models import User, Group
 from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
 from django.utils.translation import ngettext
 from celery.result import AsyncResult
 
 from django_celery_results.models import TaskResult, GroupResult
+from django_celery_results.admin import TaskResultAdmin, GroupResultAdmin
 from django_celery_beat.models import (
     SolarSchedule,
     IntervalSchedule,
     ClockedSchedule,
     CrontabSchedule,
     PeriodicTask,
+)
+from django_celery_beat.admin import (
+    PeriodicTaskAdmin,
+    ClockedScheduleAdmin,
+    CrontabScheduleAdmin,
 )
 
 from .models import CeleryTask
@@ -34,7 +43,9 @@ class TaskAdmin(ModelAdmin):
     ordering = ["-start_time"]
 
     @admin.action(description="Archive selected tasks")
-    def archive_selected(self, request, queryset) -> None:
+    def archive_selected(
+        self, request: HttpRequest, queryset: "QuerySet[CeleryTask]"
+    ) -> None:
         for task in queryset:
             try:
                 result = AsyncResult(task.task_id, app=celery_app)
@@ -87,14 +98,18 @@ class TaskAdmin(ModelAdmin):
         )
 
     @admin.action(description="Sets finished to true on tasks that may have crashed")
-    def admin_validate_finished(self, request, _) -> None:
+    def admin_validate_finished(
+        self, request: HttpRequest, _: "QuerySet[CeleryTask]"
+    ) -> None:
         validate_finished.delay()
         self.message_user(
             request, "Task validate_finished dispatched to worker", messages.SUCCESS
         )
 
     @admin.action(description="Purges Task results from database")
-    def admin_purge_results(self, request, _) -> None:
+    def admin_purge_results(
+        self, request: HttpRequest, _: "QuerySet[CeleryTask]"
+    ) -> None:
         purge_results.delay(1, 0, 0, finished=True)
         self.message_user(
             request, "Task purge_results dispatched to worker", messages.SUCCESS
@@ -106,16 +121,16 @@ class CustomAdminSite(AdminSite):
     site_header: str = "Pymap administration"
     index_title: str = "Pymap administration"
 
-    def get_urls(self):
+    def get_urls(self) -> List[Union[URLPattern, URLResolver]]:
         urls = super().get_urls()
-        custom_urls = [
+        custom_urls: list[URLResolver | URLPattern] = [
             path("run-task/", self.admin_view(self.task_view), name="run-task"),
         ]
-        logger.debug("Custom admin loaded URLS: %s", custom_urls+urls)
+        logger.debug("Custom admin loaded URLS: %s", custom_urls + urls)
         return custom_urls + urls
 
     def task_view(
-        self, request
+        self, request: HttpRequest
     ) -> (TemplateResponse | HttpResponseRedirect | HttpResponsePermanentRedirect):
         if request.method == "POST":
             if "purge_results" in request.POST:
@@ -132,11 +147,18 @@ class CustomAdminSite(AdminSite):
 custom_admin_site = CustomAdminSite(name="admin")
 # Custom task management model
 custom_admin_site.register(CeleryTask, TaskAdmin)
-# Django models
-custom_admin_site.register((User, Group))
-# Celery results
-custom_admin_site.register((TaskResult, GroupResult))
-# Periodic tasks
-custom_admin_site.register(
-    (SolarSchedule, IntervalSchedule, ClockedSchedule, CrontabSchedule, PeriodicTask)
-)
+# Django models, need to be registered with the appropriate admin models from django.contrib.auth.admin
+custom_admin_site.register(User, UserAdmin)
+custom_admin_site.register(Group, GroupAdmin)
+# Celery results, need to be registered with the appropriate admin models from django_celery_results.admin
+custom_admin_site.register(TaskResult, TaskResultAdmin)
+custom_admin_site.register(GroupResult, GroupResultAdmin)
+# Periodic tasks, need to be registered with the appropriate admin models from django_celery_beat.admin
+custom_admin_site.register(PeriodicTask, PeriodicTaskAdmin)
+custom_admin_site.register(ClockedSchedule, ClockedScheduleAdmin)
+custom_admin_site.register(CrontabSchedule, CrontabScheduleAdmin)
+# Periodic tasks with no admin models
+custom_admin_site.register((SolarSchedule, IntervalSchedule))
+# custom_admin_site.register(
+#     (SolarSchedule, IntervalSchedule, ClockedSchedule, CrontabSchedule, PeriodicTask)
+# )
