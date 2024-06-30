@@ -119,15 +119,15 @@ def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
         time.sleep(4)
 
     self.update_state(
-            state="SUCCESS",
-            meta={
-                "processing": 0,
-                "pending": 0,
-                "total": total_cmds,
-                "return_codes": finished_procs,
-                "status": "SUCCESS",
-            },
-        )
+        state="SUCCESS",
+        meta={
+            "processing": 0,
+            "pending": 0,
+            "total": total_cmds,
+            "return_codes": finished_procs,
+            "status": "SUCCESS",
+        },
+    )
 
     logger.info("Finished Task: %s , calculating run time...", task_id)
     ctask = CeleryTask.objects.get(task_id=task_id)
