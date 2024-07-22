@@ -13,6 +13,13 @@
       }
     }
   },
+  "CACHES": {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://redis:6379"
+    }
+  },
+  "CACHE_MIDDLEWARE_SECONDS": 3600,
   "LOGGING": {
     "version": 1,
     "disable_existing_loggers": false,
