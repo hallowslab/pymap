@@ -10,6 +10,7 @@ from django.shortcuts import redirect, render
 from django.conf import settings
 from django.urls import reverse
 from django.utils.functional import SimpleLazyObject
+from django.views.decorators.cache import never_cache
 from django.http import (
     HttpResponse,
     JsonResponse,
@@ -428,6 +429,7 @@ class CeleryTaskLogDetails(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @never_cache
     def get(
         self,
         request: APIRequest,
