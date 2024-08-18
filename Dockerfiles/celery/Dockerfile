@@ -1,4 +1,4 @@
-FROM debian:bookworm as debian-builder
+FROM debian:bookworm AS debian-builder
 
 # Install system and perl dependencies
 RUN apt-get update && \
@@ -114,6 +114,10 @@ RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main
 
 # Copy the source code
 COPY ./src/ ./
+
+USER root
+RUN chown -R celery:pymap /home/celery/app/
+USER celery
 
 # celery -A pymap.celery worker -E --pool=gevent --statedb=celery/working.state"
 CMD ["sh", "-c", "sleep 5 && $(poetry env info --path)/bin/celery -A pymap.celery worker -l INFO --concurrency=500 --pool=gevent"]

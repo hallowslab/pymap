@@ -98,6 +98,10 @@ RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main
 # copy the app
 COPY ./src ./
 
+USER root
+RUN chown -R pymap:pymap /home/pymap/app/
+USER pymap
+
 ENTRYPOINT [ "/home/pymap/app/init.sh" ]
 # For debbuging
 #CMD ["tail", "-f", "/dev/null"]
