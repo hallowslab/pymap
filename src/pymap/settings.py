@@ -122,6 +122,12 @@ CACHES = {
     }
 }
 CACHE_MIDDLEWARE_SECONDS = 3600
+if DJANGO_ENV == "development":
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        }
+    }
 
 
 # Password validation
@@ -226,7 +232,6 @@ def load_settings_file() -> None:
 
     print(f"Loaded custom settings from: {Path(BASE_DIR, config_file)}")
 
-
     # Override the LOGGING config with the user supplied if it exists
     log_config = custom_settings.get("LOGGING", {})
     if isinstance(log_config, dict) and len(log_config) > 0:
@@ -236,7 +241,7 @@ def load_settings_file() -> None:
     databases_config = custom_settings.get("DATABASES", {})
     if isinstance(databases_config, dict) and len(databases_config) > 0:
         DATABASES.update(databases_config)
-    
+
     # Override the CACHES config with the user supplied if it exists
     caches_config = custom_settings.get("CACHES", {})
     caches_seconds = custom_settings.get("CACHE_MIDDLEWARE_SECONDS", 3600)
@@ -254,11 +259,7 @@ def load_settings_file() -> None:
     # I don't think anything besides django should access the database settings
     # we only include settings the app should access
     PYMAP_SETTINGS.update(
-        {
-            k: v
-            for k, v in custom_settings.items()
-            if k in ["PYMAP_LOGDIR", "HOSTS"]
-        }
+        {k: v for k, v in custom_settings.items() if k in ["PYMAP_LOGDIR", "HOSTS"]}
     )
 
 
