@@ -75,7 +75,7 @@
         });
         document.getElementById('restart-btn').addEventListener('click', function() {
             var taskId = $('#task-id').text();
-            var redirectUrl = "{% url 'migrator:retry-task' 'TASK_ID_PLACEHOLDER' %}".replace('TASK_ID_PLACEHOLDER', taskId);
+            var redirectUrl = "{% url 'migrator:api-retry-task' 'TASK_ID_PLACEHOLDER' %}".replace('TASK_ID_PLACEHOLDER', taskId);
             window.location.href = redirectUrl;  // This will redirect the user to the new URL
         });
     });
