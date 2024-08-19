@@ -170,6 +170,15 @@ You can specify multiple compose files like: docker compose --env-file .env -f d
 *This actually merges them so it can override defaults*
 
 # DEV
+
+## Docker dev
+
+```
+docker compose --env-file dev.env -f .\docker-compose.yml -f .\docker-compose.extend.yml up --build -d
+```
+
+### Notes:
+I can change the celery stored 
 ### Notes:
 I can change the celery stored results with something like this:
 https://docs.celeryq.dev/en/stable/userguide/tasks.html#hiding-sensitive-information-in-arguments
