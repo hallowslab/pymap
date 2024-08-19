@@ -1,15 +1,18 @@
+# mypy: disable-error-code="unused-ignore"
 # Create your views here.
 import logging
 import re
+import ast
 from subprocess import PIPE, Popen, TimeoutExpired
-from typing import List, Optional
+from typing import List, Optional, Any
 from os import listdir
 from os.path import join
 from pathlib import Path
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.conf import settings
 from django.urls import reverse
 from django.utils.functional import SimpleLazyObject
+from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.http import (
     HttpResponse,
@@ -100,7 +103,12 @@ def task_details(request: HttpRequest, task_id: str) -> HttpResponse:
     """
     Renders task list details from the provided task_id
     """
-    return render(request, "task_details.html", {"task_id": task_id})
+    task_finished = get_object_or_404(CeleryTask, task_id=task_id).finished
+    return render(
+        request,
+        "task_details.html",
+        {"task_id": task_id, "task_finished": task_finished},
+    )
 
 
 @login_required
@@ -205,18 +213,34 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
 def retry_task(
     request: HttpRequest, task_id: str
 ) -> (HttpResponse | HttpResponseRedirect):
+    # This is to avoid -> Caution: A complex expression can overflow the C stack and cause a crash.
+    MAX_LENGTH = 20000
+
+    def validate_and_evaluate(input_str: str, max_length=MAX_LENGTH) -> Any:
+        if len(input_str) > max_length:
+            raise ValueError(
+                f"Input string exceeds the maximum length of {max_length} characters."
+            )
+        return ast.literal_eval(input_str)
+
     assert isinstance(request.user, User)
     user = request.user
     source = None
     destination = None
     try:
         db_result = CeleryTask.objects.get(task_id=task_id)
+        finished = db_result.finished
+        if not finished:
+            raise ValueError("Task has not finished yet")
         source = db_result.source
         destination = db_result.destination
         meta = celery_app.backend.get_task_meta(task_id)
-        content = meta["args"][0]
-        logger.debug(f"Content: {content}")
-        task = call_system.apply_async((content,), countdown=5)  # type: ignore
+        content_str = meta["args"]
+        # Convert the string to a Python tuple containing a list
+        content_tuple = validate_and_evaluate(content_str)
+        # Extract the list from the tuple
+        cmd_list = content_tuple[0]
+        task = call_system.apply_async((cmd_list,), countdown=5)  # type: ignore
         logger.info(
             f"Restarting task {task_id} in background with new ID: {task.id} from User: {user.username}"
         )
@@ -225,14 +249,13 @@ def retry_task(
         log_directory = Path(root_log_directory, task.id)
         if not log_directory.exists():
             log_directory.mkdir()
-        db_domains = db_result.domains if db_result.domains is not None else []
-        domains = ", ".join(db_domains)
+        domains = db_result.domains if db_result.domains is not None else ""
         ctask = CeleryTask(
             task_id=task.id,
             source=source,
             destination=destination,
             log_path=str(log_directory),
-            n_accounts=len(content),
+            n_accounts=len(cmd_list),
             domains=domains,
             owner=user,
         )
@@ -429,7 +452,7 @@ class CeleryTaskLogDetails(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @never_cache
+    @method_decorator(never_cache, name="dispatch")
     def get(
         self,
         request: APIRequest,
