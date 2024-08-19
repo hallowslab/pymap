@@ -3,7 +3,7 @@ import shlex
 import subprocess
 import time
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from celery import shared_task
@@ -27,7 +27,21 @@ CALL_SYSTEM_TYPE = Dict[str, (str | FProc)]
 
 
 @shared_task(bind=True)
-def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
+def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
+    # cmd_list is not optional and should always be a list of strings
+    # however this is a failsafe to avoid parsing invalid data
+    # It also is Optional to avoid type errors on the next statement
+    # Was implemented due to retry task since the stored data is a string
+    # and we need to parse it back to python
+    if not isinstance(cmd_list, list):
+        logger.critical(f"Expected cmd_list to be a list, got {type(cmd_list)}")
+        self.update_state(
+            state="FAILURE",
+            meta={
+                "status": "FAILURE",
+            },
+        )
+        return {"status": "FAILURE"}
     root_directory: str = settings.PYMAP_LOGDIR
     total_cmds: int = len(cmd_list)
     max_procs: int = 5
@@ -74,9 +88,9 @@ def call_system(self, cmd_list: List[str]) -> CALL_SYSTEM_TYPE:
             shlex.split(cmd)
         except ValueError:
             logger.critical("Failed to parse and split the string received")
-            logger.debug(
-                "Received the following command string: %s", cmd, exc_info=True
-            )
+            # logger.debug(
+            #     "Received the following command string: %s", cmd, exc_info=True
+            # )
             # Continue to the next iteration of the loop
             continue
         n_cmd = subprocess.Popen(
