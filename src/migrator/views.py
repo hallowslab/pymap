@@ -99,6 +99,7 @@ def tasks(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@never_cache
 def task_details(request: HttpRequest, task_id: str) -> HttpResponse:
     """
     Renders task list details from the provided task_id
@@ -240,6 +241,9 @@ def retry_task(
         content_tuple = validate_and_evaluate(content_str)
         # Extract the list from the tuple
         cmd_list = content_tuple[0]
+        logger.info(
+            f"USER: {user.username} requested a re-sync for {source} -> {destination}"
+        )
         task = call_system.apply_async((cmd_list,), countdown=5)  # type: ignore
         logger.info(
             f"Restarting task {task_id} in background with new ID: {task.id} from User: {user.username}"
@@ -374,9 +378,7 @@ class CeleryTaskDetails(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(
-        self, request: APIRequest, task_id: str, format: Optional[str] = None
-    ) -> JsonResponse:
+    def get(self, request: APIRequest, task_id: str) -> JsonResponse:
         log_directory: Optional[str] = settings.PYMAP_LOGDIR
         all_logs = []
 
@@ -458,13 +460,10 @@ class CeleryTaskLogDetails(APIView):
         request: APIRequest,
         task_id: str,
         log_file: str,
-        format: Optional[str] = None,
     ) -> JsonResponse:
-        logger.debug(f"Got request for task {task_id} logs")
         log_directory: str = settings.PYMAP_LOGDIR
         tail_timeout: int = int(request.GET.get("ttimeout", 5))
         tail_count: int = int(request.GET.get("tcount", 100))
-        logger.debug(f"Full request GET parameters: {request.GET}")
         # Tail the last X lines from the log file and return it
         f_path = Path(log_directory, task_id, log_file)
         try:
@@ -472,9 +471,6 @@ class CeleryTaskLogDetails(APIView):
                 return JsonResponse(
                     {"error": f"DJANGO:File {str(f_path)} was not found"}, status=404
                 )
-            logger.debug(
-                f"Tail timeout is: {tail_timeout}\nTail count is: {tail_count}"
-            )
 
             p1 = Popen(
                 ["tail", "-n", str(tail_count), str(f_path)],
@@ -508,7 +504,7 @@ class ArchiveTask(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request: APIRequest, format: Optional[str] = None) -> JsonResponse:
+    def post(self, request: APIRequest) -> JsonResponse:
         # Required User so we can validate the lookup on owned tasks
         # Incompatible type for lookup 'owner': AnonymousUser
         assert isinstance(request.user, SimpleLazyObject)
@@ -528,12 +524,12 @@ class ArchiveTask(APIView):
                 if user.is_staff or task.owner == user:
                     task.archived = True
                     task.save()
-                    logger.debug(
+                    logger.info(
                         f"User {user.username} archived task with ID {task.task_id}"
                     )
                     changes[task.task_id] = "OK"
                 else:
-                    logger.debug(
+                    logger.info(
                         f"User {user.username} does not own task with ID {task.task_id}"
                     )
                     changes[task.task_id] = f"User {user.username} does not own task"
@@ -555,7 +551,7 @@ class CancelTask(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request: APIRequest, format: Optional[str] = None) -> JsonResponse:
+    def post(self, request: APIRequest) -> JsonResponse:
         # Required User so we can validate the lookup on owned tasks
         # Incompatible type for lookup 'owner': AnonymousUser
         assert isinstance(request.user, SimpleLazyObject)
@@ -574,12 +570,12 @@ class CancelTask(APIView):
                 # Perform actions based on ownership
                 if user.is_staff or user == task.owner:
                     celery_app.control.revoke(task.task_id, terminate=True)
-                    logger.debug(
+                    logger.info(
                         f"User {user.username} cancelled task with ID {task.task_id}"
                     )
                     changes[task.task_id] = "OK"
                 else:
-                    logger.debug(
+                    logger.info(
                         f"User {user.username} does not own task with ID {task.task_id}"
                     )
                     changes[
@@ -601,7 +597,7 @@ class DeleteTask(APIView):
 
     permission_classes = [IsAdminUser]
 
-    def post(self, request: APIRequest, format: Optional[str] = None) -> JsonResponse:
+    def post(self, request: APIRequest) -> JsonResponse:
         # Required User so we can validate the lookup on owned tasks
         # Incompatible type for lookup 'owner': AnonymousUser
         assert isinstance(request.user, SimpleLazyObject)
@@ -624,8 +620,7 @@ class DeleteTask(APIView):
             for task in tasks:
                 # Preserve the ID before deletion
                 task_id = task.task_id
-                msg = f"User {user.username} deleted task with ID {task_id}"
-                logger.debug(msg)
+                logger.info(f"User {user.username} deleted task with ID {task_id}")
                 task.delete()
                 changes[task_id] = "OK"
             return JsonResponse(
