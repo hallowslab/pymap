@@ -11,8 +11,12 @@ if [ $exit_code -eq 1 ]; then
 fi
 
 # Run the initadmin command
-echo "Running initadmin management command"
+echo "Running initadmin command"
 poetry run python manage.py initadmin >> django_init.txt
+
+# Run the create_management_group command
+echo "Running create_management_groups command"
+poetry run python manage.py create_management_groups >> django_init.txt
 
 # Import fixtures, and other data
 echo "Importing fixtures...."
