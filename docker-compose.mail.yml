@@ -1,10 +1,9 @@
 services:
-  mailserver:
+  pymap.internal:
     build:
       context: Dockerfiles/email-server
-      dockerfile: Dockerfile
-    container_name: mailserver
-    hostname: mail
+      dockerfile: Dockerfile.mail
+    hostname: pymap.internal
     domainname: pymap.internal
     ports:
       - "25:25"   # SMTP
@@ -15,9 +14,7 @@ services:
       - MAIL_RELAY_HOST=mail.pymap.internal
       - DOVECOT_DISABLE_SSL=1
     volumes:
-      - ./data:/data
-      - ./config:/etc/postfix
-      - ./dovecot:/etc/dovecot
+      - server_data:/data
     networks:
       - mailnet
 
@@ -27,16 +24,21 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./roundcube/config:/var/www/html/config
-      - ./roundcube/mail:/var/www/html/mail
+      - roundcube_mail:/var/www/html/mail
     environment:
-      - ROUNDCUBEMAIL_DEFAULT_HOST=mail.pymap.internal
+      - ROUNDCUBEMAIL_DEFAULT_HOST=pymap.internal
       - ROUNDCUBEMAIL_DEFAULT_PORT=143
-      - ROUNDCUBEMAIL_SMTP_SERVER=mail.pymap.internal
+      - ROUNDCUBEMAIL_SMTP_SERVER=pymap.internal
       - ROUNDCUBEMAIL_SMTP_PORT=587
-      - ROUNDCUBEMAIL_SMTP_USER=pymin@pymap.internal
-      - ROUNDCUBEMAIL_SMTP_PASS="changeme!"
+      - ROUNDCUBEMAIL_SMTP_USER=test@pymap.internal
+      - ROUNDCUBEMAIL_SMTP_PASS=Password123
+    networks:
+      - mailnet
 
 networks:
   mailnet:
     driver: bridge
+
+volumes:
+  roundcube_mail:
+  server_data:

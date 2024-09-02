@@ -3,3 +3,7 @@ myorigin = $myhostname
 inet_interfaces = all
 inet_protocols = ipv4
 home_mailbox = Maildir/
+maillog_file = /var/log/postfix/
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes

@@ -1,0 +1,27 @@
+FROM ubuntu:20.04
+
+RUN apt-get update && \
+    apt-get install -y postfix dovecot-core dovecot-imapd dovecot-pop3d net-tools telnet
+
+RUN useradd -m pymap -p pymap -s /bin/false && \
+	echo "pymap:Password123"|chpasswd && \
+	mkdir /home/pymap/Maildir && \
+	chown pymap:pymap /home/pymap/Maildir/
+
+RUN useradd -m test -p test -s /bin/false && \
+	echo "test:Password123"|chpasswd && \
+	mkdir /home/test/Maildir && \
+	chown test:test /home/test/Maildir/
+
+COPY postfix/main.cf /etc/postfix/main.cf
+COPY dovecot/dovecot.conf /etc/dovecot/dovecot.conf
+
+RUN touch /var/log/postfix.log
+RUN chmod 640 /var/log/postfix.log
+RUN chown postfix:postfix /var/log/postfix.log
+
+COPY init.sh /root/init.sh
+
+EXPOSE 25 143
+
+CMD ["sh", "-c", "./root/init.sh"]
