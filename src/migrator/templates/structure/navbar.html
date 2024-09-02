@@ -1,5 +1,7 @@
 <!-- navbar.html -->
 {% load static %}
+<!-- Sets username in global context -->
+{% load user_tags %}
 <nav class="navbar navbar-expand-lg fixed-top navbar-dark bg-primary">
   <div class="container-fluid">
     <a class="navbar-brand" href="/">
@@ -37,7 +39,7 @@
           <ul class="dropdown-menu">
             <li>
               <form action="{% url 'migrator:user-account' %}">
-                <button class="dropdown-item" href="#">Account <i class="bi bi-gear"></i></button>
+                <button class="dropdown-item" href="#"><b>{% get_username request.user %} </b><i class="bi bi-gear"></i></button>
               </form>
             </li>
             <li>

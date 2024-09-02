@@ -50,6 +50,7 @@ class CeleryTask(models.Model):
     domains = models.TextField(null=True, blank=True)
     archived = models.BooleanField(default=False)
     finished = models.BooleanField(default=False)
+    terminated = models.BooleanField(default=False)
     start_time = models.DateTimeField(auto_now_add=True, blank=True)
     # end_time = models.DateTimeField(default=0,blank=True)
     results_purged = models.BooleanField(default=False)

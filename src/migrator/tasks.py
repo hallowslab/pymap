@@ -26,6 +26,15 @@ RProc = Dict[str, Any]
 CALL_SYSTEM_TYPE = Dict[str, (str | FProc)]
 
 
+def should_terminate_task(task_id:str):
+    # Implement logic to check if the task should terminate
+    # For example, check a value in the database or cache
+    task = CeleryTask.objects.filter(task_id=task_id).first()
+    if task:
+        if task.terminated:
+            return True
+    return False
+
 @shared_task(bind=True)
 def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
     # cmd_list is not optional and should always be a list of strings
@@ -79,6 +88,13 @@ def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
                     finished_procs[key] = status
                     procs.pop(key, None)
         return procs
+    
+    def terminate_all(procs: RProc) -> None:
+        for key in list(procs):
+            proc = procs[key]
+            if isinstance(proc, subprocess.Popen):
+                logger.info(f"Terminating {proc.pid}")
+                proc.terminate()
 
     for index, cmd in enumerate(cmd_list):
         logger.info("Task %s Scheduling %s", task_id, index)
@@ -116,10 +132,14 @@ def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
                 "status": "Processing...",
             },
         )
+        if should_terminate_task(task_id):
+            terminate_all(running_procs)
 
     while running_procs:
         running_procs = check_running(running_procs)
         nrp = len(running_procs)
+        if should_terminate_task(task_id):
+            terminate_all(running_procs)
         self.update_state(
             state="PROGRESS",
             meta={
@@ -130,7 +150,7 @@ def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
                 "status": "Processing...",
             },
         )
-        time.sleep(4)
+        time.sleep(10)
 
     self.update_state(
         state="SUCCESS",

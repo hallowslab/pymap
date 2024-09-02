@@ -569,10 +569,8 @@ class CancelTask(APIView):
             for task in tasks:
                 # Perform actions based on ownership
                 if user.is_staff or user == task.owner:
-                    celery_app.control.revoke(task.task_id, terminate=True)
-                    logger.info(
-                        f"User {user.username} cancelled task with ID {task.task_id}"
-                    )
+                    task.terminated = True
+                    task.save()
                     changes[task.task_id] = "OK"
                 else:
                     logger.info(
