@@ -1,6 +1,0 @@
-myhostname = pymap.lan
-mydomain = pymap.lan
-myorigin = $mydomain
-mydestination = $myhostname, $mydomain, localhost.$mydomain, localhost
-inet_interfaces = all
-home_mailbox = Maildir/
