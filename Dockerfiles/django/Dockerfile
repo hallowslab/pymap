@@ -89,7 +89,7 @@ RUN chmod 600 ./.secret
 COPY ./src/pyproject.toml ./
 COPY ./src/poetry.lock ./
 
-COPY Dockerfiles/django/init.sh ./init.sh
+COPY Dockerfiles/django/init.sh /home/pymap/init.sh
 
 # Install dependecies trough poetry
 RUN poetry install $(if [ "$DJANGO_ENV" = 'production' ]; then echo '--only main'; fi) \
@@ -102,6 +102,6 @@ USER root
 RUN chown -R pymap:pymap /home/pymap/app/
 USER pymap
 
-ENTRYPOINT [ "/home/pymap/app/init.sh" ]
+ENTRYPOINT [ "/home/pymap/init.sh" ]
 # For debbuging
 #CMD ["tail", "-f", "/dev/null"]

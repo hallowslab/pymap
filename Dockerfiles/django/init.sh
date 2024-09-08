@@ -2,6 +2,8 @@
 
 # Wait for all systems to start
 #sleep 5
+cd app
+
 # Check for migrations
 poetry run python manage.py migrate --no-input --check >> django_init.txt
 exit_code="$?"

@@ -174,7 +174,7 @@ You can specify multiple compose files like: docker compose --env-file .env -f d
 ## Docker dev
 
 ```
-docker compose --env-file dev.env -f .\docker-compose.yml -f .\docker-compose.extend.yml up --build -d
+docker compose --env-file dev.env -f .\docker-compose.yml -f .\docker-compose.extend.yml -f .\docker-compose.mail.yml up --build -d
 ```
 
 ### Notes:

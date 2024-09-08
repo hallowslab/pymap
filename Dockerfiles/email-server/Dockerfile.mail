@@ -1,6 +1,11 @@
 FROM ubuntu:22.04
 
-ARG HOSTNAME
+ARG HOSTNAME \
+	SMTP_PORT \
+	SMTP_SUBMISSION \
+	IMAP_PORT
+
+ENV GENERATE_MESSAGES=${GENERATE_MESSAGES}
 
 # Install Postfix and Dovecot
 RUN apt-get update && \
@@ -19,8 +24,8 @@ RUN echo "mydomain = ${HOSTNAME}" >> /etc/postfix/main.cf && \
 RUN sed -i 's/^mail_location.*/mail_location = maildir:~\/Maildir/' /etc/dovecot/conf.d/10-mail.conf && \
     sed -i 's/^#disable_plaintext_auth.*/disable_plaintext_auth = no/' /etc/dovecot/conf.d/10-auth.conf && \
 	sed -i 's/^#auth_username_format =.*/auth_username_format = %n/' /etc/dovecot/conf.d/10-auth.conf && \
-    sed -i 's/#port = 143/port = 143/' /etc/dovecot/conf.d/10-master.conf && \
-    sed -i 's/#port = 587/port = 587/' /etc/dovecot/conf.d/10-master.conf && \
+    sed -i "s/#port = 143/port = ${IMAP_PORT}/" /etc/dovecot/conf.d/10-master.conf && \
+    sed -i "s/#port = 587/port = ${SMTP_SUBMISSION}/" /etc/dovecot/conf.d/10-master.conf && \
 	sed -i 's/^#log_path.*/log_path = \/var\/log\/dovecot.log/' /etc/dovecot/conf.d/10-logging.conf
 
 RUN useradd -m pymap -p pymap -s /bin/false && \
@@ -42,7 +47,6 @@ RUN chmod 640 /var/log/dovecot.log
 RUN chown dovecot:dovecot /var/log/dovecot.log
 
 COPY init.sh /root/init.sh
-
-EXPOSE 25 143
+COPY generate_messages.sh /root/generate_messages.sh
 
 CMD ["sh", "-c", "./root/init.sh"]
