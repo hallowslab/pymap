@@ -177,8 +177,11 @@ You can specify multiple compose files like: docker compose --env-file .env -f d
 docker compose --env-file dev.env -f .\docker-compose.yml -f .\docker-compose.extend.yml -f .\docker-compose.mail.yml up --build -d
 ```
 
-### Notes:
-I can change the celery stored 
+Test accounts to sync
+```
+pymap@mail.pymap.lan Password123 pymap@vps.pymap.lan Password123
+```
+
 ### Notes:
 I can change the celery stored results with something like this:
 https://docs.celeryq.dev/en/stable/userguide/tasks.html#hiding-sensitive-information-in-arguments

@@ -1,19 +1,18 @@
 services:
-  pymap.lan:
-    &pymap
+  mail.pymap.lan:
+    &m1
     build:
       context: Dockerfiles/email-server
-      dockerfile: Dockerfile.mail
       args:
-        - HOSTNAME=pymap.lan
+        - HOSTNAME=mail.pymap.lan
         - SMTP_PORT=2525
         - SMTP_SUBMISSION=5877
         - IMAP_PORT=1433
     environment:
       - GENERATE_MESSAGES=true
-    container_name: pymap
-    hostname: pymap.lan
-    domainname: pymap.lan
+    container_name: m1
+    hostname: mail.pymap.lan
+    domainname: mail.pymap.lan
     ports:
       - 2525:25 # SMTP
       - 5877:587 # SMTP submission
@@ -21,16 +20,15 @@ services:
 
 
   vps.pymap.lan:
-    <<: *pymap
+    <<: *m1
     build:
       context: Dockerfiles/email-server
-      dockerfile: Dockerfile.mail
       args:
         - HOSTNAME=vps.pymap.lan
         - SMTP_PORT=2526
         - SMTP_SUBMISSION=5878
         - IMAP_PORT=1434
-    container_name: vps.pymap
+    container_name: m2
     hostname: vps.pymap.lan
     domainname: vps.pymap.lan
     ports:
@@ -43,8 +41,8 @@ services:
     image: roundcube/roundcubemail
     container_name: r1
     environment:
-      - ROUNDCUBEMAIL_DEFAULT_HOST=pymap.lan
-      - ROUNDCUBEMAIL_SMTP_SERVER=smtp://pymap.lan
+      - ROUNDCUBEMAIL_DEFAULT_HOST=mail.pymap.lan
+      - ROUNDCUBEMAIL_SMTP_SERVER=smtp://mail.pymap.lan
       - ROUNDCUBEMAIL_DB_TYPE=sqlite
       - ROUNDCUBEMAIL_DEFAULT_PORT=1433
       - ROUNDCUBEMAIL_SMTP_PORT=5877

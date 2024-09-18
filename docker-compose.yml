@@ -18,17 +18,17 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  pymap-server:
+  pymap.lan:
     build: 
       context: Dockerfiles/nginx
-      dockerfile: Dockerfiles/nginx/Dockerfile
       args:
         - STATIC_ROOT
         - GROUPNAME
         - GID
         - PYMAP_HOSTNAME
     ports:
-      - "5000:80"
+      - "5001:80"
+      - "5000:443"
     depends_on:
       pymap:
         condition: service_healthy
