@@ -104,11 +104,11 @@ def task_details(request: HttpRequest, task_id: str) -> HttpResponse:
     """
     Renders task list details from the provided task_id
     """
-    task_finished = get_object_or_404(CeleryTask, task_id=task_id).finished
+    task = get_object_or_404(CeleryTask, task_id=task_id)
     return render(
         request,
         "task_details.html",
-        {"task_id": task_id, "task_finished": task_finished},
+        {"task_id": task_id, "task_finished": task.finished, "source": task.source, "destination": task.destination},
     )
 
 

@@ -32,6 +32,9 @@
         <i id="copy-btn" class="round-btn bi bi-clipboard"></i>
         <i id="restart-btn" class="round-btn bi bi-arrow-repeat {% if not task_finished %}disabled{% endif %}"></i>
     </div>
+    <div>
+        <h3>{{source}} -> {{destination}}</h3>
+    </div>
     <table id="taskDetails" class="table">
         <thead>
             <tr>
@@ -66,7 +69,7 @@
             var taskId = $('#task-id').text();
             
             // Use the Clipboard API to copy text
-            window.navigator.clipboard.writeText(taskId).then(function() {
+            navigator.clipboard.writeText(taskId).then(function() {
                 // Optionally, show a message or provide feedback to the user
                 alert('Copied task ID: ' + taskId);
             }).catch(function(error) {

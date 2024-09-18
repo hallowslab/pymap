@@ -42,8 +42,7 @@ if DEBUG:
 ALLOWED_HOSTS: List[str] = [
     # ...
     "127.0.0.1",
-    "pymap",
-    "pymap-server"
+    "localhost"
     # ...
 ]
 
@@ -300,6 +299,7 @@ def load_settings_env() -> None:
     Returns:
         None
     """
+    global ALLOWED_HOSTS
     SETTINGS = [
         "CELERY_BROKER_URL",
         "CELERY_RESULT_BACKEND",
@@ -316,6 +316,9 @@ def load_settings_env() -> None:
             print(f"LOADED {key}={value[:2]}...")
             globals()[key] = value
 
+    # add PYMAP_HOSTNAME to ALLOWED_HOSTS
+    hostname = os.getenv("PYMAP_HOSTNAME")
+    if hostname: ALLOWED_HOSTS.append(hostname)
 
 def check_log_directory() -> None:
     """
