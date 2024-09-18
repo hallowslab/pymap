@@ -39,12 +39,9 @@ if DEBUG:
           current value: DJANGO_ENV={DJANGO_ENV}"""
     )
 
-ALLOWED_HOSTS: List[str] = [
-    # ...
-    "127.0.0.1",
-    "localhost"
-    # ...
-]
+ALLOWED_HOSTS: List[str] = []
+
+CSRF_TRUSTED_ORIGINS: List[str] = []
 
 # The Debug Toolbar is shown only if your IP address is listed in Django’s INTERNAL_IPS setting.
 INTERNAL_IPS: List[str] = [
@@ -215,7 +212,7 @@ def load_settings_file() -> None:
     """
     Load custom settings from a JSON file.
     """
-    global PYMAP_SETTINGS, LOGGING, ALLOWED_HOSTS, CACHES, CACHE_MIDDLEWARE_SECONDS
+    global PYMAP_SETTINGS, LOGGING, ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, CACHES, CACHE_MIDDLEWARE_SECONDS
     config_file = "config.json" if DJANGO_ENV == "production" else "config.dev.json"
     custom_settings = {}
     try:
@@ -249,10 +246,15 @@ def load_settings_file() -> None:
     if isinstance(caches_seconds, int):
         CACHE_MIDDLEWARE_SECONDS = caches_seconds
 
+    # Update ALLOWED_HOSTS
     new_hosts = custom_settings.get("ALLOWED_HOSTS", [])
-
     if isinstance(new_hosts, List) and len(new_hosts) > 0:
         ALLOWED_HOSTS = new_hosts
+
+    # Update CSRF_TRUSTED_ORIGINS
+    new_origins = custom_settings.get("CSRF_TRUSTED_ORIGINS", [])
+    if isinstance(new_origins, List) and len(new_origins) > 0:
+        CSRF_TRUSTED_ORIGINS = new_origins
 
     # Store custom settings under a specific key in PYMAP_SETTINGS
     # I don't think anything besides django should access the database settings
@@ -299,7 +301,7 @@ def load_settings_env() -> None:
     Returns:
         None
     """
-    global ALLOWED_HOSTS
+    global ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS
     SETTINGS = [
         "CELERY_BROKER_URL",
         "CELERY_RESULT_BACKEND",
@@ -316,9 +318,12 @@ def load_settings_env() -> None:
             print(f"LOADED {key}={value[:2]}...")
             globals()[key] = value
 
-    # add PYMAP_HOSTNAME to ALLOWED_HOSTS
+    # add PYMAP_HOSTNAME to ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS
     hostname = os.getenv("PYMAP_HOSTNAME")
-    if hostname: ALLOWED_HOSTS.append(hostname)
+    if hostname:
+        ALLOWED_HOSTS.append(hostname)
+        CSRF_TRUSTED_ORIGINS.append(f"https://{hostname}")
+
 
 def check_log_directory() -> None:
     """
