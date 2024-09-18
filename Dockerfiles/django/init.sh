@@ -35,5 +35,5 @@ if [ "$DJANGO_ENV" == "production" ]; then
     poetry run python -m gunicorn pymap.asgi:application -b 0.0.0.0:8000 -k uvicorn.workers.UvicornWorker
 else
     echo "Starting development server"
-    poetry run python manage.py runserver 0.0.0.0:9000
+    poetry run python manage.py runserver 0.0.0.0:8000
 fi
