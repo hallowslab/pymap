@@ -26,7 +26,7 @@ RProc = Dict[str, Any]
 CALL_SYSTEM_TYPE = Dict[str, (str | FProc)]
 
 
-def should_terminate_task(task_id:str):
+def should_terminate_task(task_id: str):
     # Implement logic to check if the task should terminate
     # For example, check a value in the database or cache
     task = CeleryTask.objects.filter(task_id=task_id).first()
@@ -34,6 +34,7 @@ def should_terminate_task(task_id:str):
         if task.terminated:
             return True
     return False
+
 
 @shared_task(bind=True)
 def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
@@ -88,7 +89,7 @@ def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
                     finished_procs[key] = status
                     procs.pop(key, None)
         return procs
-    
+
     def terminate_all(procs: RProc) -> None:
         for key in list(procs):
             proc = procs[key]

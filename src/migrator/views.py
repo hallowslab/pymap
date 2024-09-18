@@ -108,7 +108,12 @@ def task_details(request: HttpRequest, task_id: str) -> HttpResponse:
     return render(
         request,
         "task_details.html",
-        {"task_id": task_id, "task_finished": task.finished, "source": task.source, "destination": task.destination},
+        {
+            "task_id": task_id,
+            "task_finished": task.finished,
+            "source": task.source,
+            "destination": task.destination,
+        },
     )
 
 

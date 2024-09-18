@@ -9,14 +9,16 @@ from django.db.models import Model
 
 from django_celery_results.models import TaskResult
 
+
 class Command(BaseCommand):
     help = "Adds a group for managing the users trough the admin dashboard"
 
-    def manage_group(self,group_name:str,model:type[Model],group_permissions:list) -> None:
-
+    def manage_group(
+        self, group_name: str, model: type[Model], group_permissions: list[str]
+    ) -> None:
         def has_permission(group: Group, perm: Permission) -> bool:
             return group.permissions.filter(codename=perm.codename).exists()
-        
+
         # Get or create the group
         group, _ = Group.objects.get_or_create(name=group_name)
 
@@ -30,22 +32,30 @@ class Command(BaseCommand):
         for perm in permissions:
             if not has_permission(group, perm):
                 self.stdout.write(
-                        self.style.SUCCESS(f"Adding {perm.codename} to {group_name}")
+                    self.style.SUCCESS(f"Adding {perm.codename} to {group_name}")
                 )
                 group.permissions.add(perm)
             else:
                 self.stdout.write(
-                        self.style.WARNING(f"{group_name} already has {perm.codename}")
+                    self.style.WARNING(f"{group_name} already has {perm.codename}")
                 )
-        
+
         # Save the group
         group.save()
 
     def handle(self, *args: object, **options: Any) -> None:
         # Create User Managers group
-        self.manage_group("User Managers", User, ['add_user', 'change_user', 'delete_user', "view_user"])
+        self.manage_group(
+            "User Managers",
+            User,
+            ["add_user", "change_user", "delete_user", "view_user"],
+        )
         # Create Task Managers group
-        self.manage_group("Task Managers", TaskResult, ["view_taskresult", "delete_taskresult"])
-        self.manage_group("Task Managers", CeleryTask, ["view_celerytask", "delete_celerytask", "change_celerytask"])
-        
-
+        self.manage_group(
+            "Task Managers", TaskResult, ["view_taskresult", "delete_taskresult"]
+        )
+        self.manage_group(
+            "Task Managers",
+            CeleryTask,
+            ["view_celerytask", "delete_celerytask", "change_celerytask"],
+        )
