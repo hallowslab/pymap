@@ -56,4 +56,5 @@ urlpatterns = [
     ),
     path("account/", views.user_account, name="user-account"),
     path("update-account/", views.update_account, name="update-account"),
+    path("update-preferences/", views.update_preferences, name="update-preferences"),
 ]

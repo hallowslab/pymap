@@ -32,9 +32,9 @@ from rest_framework.response import Response as APIResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView
 
-from .models import CeleryTask
+from .models import CeleryTask, UserPreferences
 from .serializers import CeleryTaskSerializer, TaskIdListSerializer
-from .forms import SyncForm, CustomUserChangeForm
+from .forms import SyncForm, CustomUserChangeForm, PreferencesForm
 from .tasks import call_system
 from pymap import celery_app
 from .utilites.helpers import get_logs_status
@@ -69,7 +69,8 @@ def index(request: HttpRequest) -> HttpResponse:
 @login_required
 def user_account(request: HttpRequest) -> HttpResponse:
     user = request.user
-    return render(request, "account.html", {"user": user})
+    preferences, _ = UserPreferences.objects.get_or_create(user=user)
+    return render(request, "account.html", {"user": user, "preferences": preferences})
 
 
 @login_required
@@ -88,6 +89,24 @@ def update_account(
         form = CustomUserChangeForm(instance=request.user)
     username = request.user.username
     return render(request, "update_account.html", {"form": form, "username": username})
+
+
+@login_required
+def update_preferences(
+    request: HttpRequest,
+) -> (HttpResponse | HttpResponseRedirect):
+    assert isinstance(request.user, User)  # AbstractBaseUser has no .username
+    user_preferences, _ = UserPreferences.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        form = PreferencesForm(request.POST, instance=user_preferences)
+        if form.is_valid():
+            form.save()
+            return redirect(
+                "migrator:user-account", permanent=False
+            )  # Redirect to user's account page after successful update
+    else:
+        form = PreferencesForm(instance=user_preferences)
+    return render(request, "update_preferences.html", {"form": form})
 
 
 @login_required
