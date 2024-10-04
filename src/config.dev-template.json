@@ -1,5 +1,5 @@
 {
-  "PYMAP_LOGDIR": "pymap_logs",
+  "PYMAP_LOGDIR": "/var/log/pymap",
   "ALLOWED_HOSTS": ["127.0.0.1", "localhost"],
   "CSRF_TRUSTED_ORIGINS": ["https://127.0.0.1", "https://localhost","https://pymap.lan"],
   "HOSTS": [
@@ -22,7 +22,7 @@
       },
       "file": {
         "class": "logging.FileHandler",
-        "filename": "pymap_logs/pymap.log",
+        "filename": "/var/log/pymap/pymap-dev.log",
         "level": "DEBUG",
         "formatter": "custom_formatter"
       }
