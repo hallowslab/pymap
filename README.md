@@ -180,6 +180,7 @@ docker compose --env-file dev.env -f .\docker-compose.yml -f .\docker-compose.ex
 Test accounts to sync
 ```
 pymap@mail.pymap.lan Password123 pymap@vps.pymap.lan Password123
+test@mail.pymap.lan Password123 test@vps.pymap.lan Password123
 ```
 
 ### Notes:
