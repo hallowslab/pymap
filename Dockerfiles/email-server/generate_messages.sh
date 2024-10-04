@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # Configuration
-sender="pymap@pymap.lan"  # Replace with your email address
-recipients=("pymap@pymap.lan" "test@pymap.lan")  # Replace with your recipient email addresses
-num_messages=50  # Number of messages to send to each recipient
+sender="pymap@mail.pymap.lan"
+recipients=("pymap@mail.pymap.lan" "test@mail.pymap.lan")
+num_messages=5000
+subjects_file="subjects.txt"
+bodies_file="bodies.txt"
 
-# Generate random subjects and bodies
+# Load random subjects and bodies from external files
 generate_random_subject() {
-  subjects=("Subject A" "Subject B" "Subject C")
-  echo "${subjects[$RANDOM % ${#subjects[@]}]}"
+  shuf -n 1 "$subjects_file"
 }
 
 generate_random_body() {
-  bodies=("Message body A" "Message body B" "Message body C")
-  echo "${bodies[$RANDOM % ${#bodies[@]}]}"
+  shuf -n 1 "$bodies_file"
 }
 
 # Loop through recipients and send multiple emails

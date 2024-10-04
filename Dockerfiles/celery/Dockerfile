@@ -68,7 +68,7 @@ RUN addgroup --gid $GID $GROUPNAME && \
 
 # Create the log directory
 RUN mkdir -p $PYMAP_LOGDIR
-
+RUN touch "$PYMAP_LOGDIR/pymap-dev.log" "$PYMAP_LOGDIR/pymap.log"
 RUN chown -R celery:$GROUPNAME $PYMAP_LOGDIR && chmod -R g+rw $PYMAP_LOGDIR
 
 

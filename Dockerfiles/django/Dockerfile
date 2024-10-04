@@ -53,6 +53,7 @@ RUN addgroup --gid $GID $GROUPNAME && \
 
 # Create the log directory and add permissions to user and group
 RUN mkdir -p $PYMAP_LOGDIR
+RUN touch "$PYMAP_LOGDIR/pymap-dev.log" "$PYMAP_LOGDIR/pymap.log"
 RUN chown -R pymap:$GROUPNAME $PYMAP_LOGDIR && chmod -R g+rw $PYMAP_LOGDIR
 
 USER pymap

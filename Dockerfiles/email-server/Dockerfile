@@ -46,7 +46,9 @@ RUN touch /var/log/dovecot.log
 RUN chmod 640 /var/log/dovecot.log
 RUN chown dovecot:dovecot /var/log/dovecot.log
 
-COPY init.sh /root/init.sh
-COPY generate_messages.sh /root/generate_messages.sh
+COPY init.sh init.sh
+COPY bodies.list bodies.txt
+COPY subjects.list subjects.txt
+COPY generate_messages.sh generate_messages.sh
 
-CMD ["sh", "-c", "./root/init.sh"]
+CMD ["sh", "-c", "./init.sh"]
