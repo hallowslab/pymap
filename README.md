@@ -160,7 +160,7 @@ If you need to interact with the application for adding users or running the int
 Run the following command in the src directory:
   * `poetry run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
 
-This will output a random string of characters, copy the output (be carefull to not copy any spaces or new lines at the end or beggining or end of the key) and paste it in a file in src/.secret (You will need to create the file)
+This will output a random string of characters, copy the output (be carefull to not copy any spaces or new lines at the end or beggining or end of the key) and paste it in a file in the project root directory Pymap/.secret (You will need to create the file)
 
 #### Notes
 
