@@ -15,7 +15,6 @@ ARG DJANGO_ENV \
     PYMAP_LOGDIR \
     PYMAP_ADMIN_USER \
     PYMAP_ADMIN_PASSWORD \
-    SECRET_KEY \
     POSTGRES_DB \
     POSTGRES_USER \
     POSTGRES_PASSWORD \
@@ -84,8 +83,12 @@ RUN echo "$POSTGRES_HOST:$POSTGRES_PORT:$POSTGRES_DB:$POSTGRES_USER:$POSTGRES_PA
 RUN chmod 600 ./.pgpass
 
 # Create .secret file for SECRET_KEY
-RUN echo "$SECRET_KEY" > ./.secret
-RUN chmod 600 ./.secret
+#RUN echo "$SECRET_KEY" > ./.secret
+# The secret file should be mounted at runtime
+# create it and set permissions to avoid issues reading
+RUN touch .secret
+RUN chmod 600 .secret
+
 
 # Copy the project files
 COPY ./src/pyproject.toml ./

@@ -52,7 +52,6 @@ ARG POSTGRES_DB \
     CELERY_BROKER_URL \
     CELERY_RESULT_BACKEND \
     PYMAP_LOGDIR \
-    SECRET_KEY \
     GROUPNAME \
     GID
 
@@ -100,9 +99,10 @@ EOF
 RUN echo "$POSTGRES_HOST:$POSTGRES_PORT:$POSTGRES_DB:$POSTGRES_USER:$POSTGRES_PASSWORD" > ./.pgpass
 RUN chmod 600 ./.pgpass
 
-# Create .secret file for SECRET_KEY
-RUN echo "$SECRET_KEY" > ./.secret
-RUN chmod 600 ./.secret
+# The secret file should be mounted at runtime
+# create it and set permissions to avoid issues reading
+RUN touch .secret
+RUN chmod 600 .secret
 
 # Copy the project files
 COPY ./src/pyproject.toml ./
