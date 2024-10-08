@@ -50,18 +50,12 @@ This setup focus on running the app natively on a linux environment, the app sho
 `git clone https://github.com/hallowslab/Pymap.git`
 - Create a .env file in the project's root directory where the file .env.template is located, you can duplicate it and modify accordingly
 - Create a config file in `pymap/src/config.json`, You can copy it from the existing templates config*-template.json and modify the settings accordingly, more info in [Addtional Info - Config File](#config-file)
-- From the project's root where the file docker-compose.yml is located, run the command `docker compose --env-file .env build` to build the containers and then `docker compose up -d` to start them in the background, or in a single command `docker compose --env-file .env up --build -d`
-
-- To start the included flower monitor for celery include `--profile flower`
-  `docker compose --profile flower --env-file .env up --build -d`
+- From the project's root where the file docker-compose.yml is located, run the command `ocker compose --env-file .env -f docker-compose.yml build` to build the containers and then `docker compose up -d` to start them in the background, or in a single command `ocker compose --env-file .env -f docker-compose.yml up --build -d`
 
 To remove containers/volumes and images:
 
 * `docker rm -vf $(docker images -aq)` - Removes all containers and volumes
 * `docker rmi -f $(docker images -aq)` - Removes all images (*Remove containers beforehand*)
-
-*If you used a profile you might need to specify it again to remove containers associated with them*
-* `docker compose --profile flower down --rmi all`
 
 # Additional Info
 
@@ -76,7 +70,7 @@ The environment variable that can be defined will take precedence when loading t
 * CELERY_RESULT_BACKEND=redis://localhost:6379/0 # The URL that will save the temporary results of the task <b>*can be set in config/optional</b>
 
 ### Optional AND|OR Docker
-* SECRET_KEY="" # This should not be stored as an environment variable and instead be defined in a .secret file in the /src directory, it can be defined in .env with docker since it does not register it in the container's environment, it creates the .secret file
+* SECRET_KEY="" # This should not be stored as an environment variable and instead be defined in a .secret file in the project root directory Pymap/.secret
 * PYMAP_LOGDIR=/var/log/pymap # Directory for the application's log files <b>*can be set in config/optional</b>
 * POSTGRES_USER=USER # The user that is created in the postgres image and defined pgsecret and pgconf files, for barebones you need to create the specific files and define the postgres variables there
 * POSTGRES_PASSWORD=PASS # Password for the user mentioned above
@@ -174,7 +168,7 @@ You can specify multiple compose files like: docker compose --env-file .env -f d
 ## Docker dev
 
 ```
-docker compose --env-file dev.env -f .\docker-compose.yml -f .\docker-compose.extend.yml -f .\docker-compose.mail.yml up --build -d
+docker compose --env-file dev.env -f docker-compose.yml -f docker-compose.extend.yml -f docker-compose.mail.yml up --build -d
 ```
 
 Test accounts to sync
