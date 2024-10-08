@@ -26,7 +26,7 @@ RProc = Dict[str, Any]
 CALL_SYSTEM_TYPE = Dict[str, (str | FProc)]
 
 
-def should_terminate_task(task_id: str):
+def should_terminate_task(task_id: str) -> bool:
     # Implement logic to check if the task should terminate
     # For example, check a value in the database or cache
     task = CeleryTask.objects.filter(task_id=task_id).first()
@@ -34,6 +34,52 @@ def should_terminate_task(task_id: str):
         if task.terminated:
             return True
     return False
+
+
+def get_running_tasks() -> Dict[str, Dict[object, object]]:
+    inspector = Inspect(app=celery_app)
+    all_tasks: Dict[str, Dict[object, object]] = {
+        "active": {},
+        "reserved": {},
+        "scheduled": {},
+    }
+
+    # Check active tasks
+    active_tasks = inspector.active()
+    logger.debug(f"ACTIVE TASKS: {active_tasks}")
+    if active_tasks:
+        for worker, tasks in active_tasks.items():
+            all_tasks["active"][worker] = [
+                f"{task['name']} :: {task['id']}" for task in tasks
+            ]
+
+    # Check reserved tasks
+    reserved_tasks = inspector.reserved()
+    logger.debug(f"RESERVED TASKS: {reserved_tasks}")
+    if reserved_tasks:
+        for worker, tasks in reserved_tasks.items():
+            all_tasks["reserved"][worker] = [
+                f"{task['name']} :: {task['id']}" for task in tasks
+            ]
+
+    # Check scheduled tasks
+    scheduled_tasks = inspector.scheduled()
+    logger.debug(f"SCHEDULED TASKS: {scheduled_tasks}")
+    if scheduled_tasks:
+        for worker, tasks in scheduled_tasks.items():
+            all_tasks["scheduled"][worker] = [
+                f"{task['name']} :: {task['id']}" for task in tasks
+            ]
+
+    return all_tasks
+
+
+@shared_task
+def long_running_test_task(timeout: int = 100, wait_timer: int = 5) -> None:
+    ltime = timeout
+    while ltime > 0:
+        time.sleep(wait_timer)
+        ltime = ltime - wait_timer
 
 
 @shared_task(bind=True)
