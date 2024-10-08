@@ -101,9 +101,12 @@ def update_preferences(
         form = PreferencesForm(request.POST, instance=user_preferences)
         if form.is_valid():
             form.save()
+            logger.debug(f"Updated user preferences for {request.user.username}")
             return redirect(
                 "migrator:user-account", permanent=False
             )  # Redirect to user's account page after successful update
+        else:
+            logger.debug(f"Update preferences form is not valid: {form.errors}")
     else:
         form = PreferencesForm(instance=user_preferences)
     return render(request, "update_preferences.html", {"form": form})
@@ -174,6 +177,8 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             dry_run: bool = form.cleaned_data["dry_run"]
             config = settings.PYMAP_SETTINGS
             user = request.user
+            user_preferences, _ = UserPreferences.objects.get_or_create(user=user)
+            additional_known_hosts = user_preferences.host_patterns
             logger.info(
                 f"USER: {user.username} requested a sync for {source} -> {destination}"
             )
@@ -195,6 +200,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
                 config=config,
                 dry_run=dry_run,
                 pymap_logdir=settings.PYMAP_LOGDIR,
+                additional_known_hosts=additional_known_hosts,
             )
             content = gen.process_strings(input_text)
 

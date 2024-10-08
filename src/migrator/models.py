@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 
 class UserPreferences(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    host_patterns = models.JSONField(default=lambda:[["^(vm[0-9]*|vps)", ".example.com"]])
+    host_patterns = models.JSONField(
+        default=lambda: [["^(vm[0-9]*|vps)$", ".example.com"]]
+    )
 
     def __str__(self) -> str:
         return f"{self.user.username}'s Preferences"

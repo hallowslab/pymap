@@ -1,10 +1,13 @@
-from typing import Any
 import json
+import logging
+import re
 from django import forms
 from django.contrib.auth.forms import UserChangeForm
 from django.contrib.auth.models import User
 
 from .models import UserPreferences
+
+logger = logging.getLogger(__name__)
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -14,7 +17,7 @@ class CustomUserChangeForm(UserChangeForm):
 
 
 class JSONPrettyWidget(forms.Textarea):
-    def format_value(self, value):
+    def format_value(self, value: str) -> str:
         # Pretty print the value before rendering
         try:
             value = json.loads(value)  # Ensure it's valid JSON
@@ -22,22 +25,27 @@ class JSONPrettyWidget(forms.Textarea):
         except (TypeError, ValueError):
             return value  # If it's invalid, return as is
 
+
 class PreferencesForm(forms.ModelForm):
     class Meta:
         model = UserPreferences
         fields = ["host_patterns"]
-        widgets = {
-            'host_patterns': JSONPrettyWidget(attrs={'rows': 10, 'cols': 60}),
-        }
 
-    def clean_host_patterns(self) -> Any:
-        patterns = self.cleaned_data.get("host_patterns")
+    def clean_host_patterns(self):
+        patterns = self.data.get("host_patterns")
         try:
-            if not patterns:
-                raise ValueError
-            patterns_list = json.loads(patterns)
-            # Return pretty-printed JSON for saving
-            return json.dumps(patterns_list, indent=4)
+            if patterns:
+                # Load the JSON string into a Python object (list)
+                patterns_list = json.loads(patterns)
+
+                # Clean each pattern by removing whitespace
+                cleaned_patterns = [
+                    [re.sub(r"\s+", "", pattern) for pattern in sublist]
+                    for sublist in patterns_list
+                ]
+
+                # Return the cleaned list (not JSON string, just the Python object)
+                return cleaned_patterns
         except (ValueError, TypeError):
             raise forms.ValidationError("Invalid JSON format")
 
