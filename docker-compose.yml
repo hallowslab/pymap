@@ -64,7 +64,7 @@ services:
       - shared_logs:$PYMAP_LOGDIR
       - type: bind
         source: .secret
-        target: /home/pymap/app/.secret
+        target: /home/celery/app/.secret
         read_only: true
     user: "1001:$GID"  # UID:GID for user
     group_add:
@@ -77,8 +77,6 @@ services:
     entrypoint: /bin/sh -c "sleep 10 && poetry run celery -A pymap.celery beat -l ${BEAT_LOG_LEVEL:-INFO} --scheduler django_celery_beat.schedulers:DatabaseScheduler -f $PYMAP_LOGDIR/celery-beat.log"
     depends_on:
       - celery-worker
-    volumes:
-      - shared_logs:$PYMAP_LOGDIR
     user: "1001:$GID"  # UID:GID for user
     group_add:
       - $GROUPNAME
