@@ -19,7 +19,7 @@ from django_celery_results.models import TaskResult
 from migrator.models import CeleryTask
 from pymap import celery_app
 
-logger = get_task_logger("CeleryTask")
+logger = get_task_logger(__name__)
 
 FProc = Dict[str, (str | int)]
 RProc = Dict[str, Any]
@@ -36,9 +36,9 @@ def should_terminate_task(task_id: str) -> bool:
     return False
 
 
-def get_running_tasks() -> Dict[str, Dict[object, object]]:
+def get_running_tasks() -> Dict[str, Dict[str, list]]:
     inspector = Inspect(app=celery_app)
-    all_tasks: Dict[str, Dict[object, object]] = {
+    all_tasks: Dict[str, Dict[str, list]] = {
         "active": {},
         "reserved": {},
         "scheduled": {},
@@ -49,27 +49,39 @@ def get_running_tasks() -> Dict[str, Dict[object, object]]:
     logger.debug(f"ACTIVE TASKS: {active_tasks}")
     if active_tasks:
         for worker, tasks in active_tasks.items():
-            all_tasks["active"][worker] = [
-                f"{task['name']} :: {task['id']}" for task in tasks
-            ]
+            if worker not in all_tasks["active"]:
+                all_tasks["active"][worker] = []
+            for task in tasks:
+                if "name" in task:
+                    all_tasks["active"][worker].append(f"{task['name']} :: {task['id']}")
+                else:
+                    logger.warning("Task is missing 'name' key: %s", task)
 
     # Check reserved tasks
     reserved_tasks = inspector.reserved()
     logger.debug(f"RESERVED TASKS: {reserved_tasks}")
     if reserved_tasks:
         for worker, tasks in reserved_tasks.items():
-            all_tasks["reserved"][worker] = [
-                f"{task['name']} :: {task['id']}" for task in tasks
-            ]
+            if worker not in all_tasks["reserved"]:
+                all_tasks["reserved"][worker] = []
+            for task in tasks:
+                if "name" in task:
+                    all_tasks["reserved"][worker].append(f"{task['name']} :: {task['id']}")
+                else:
+                    logger.warning("Task is missing 'name' key: %s", task)
 
     # Check scheduled tasks
     scheduled_tasks = inspector.scheduled()
     logger.debug(f"SCHEDULED TASKS: {scheduled_tasks}")
     if scheduled_tasks:
         for worker, tasks in scheduled_tasks.items():
-            all_tasks["scheduled"][worker] = [
-                f"{task['name']} :: {task['id']}" for task in tasks
-            ]
+            if worker not in all_tasks["scheduled"]:
+                all_tasks["scheduled"][worker] = []
+            for task in tasks:
+                if "name" in task["request"]:
+                    all_tasks["scheduled"][worker].append(f"{task['request']['name']} :: {task['request']['id']}")
+                else:
+                    logger.warning("Task is missing 'name' key: %s", task)
 
     return all_tasks
 
@@ -407,12 +419,13 @@ def modify_older_than(
         td = timedelta(weeks=int(weeks), days=int(days), hours=int(hours), minutes=int(minutes))
     except ValueError:
         logger.error(
-            "Invalid values passed to archive older tasks: Days %s, Hours %s, Minutes %s",
+            "Invalid values passed to modify older tasks: weeks %s Days %s, Hours %s, Minutes %s",
+            weeks,
             days,
             hours,
             minutes,
         )
-        # Here we actually don't continue we might not want to archive by the default values
+        # Here we actually don't continue we might not want to modify by the default values
         return
     cutoff_date = datetime.now() - td
     tasks = CeleryTask.objects.filter(start_time__lt=cutoff_date, finished=True)
