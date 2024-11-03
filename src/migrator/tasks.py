@@ -74,14 +74,6 @@ def get_running_tasks() -> Dict[str, Dict[object, object]]:
     return all_tasks
 
 
-@shared_task
-def long_running_test_task(timeout: int = 100, wait_timer: int = 5) -> None:
-    ltime = timeout
-    while ltime > 0:
-        time.sleep(wait_timer)
-        ltime = ltime - wait_timer
-
-
 @shared_task(bind=True)
 def call_system(self, cmd_list: Optional[List[str]]) -> CALL_SYSTEM_TYPE:
     # cmd_list is not optional and should always be a list of strings
@@ -403,7 +395,8 @@ def validate_finished() -> None:
 # This will be used to automate the archival of tasks by a certain date,
 # It should not be pre-configured and the admin must create a periodic task
 @shared_task
-def archive_older_than(
+def modify_older_than(
+    mode:str="a",
     weeks: int = int("4"),
     days: int = int("0"),
     hours: int = int("0"),
@@ -411,7 +404,7 @@ def archive_older_than(
 ) -> None:
     td = timedelta(weeks=4, days=0, hours=0, minutes=0)
     try:
-        td = timedelta(weeks=weeks, days=days, hours=hours, minutes=minutes)
+        td = timedelta(weeks=int(weeks), days=int(days), hours=int(hours), minutes=int(minutes))
     except ValueError:
         logger.error(
             "Invalid values passed to archive older tasks: Days %s, Hours %s, Minutes %s",
@@ -423,4 +416,7 @@ def archive_older_than(
         return
     cutoff_date = datetime.now() - td
     tasks = CeleryTask.objects.filter(start_time__lt=cutoff_date, finished=True)
-    tasks.update(archived=True)
+    if mode == "a":
+        tasks.update(archived=True)
+    elif mode == "d":
+        tasks.delete()
