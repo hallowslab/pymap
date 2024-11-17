@@ -174,6 +174,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
             input_text: List[str] = clean_input.split("\n")
             logger.debug("Input after split %s", input_text)
             additional_arguments: str = form.cleaned_data["additional_arguments"]
+            custom_label: str = form.cleaned_data["custom_label"]
             dry_run: bool = form.cleaned_data["dry_run"]
             config = settings.PYMAP_SETTINGS
             user = request.user
@@ -227,6 +228,7 @@ def sync(request: HttpRequest) -> (HttpResponse | HttpResponseRedirect):
                 log_path=str(log_directory),
                 n_accounts=len(content),
                 domains=domains,
+                custom_label=custom_label,
                 owner=user,
             )
             ctask.save()
@@ -357,7 +359,7 @@ class CeleryTaskList(ListCreateAPIView):
         # Filtering based on search value
         if search_value != "":
             queryset = queryset.filter(
-                Q(task_id__icontains=search_value) | Q(domains__icontains=search_value)
+                Q(task_id__icontains=search_value) | Q(domains__icontains=search_value) | Q(custom_label__icontains=search_value)
             )
         else:
             queryset = queryset.filter(archived=False)
