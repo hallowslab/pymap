@@ -267,6 +267,7 @@ def retry_task(
             raise ValueError("Task has not finished yet")
         source = db_result.source
         destination = db_result.destination
+        custom_label = db_result.custom_label
         meta = celery_app.backend.get_task_meta(task_id)
         content_str = meta["args"]
         # Convert the string to a Python tuple containing a list
@@ -293,6 +294,7 @@ def retry_task(
             log_path=str(log_directory),
             n_accounts=len(cmd_list),
             domains=domains,
+            custom_label=custom_label,
             owner=user,
         )
         ctask.save()
