@@ -56,7 +56,9 @@ class SyncForm(forms.Form):
         label="Custom Identifier(Optional)",
         widget=forms.TextInput(
             attrs={"class": "form-control", "placeholder": "..."}
-        )
+        ),
+        required=False,
+        initial=""
     )
     source = forms.CharField(
         label="source",
