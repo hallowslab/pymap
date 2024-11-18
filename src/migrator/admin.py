@@ -37,8 +37,7 @@ from .models import CeleryTask, UserPreferences
 from .tasks import (
     purge_results,
     validate_finished,
-    get_running_tasks,
-    long_running_test_task,
+    get_running_tasks
 )
 from pymap import celery_app
 
@@ -174,8 +173,6 @@ class CustomAdminSite(AdminSite):
                 purge_results.delay()
             elif "validate_finished" in request.POST:
                 validate_finished.delay()
-            elif "long_running_test_task" in request.POST:
-                long_running_test_task.delay()
             return redirect("admin:tasks")
         context = dict(
             self.each_context(request),

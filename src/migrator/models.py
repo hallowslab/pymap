@@ -28,10 +28,18 @@ logger = logging.getLogger(__name__)
 #         return f"Global Task Statistics"
 
 
+def host_patterns_default():
+    return [["^(vm[0-9]*|vps)$", ".example.com"]]
+
+
 class UserPreferences(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    # Django cannot serialize:
+    # Nested classes
+    # Arbitrary class instances (e.g. MyClass(4.3, 5.7))
+    # Lambdas
     host_patterns = models.JSONField(
-        default=lambda: [["^(vm[0-9]*|vps)$", ".example.com"]]
+        default=host_patterns_default 
     )
 
     def __str__(self) -> str:
@@ -54,6 +62,7 @@ class CeleryTask(models.Model):
     finished = models.BooleanField(default=False)
     terminated = models.BooleanField(default=False)
     start_time = models.DateTimeField(auto_now_add=True, blank=True)
+    custom_label = models.CharField(default="", max_length=255)
     # end_time = models.DateTimeField(default=0,blank=True)
     results_purged = models.BooleanField(default=False)
     run_time = models.IntegerField(default=0)
